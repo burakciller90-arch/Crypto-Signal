@@ -4,7 +4,7 @@ import sqlite3
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from crypto_signal.decision_ledger import (
     DecisionLedgerConflictError,
@@ -16,6 +16,7 @@ from crypto_signal.paper.epoch2_accounting import (
     read_epoch2_state_read_only,
 )
 from crypto_signal.paper.epochs import PaperVaultId
+from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
     EventSourceCalendarEventTruth,
@@ -530,6 +531,79 @@ class CapitalMovementsView:
     to_ms: int
     vault_label: str | None
     items: tuple[CapitalMovementItem, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class TradePassportAudit:
+    bundle_identity: str
+    activation_identity: str
+    intent_identity: str
+    fill_identity: str
+    forecast_identity: str
+    proof_identity: str
+    signal_freeze_identity: str
+    policy_identity: str
+    sizing_assessment_identity: str
+    sizing_decision_identity: str
+    allocator_candidate_identity: str
+    decision_identity: str
+    source_evidence_identities: tuple[str, ...]
+    source_fill_identity: str
+    mutation_identity: str
+    mark_evidence_identity: str
+    outcome_identity: str | None
+    before_vault_snapshot_identity: str
+    after_vault_snapshot_identity: str
+    before_consolidated_snapshot_identity: str
+    after_consolidated_snapshot_identity: str
+    raw_action: str
+    raw_outcome: str
+    reason_codes: tuple[str, ...]
+    execution_policy_version: str
+    venue_reference: str
+
+
+@dataclass(frozen=True, slots=True)
+class TradePassportView:
+    availability_label: str
+    program_label: str
+    action_label: str | None
+    outcome_label: str | None
+    vault_label: str | None
+    symbol: str | None
+    timeframe: str | None
+    decided_at_ms: int | None
+    filled_at_ms: int | None
+    snapshot_at_ms: int | None
+    proof_source_as_of_ms: int | None
+    decision_thesis: str | None
+    direction_label: str | None
+    trigger_zone_label: str | None
+    target_zone_label: str | None
+    invalidation_price: str | None
+    uncertainty_label: str | None
+    proof_availability_label: str
+    quantity: str | None
+    reference_price: str | None
+    simulated_fill_price: str | None
+    notional_usdt: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    cash_before_usdt: str | None
+    cash_after_usdt: str | None
+    vault_nav_before_usdt: str | None
+    vault_nav_after_usdt: str | None
+    consolidated_nav_before_usdt: str | None
+    consolidated_nav_after_usdt: str | None
+    position_quantity_before: str | None
+    position_quantity_after: str | None
+    realized_pnl_delta_usdt: str | None
+    unrealized_pnl_delta_usdt: str | None
+    audit: TradePassportAudit | None = None
     read_only: bool = True
     real_capital: int = REAL_CAPITAL
     schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
@@ -1141,6 +1215,89 @@ class FinalProductReadModel:
             items=items,
         )
 
+    def trade_passport(
+        self,
+        *,
+        bundle_identity: str,
+        include_audit: bool = False,
+    ) -> TradePassportView:
+        _sha_text(bundle_identity, "trade passport bundle identity")
+        if self.epoch2_path is None or not self.epoch2_path.is_file():
+            return _trade_passport_unavailable(
+                "Trade Passport verisi kullanılamıyor"
+            )
+
+        try:
+            context = cast(
+                dict[str, Any],
+                R22Epoch2AtomicTape(
+                    self.epoch2_path
+                ).read_bundle_story_context(bundle_identity),
+            )
+        except ValueError as exc:
+            if str(exc) == "R22 audit bundle not found":
+                return _trade_passport_unavailable(
+                    "Trade Passport bulunamadı"
+                )
+            raise FinalProductReadError(
+                "Trade Passport kaynağı güvenli doğrulanamadı"
+            ) from exc
+
+        try:
+            intent = _required_mapping(context, "intent")
+            forecast_identity = _required_sha(intent, "forecast_identity")
+            expected_proof_identity = _required_sha(intent, "proof_identity")
+            expected_signal_identity = _required_sha(
+                intent,
+                "signal_freeze_identity",
+            )
+
+            proof: dict[str, Any] | None = None
+            proof_label = "Karar kanıtı kaynağı bağlı değil"
+            if (
+                self.decision_evidence_path is not None
+                and self.decision_evidence_path.is_file()
+            ):
+                proof = ImmutableDecisionEvidenceLedger(
+                    self.decision_evidence_path
+                ).read_proof_for_forecast(forecast_identity)
+                if proof is None:
+                    proof_label = "Karar kanıtı bulunamadı"
+                else:
+                    if (
+                        proof.get("forecast_identity") != forecast_identity
+                        or proof.get("proof_identity")
+                        != expected_proof_identity
+                        or proof.get("signal_freeze_identity")
+                        != expected_signal_identity
+                        or proof.get("read_only") is not True
+                        or proof.get("production_authority") is not False
+                        or proof.get("real_capital") != REAL_CAPITAL
+                    ):
+                        raise FinalProductReadError(
+                            "Trade Passport karar kanıtı lineage uyuşmuyor"
+                        )
+                    proof_label = "Karar kanıtı doğrulandı"
+
+            return _trade_passport_view(
+                bundle_identity=bundle_identity,
+                context=context,
+                proof=proof,
+                proof_label=proof_label,
+                include_audit=include_audit,
+            )
+        except (
+            DecisionLedgerConflictError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "Trade Passport güvenli projekte edilemedi"
+            ) from exc
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -1315,6 +1472,332 @@ def _plain_decimal_text(value: Decimal) -> str:
     if "." in raw:
         raw = raw.rstrip("0").rstrip(".")
     return raw or "0"
+
+
+def _trade_passport_unavailable(reason: str) -> TradePassportView:
+    return TradePassportView(
+        availability_label=reason,
+        program_label="Paper Capital · Epoch 2",
+        action_label=None,
+        outcome_label=None,
+        vault_label=None,
+        symbol=None,
+        timeframe=None,
+        decided_at_ms=None,
+        filled_at_ms=None,
+        snapshot_at_ms=None,
+        proof_source_as_of_ms=None,
+        decision_thesis=None,
+        direction_label=None,
+        trigger_zone_label=None,
+        target_zone_label=None,
+        invalidation_price=None,
+        uncertainty_label=None,
+        proof_availability_label="Karar kanıtı kullanılamıyor",
+        quantity=None,
+        reference_price=None,
+        simulated_fill_price=None,
+        notional_usdt=None,
+        fee_usdt=None,
+        spread_usdt=None,
+        slippage_usdt=None,
+        cash_before_usdt=None,
+        cash_after_usdt=None,
+        vault_nav_before_usdt=None,
+        vault_nav_after_usdt=None,
+        consolidated_nav_before_usdt=None,
+        consolidated_nav_after_usdt=None,
+        position_quantity_before=None,
+        position_quantity_after=None,
+        realized_pnl_delta_usdt=None,
+        unrealized_pnl_delta_usdt=None,
+    )
+
+
+def _trade_passport_view(
+    *,
+    bundle_identity: str,
+    context: dict[str, Any],
+    proof: dict[str, Any] | None,
+    proof_label: str,
+    include_audit: bool,
+) -> TradePassportView:
+    bundle = _required_mapping(context, "bundle")
+    intent = _required_mapping(context, "intent")
+    fill = _required_mapping(context, "fill")
+    before_vault = _required_mapping(context, "before_vault")
+    after_vault = _required_mapping(context, "after_vault")
+    before_parent = _required_mapping(context, "before_consolidated")
+    after_parent = _required_mapping(context, "after_consolidated")
+
+    if _required_sha(bundle, "bundle_identity") != bundle_identity:
+        raise ValueError("Trade Passport bundle identity mismatch")
+
+    raw_action = _required_text(fill, "action")
+    if _required_text(intent, "action") != raw_action:
+        raise ValueError("Trade Passport intent/fill action mismatch")
+    action_label = _trade_passport_action_label(raw_action)
+
+    raw_outcome = _required_text(fill, "financial_outcome")
+    outcome_label = _trade_passport_outcome_label(raw_outcome)
+
+    raw_vault = _required_text(fill, "vault_id")
+    if _required_text(intent, "vault_id") != raw_vault:
+        raise ValueError("Trade Passport intent/fill vault mismatch")
+    vault_label = _capital_vault_label(raw_vault)
+
+    symbol = _required_text(fill, "symbol")
+    if _required_text(intent, "symbol") != symbol:
+        raise ValueError("Trade Passport intent/fill symbol mismatch")
+
+    reason_codes = _text_sequence(
+        _required_sequence(intent, "reason_codes"),
+        "Trade Passport reason codes",
+    )
+    source_evidence_identities = tuple(
+        _sha_text(value, "Trade Passport source evidence identity")
+        for value in _required_sequence(intent, "source_evidence_identities")
+    )
+
+    proof_source_as_of_ms = None
+    timeframe = None
+    thesis = None
+    direction_label = None
+    trigger_zone_label = None
+    target_zone_label = None
+    invalidation_price = None
+    uncertainty_label = None
+    if proof is not None:
+        if _required_text(proof, "symbol") != symbol:
+            raise ValueError("Trade Passport proof symbol mismatch")
+        timeframe = _required_text(proof, "timeframe")
+        proof_source_as_of_ms = _required_int(proof, "source_as_of_ms")
+        if proof_source_as_of_ms > _required_int(intent, "decided_at_ms"):
+            raise ValueError("Trade Passport proof source is after decision")
+        thesis = _required_text(proof, "conditional_thesis")
+        direction_label = _trade_passport_direction_label(
+            _required_text(proof, "direction")
+        )
+        trigger_zone_label = _trade_passport_zone_label(
+            proof.get("trigger_zone"),
+            "Trade Passport trigger zone",
+        )
+        target_zone_label = _trade_passport_zone_label(
+            proof.get("target_zone"),
+            "Trade Passport target zone",
+        )
+        invalidation_price = _decimal_text(
+            proof.get("invalidation_price"),
+            "Trade Passport invalidation",
+        )
+        uncertainty_flags = _text_sequence(
+            _required_sequence(proof, "uncertainty_flags"),
+            "Trade Passport uncertainty flags",
+        )
+        uncertainty_label = (
+            "Ek belirsizlik işareti yok"
+            if not uncertainty_flags
+            else f"{len(uncertainty_flags)} belirsizlik işareti mevcut"
+        )
+
+    outcome_identity = _optional_sha(fill.get("outcome_evidence_identity"))
+    audit = None
+    if include_audit:
+        audit = TradePassportAudit(
+            bundle_identity=bundle_identity,
+            activation_identity=_required_sha(fill, "activation_identity"),
+            intent_identity=_required_sha(intent, "intent_identity"),
+            fill_identity=_required_sha(fill, "fill_identity"),
+            forecast_identity=_required_sha(intent, "forecast_identity"),
+            proof_identity=_required_sha(intent, "proof_identity"),
+            signal_freeze_identity=_required_sha(
+                intent,
+                "signal_freeze_identity",
+            ),
+            policy_identity=_required_sha(intent, "policy_identity"),
+            sizing_assessment_identity=_required_sha(
+                intent,
+                "sizing_assessment_identity",
+            ),
+            sizing_decision_identity=_required_sha(
+                intent,
+                "sizing_decision_identity",
+            ),
+            allocator_candidate_identity=_required_sha(
+                intent,
+                "allocator_candidate_identity",
+            ),
+            decision_identity=_required_sha(intent, "decision_identity"),
+            source_evidence_identities=source_evidence_identities,
+            source_fill_identity=_required_sha(fill, "source_fill_identity"),
+            mutation_identity=_required_sha(fill, "mutation_identity"),
+            mark_evidence_identity=_required_sha(
+                fill,
+                "mark_evidence_identity",
+            ),
+            outcome_identity=outcome_identity,
+            before_vault_snapshot_identity=_required_sha(
+                fill,
+                "before_snapshot_identity",
+            ),
+            after_vault_snapshot_identity=_required_sha(
+                fill,
+                "after_snapshot_identity",
+            ),
+            before_consolidated_snapshot_identity=_required_sha(
+                bundle,
+                "before_consolidated_snapshot_identity",
+            ),
+            after_consolidated_snapshot_identity=_required_sha(
+                bundle,
+                "after_consolidated_snapshot_identity",
+            ),
+            raw_action=raw_action,
+            raw_outcome=raw_outcome,
+            reason_codes=reason_codes,
+            execution_policy_version=_required_text(
+                fill,
+                "execution_policy_version",
+            ),
+            venue_reference=_required_text(fill, "venue_reference"),
+        )
+
+    return TradePassportView(
+        availability_label="Doğrulanmış veri",
+        program_label="Paper Capital · Epoch 2",
+        action_label=action_label,
+        outcome_label=outcome_label,
+        vault_label=vault_label,
+        symbol=symbol,
+        timeframe=timeframe,
+        decided_at_ms=_required_int(intent, "decided_at_ms"),
+        filled_at_ms=_required_int(fill, "filled_at_ms"),
+        snapshot_at_ms=_required_int(fill, "snapshot_at_ms"),
+        proof_source_as_of_ms=proof_source_as_of_ms,
+        decision_thesis=thesis,
+        direction_label=direction_label,
+        trigger_zone_label=trigger_zone_label,
+        target_zone_label=target_zone_label,
+        invalidation_price=invalidation_price,
+        uncertainty_label=uncertainty_label,
+        proof_availability_label=proof_label,
+        quantity=_decimal_text(fill.get("quantity"), "Trade Passport quantity"),
+        reference_price=_decimal_text(
+            fill.get("reference_price"),
+            "Trade Passport reference price",
+        ),
+        simulated_fill_price=_decimal_text(
+            fill.get("simulated_fill_price"),
+            "Trade Passport fill price",
+        ),
+        notional_usdt=_decimal_text(
+            fill.get("notional_usdt"),
+            "Trade Passport notional",
+        ),
+        fee_usdt=_decimal_text(fill.get("fee_usdt"), "Trade Passport fee"),
+        spread_usdt=_decimal_text(
+            fill.get("spread_usdt"),
+            "Trade Passport spread",
+        ),
+        slippage_usdt=_decimal_text(
+            fill.get("slippage_usdt"),
+            "Trade Passport slippage",
+        ),
+        cash_before_usdt=_decimal_text(
+            before_vault.get("cash_usdt"),
+            "Trade Passport cash before",
+        ),
+        cash_after_usdt=_decimal_text(
+            after_vault.get("cash_usdt"),
+            "Trade Passport cash after",
+        ),
+        vault_nav_before_usdt=_decimal_text(
+            before_vault.get("nav_usdt"),
+            "Trade Passport vault NAV before",
+        ),
+        vault_nav_after_usdt=_decimal_text(
+            after_vault.get("nav_usdt"),
+            "Trade Passport vault NAV after",
+        ),
+        consolidated_nav_before_usdt=_decimal_text(
+            before_parent.get("nav_usdt"),
+            "Trade Passport consolidated NAV before",
+        ),
+        consolidated_nav_after_usdt=_decimal_text(
+            after_parent.get("nav_usdt"),
+            "Trade Passport consolidated NAV after",
+        ),
+        position_quantity_before=_plain_decimal_text(
+            _decimal(
+                fill.get("position_before_quantity"),
+                "Trade Passport position before",
+            )
+        ),
+        position_quantity_after=_plain_decimal_text(
+            _decimal(
+                fill.get("position_after_quantity"),
+                "Trade Passport position after",
+            )
+        ),
+        realized_pnl_delta_usdt=_signed_money_text(
+            _decimal(
+                fill.get("realized_pnl_delta_usdt"),
+                "Trade Passport realized PnL",
+            )
+        ),
+        unrealized_pnl_delta_usdt=_signed_money_text(
+            _decimal(
+                fill.get("unrealized_pnl_delta_usdt"),
+                "Trade Passport unrealized PnL",
+            )
+        ),
+        audit=audit,
+    )
+
+
+def _trade_passport_action_label(value: str) -> str:
+    labels = {
+        "BUY": "Pozisyon açıldı / artırıldı",
+        "REDUCE": "Pozisyon azaltıldı",
+        "EXIT": "Pozisyon kapatıldı",
+    }
+    try:
+        return labels[value]
+    except KeyError as exc:
+        raise ValueError("unsupported Trade Passport action") from exc
+
+
+def _trade_passport_outcome_label(value: str) -> str:
+    labels = {
+        "OPEN": "Pozisyon açık",
+        "PARTIAL_REDUCTION": "Kısmi azaltma",
+        "CLOSED_WIN": "Kârla kapandı",
+        "CLOSED_LOSS": "Zararla kapandı",
+        "CLOSED_BREAKEVEN": "Başa baş kapandı",
+    }
+    try:
+        return labels[value]
+    except KeyError as exc:
+        raise ValueError("unsupported Trade Passport outcome") from exc
+
+
+def _trade_passport_direction_label(value: str) -> str:
+    labels = {
+        "bullish": "Yukarı yönlü",
+        "bearish": "Aşağı yönlü",
+        "neutral": "Nötr",
+    }
+    try:
+        return labels[value.strip().lower()]
+    except KeyError as exc:
+        raise ValueError("unsupported Trade Passport direction") from exc
+
+
+def _trade_passport_zone_label(value: object, label: str) -> str:
+    raw = _mapping_value(value, label)
+    low = _decimal_text(raw.get("low"), f"{label} low")
+    high = _decimal_text(raw.get("high"), f"{label} high")
+    return low if low == high else f"{low} – {high}"
 
 
 def _capital_vault_label(vault_id: str | None) -> str | None:
