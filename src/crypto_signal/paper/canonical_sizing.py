@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import (
@@ -16,10 +17,8 @@ from crypto_signal.paper.epoch2_accounting import (
     Epoch2VaultAccountingSnapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.portfolio_risk_v2 import (
-    PortfolioAllocationAssessmentV2,
-    PortfolioRiskStatus,
-)
+if TYPE_CHECKING:
+    from crypto_signal.paper.portfolio_risk_v2 import PortfolioAllocationAssessmentV2
 from crypto_signal.paper.position_sizing_intelligence import (
     PositionSizingAssessment,
     SizingMethod,
@@ -277,7 +276,7 @@ def promote_portfolio_risk_bounded_sizing(
     *,
     current_vault: Epoch2VaultAccountingSnapshot,
     current_portfolio: Epoch2ConsolidatedAccountingSnapshot,
-    portfolio_assessment: PortfolioAllocationAssessmentV2,
+    portfolio_assessment: "PortfolioAllocationAssessmentV2",
     candidate_asset: str,
     risk_input_identity: str,
     selected_at_ms: int,
@@ -308,13 +307,14 @@ def promote_portfolio_risk_bounded_sizing(
     ):
         raise ValueError("S11 V2 sizing selection predates exact portfolio truth")
 
-    if portfolio_assessment.status is PortfolioRiskStatus.NOT_PROVEN:
+    portfolio_status = portfolio_assessment.status.value
+    if portfolio_status == "not_proven":
         return None
-    if portfolio_assessment.status is PortfolioRiskStatus.HOLD_CASH:
+    if portfolio_status == "hold_cash":
         if portfolio_assessment.source_portfolio_identity is None:
             raise ValueError("S11 V2 HOLD_CASH requires proven portfolio source")
         return None
-    if portfolio_assessment.status is not PortfolioRiskStatus.DEPLOYABLE:
+    if portfolio_status != "deployable":
         raise ValueError("S11 V2 unsupported FP5 portfolio-risk status")
 
     portfolio_source_identity = portfolio_assessment.source_portfolio_identity
