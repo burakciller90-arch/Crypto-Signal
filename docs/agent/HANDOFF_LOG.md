@@ -5965,3 +5965,27 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; no Product/Development deploy; Durdurulmaz/Quantum untouched
 - blocker: none for FP4-A; FP3-D and RDP11 remain independent waiting gates
 - nextAction: start isolated FP4-B latency/queue/timeout contract from exact current main
+
+
+## 2026-09-29 — FP4-A merged / FP4-B timing-queue implementation checkpoint
+
+- FP4-A PR #1688 merged to main as `918e269e70f1e87df492fd0db00f8b21b397d3e1`
+- FP4-A accepted source head: `cd8e6af5f0e25d6f104268e684b63d25d9e9aabb`; final PR head was docs-only `4c24613a8cab36f225af1e463095e7c6ea18e39d`
+- FP4-A acceptance run/job: `36618938401` / `109579075252` PASS
+- WC6 run/job: `36618938375` / `109579064102` PASS
+- RDP11 pre-soak run/job: `36618938277` / `109579069996` PASS
+- F10 run: `36618938385` PASS
+- post-merge Workbench run/job: `36619632691` / `109581427237`; exact main `918e269e70f1e87df492fd0db00f8b21b397d3e1`, branch `main`, dirty `0`, `SSD504_WORKBENCH_PASS=YES`
+- FP4-B task-start main: `918e269e70f1e87df492fd0db00f8b21b397d3e1`
+- FP4-B branch: `fp4b/timing-queue-uncertainty-v2`
+- session-local worktree: not created in connector session
+- duplicate audit: no other FP4-B branch/PR; latency/timeout/cancel/passive-limit queue contract absent on main
+- implemented versioned timing request + deterministic decision classifier over immutable Market Tape orderbooks
+- explicit statuses: EXECUTION_READY / PENDING / TIMED_OUT / CANCELLED / FILL_NOT_PROVEN
+- configured latency controls causal eligibility; future-ingested books are ignored for historical evaluation
+- passive limit later touch/cross cannot become a fill without queue proof
+- no candle-wick fill inference; no R21/R22 mutation; no deploy/backfill
+- dedicated workflow: `.github/workflows/fp4b-timing-queue-uid504.yml`
+- REAL_CAPITAL=0; frozen RDP11 target untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head FP4-B acceptance not yet run
+- nextAction: open isolated PR and require focused + FP4-A/v1 compatibility + full regression + frozen runtime non-mutation PASS
