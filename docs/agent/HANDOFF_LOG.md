@@ -3060,3 +3060,59 @@ Current blocker:
 
 Exact nextAction:
 Audit the three verified Stream detail kinds and exact read-only join APIs, then record a B2 message-kind/source matrix before changing B2 production code.
+
+
+## FP1-B2 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_IMPLEMENTATION_START
+activeBranch: fp1b/attention-workspace-family-summary
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+auditDocument: docs/CRYPTO_SIGNAL_FP1B2_WORKSPACE_MESSAGE_KIND_MATRIX.md
+auditCommit: 6560678167087bcd862cfeb532ec8fd0b934e112
+prerequisiteB1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audited B2 message kinds:
+- System View = SUPPORTED from verified system-view truth;
+- Family narrative = SUPPORTED from verified family fact/analytical truth;
+- Decision/Outcome narrative = SUPPORTED from verified generic Stream fact/analytical truth;
+- Capital story/decision/sizing/lifecycle = EXPLICITLY DEFERRED TO FP1-D and must not be reinterpreted in B2.
+
+Bounded implementation:
+- add WorkspaceSummary customer/audit contracts;
+- add workspace_summary(narrative_identity, observed_at_ms, ...);
+- classify message kind from verified read_message_detail structure;
+- System View: reuse exact system-view text/state/conditions/event/provider context;
+- Family: reuse exact family state/source_as_of/evidence domains/uncertainty; no fabricated trigger/target/invalidation;
+- Decision/Outcome: reuse exact Stream decision fact trigger/target/invalidation/event/probability/uncertainty;
+- optional Decision Evidence join only when configured file exists;
+- optional exact-evidence availability summary via existing IntelligenceStreamExactEvidenceReadModel for Family and Decision/Outcome;
+- no confluence-to-probability inference;
+- no Signal Detail dependency required for B2 core;
+- missing optional sources degrade explicitly;
+- conflict in configured immutable proof lineage fails closed;
+- no route/frontend/deploy/new DB/schema/writer.
+
+Implementation files:
+- src/crypto_signal/product/final_product_read_model.py
+- tests/test_final_product_read_model.py
+
+B2 PASS:
+- missing/unknown source explicit;
+- supported kind behavior exact;
+- capital kind explicit deferred;
+- no SHA/raw enum/database vocabulary in default customer payload;
+- audit exact provenance;
+- read-only/non-creating optional paths;
+- deterministic output;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Implement Workspace Summary contracts and message-kind branching in final_product_read_model.py first. Then add deterministic tests using existing accepted Stream fixtures before any acceptance harness change.
