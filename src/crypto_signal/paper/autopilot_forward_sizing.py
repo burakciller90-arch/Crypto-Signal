@@ -37,6 +37,7 @@ from crypto_signal.paper.canonical_sizing_events import (
     CanonicalSizingEventLedger,
     build_canonical_sizing_event,
 )
+from crypto_signal.paper.canonical_vault_decisions import CanonicalVaultDecisionLedger
 from crypto_signal.paper.canonical_vault_eligibility import (
     CanonicalVaultEligibilityProof,
     promote_vault_eligibility,
@@ -544,6 +545,26 @@ class FP3EligibleFixedFractionalSizingBridge:
         )
         if envelope is None:
             raise ValueError("FP3-B allocator lost target vault envelope")
+
+        decision_rows = CanonicalVaultDecisionLedger(
+            self.epoch2_path
+        ).read_assessment_decisions(
+            front_receipt.allocator_assessment_identity
+        )
+        if len(decision_rows) != len(tuple(PaperVaultId)):
+            raise ValueError("FP3-B requires exact three-vault decision chronology")
+        decision_identities = tuple(
+            sorted(_required_text(item, "decision_identity") for item in decision_rows)
+        )
+        if decision_identities != front_receipt.decision_identities:
+            raise ValueError("FP3-B canonical decision lineage differs from FP3-A")
+        latest_decision_at_ms = max(
+            _required_int(item, "decided_at_ms") for item in decision_rows
+        )
+        if selected_at_ms <= latest_decision_at_ms:
+            raise ValueError(
+                "FP3-B sizing selection must follow latest canonical vault decision"
+            )
 
         epoch2 = Epoch2CanonicalLedger(self.epoch2_path).read_state()
         current_vault = _current_vault(epoch2.vault_snapshots, vault_id)
