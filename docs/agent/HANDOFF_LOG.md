@@ -3404,3 +3404,67 @@ C1 PASS:
 
 Exact nextAction:
 Implement the read_event_source_calendar_rail Product adapter and focused event-source Product tests. Do not modify final_product_read_model.py until C1 acceptance passes.
+
+
+## FP1-C1 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_START
+activeBranch: fp1c/event-rail-read-model
+implementationHead: 818943a8f697dabdc3a6fb295192d203c11f6ad4
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented C1 production scope:
+- src/crypto_signal/product/event_source_runtime.py only;
+- EventSourceCalendarCoverageTruth;
+- EventSourceCalendarEventTruth;
+- EventSourceCalendarRailTruth;
+- read_event_source_calendar_rail(...);
+- detached SQLite + quick_check + schema verification reuse;
+- nonempty WAL fail closed;
+- only structured events referenced by successful point-in-time calendar fetch lineage;
+- late/future ingestion excluded;
+- latest point-in-time calendar fetch per provider determines usable current coverage;
+- latest provider failure removes stale previous coverage claim;
+- exact asset/global filtering;
+- exact category filtering;
+- deterministic scheduled_at_ms + event_identity ordering;
+- bounded limit with total matching count;
+- news observations excluded;
+- no Event Risk scoring/window duplication;
+- no Product route/frontend/writer/schema/deploy.
+
+Implemented C1 tests:
+- verified structured scheduled event query and news exclusion;
+- exact asset filter includes global + requested asset only;
+- orphan structured rows excluded;
+- late-ingested event excluded;
+- latest failed calendar fetch removes current coverage claim;
+- COMPLETE / INCOMPLETE / SOURCE_SCOPED_ONLY coverage semantics;
+- future fetch/coverage ignored point-in-time;
+- deterministic bounded ordering;
+- missing DB non-creating;
+- nonempty WAL fail closed;
+- source files remain byte-stable.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- tests/test_event_source_product.py including C1 tests;
+- existing tests/test_event_source_runtime.py regression;
+- Ruff changed Product module/test;
+- strict mypy changed Product module;
+- canonical Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak mutation.
+
+Acceptance harness rule:
+- prefer existing event-source UID504 Product acceptance workflow;
+- any temporary fp1c trigger/test wiring is acceptance infrastructure only;
+- restore exact current-main workflow before PR.
+
+Exact nextAction:
+Inspect the existing event-source Product hosted workflow. If it proves exact source + non-mutation, temporarily wire fp1c/event-rail-read-model and C1 changed files/tests into that harness; otherwise use a bounded existing UID504 harness without touching Product/Development runtime.
