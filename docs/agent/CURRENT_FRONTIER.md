@@ -5785,3 +5785,33 @@ Bounded production repair:
 
 Exact nextAction:
 Remove only the invalid sizing-result distinctness check, add regression proof that distinct assessments may share deterministic result identity, then rerun full exact-head acceptance.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 6 FAIL / TRIGGER-ZONE FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_6_TRIGGER_ZONE
+pr: 1683
+testedHead: 871d81202a164457ef99a25bd0a193342e74e882
+rdp11FulltestRun: 36607251651
+rdp11FulltestJob: 109539306982
+f10Run: 36607252037
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- F10 PASS;
+- exact source/clean Development PASS;
+- distinct forecast/proof/sizing-assessment guard no longer rejects genuine second-cycle SCALE_IN;
+- test reaches canonical S11 BUY validation;
+- failure: \`S11 BUY reference price must be inside exact trigger zone\`;
+- fixture used 103 while frozen signal trigger zone is 100–102;
+- canonical S11 trigger-zone protection is correct and remains unchanged;
+- cleanup reports non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- change only genuine SCALE_IN test reference/mark price to 102, inside the exact frozen trigger zone;
+- preserve the frozen signal geometry and all production validation.
+
+Exact nextAction:
+Patch fixture price only, rerun exact-head full acceptance, then inspect next failure or PASS.
