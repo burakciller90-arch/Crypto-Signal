@@ -7,9 +7,9 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from test_epoch2_accounting import _activate as _activate_epoch2
 from test_event_source_product import _seed_successes as _seed_event_source_successes
 from test_intelligence_stream_read_model import _create_read_fixture
-from test_epoch2_accounting import _activate as _activate_epoch2
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import (
@@ -17,6 +17,13 @@ from crypto_signal.ledger.serialization import (
     canonical_sha256,
     sha256_text,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2CanonicalLedger,
+    build_consolidated_epoch2_snapshot,
+    build_epoch2_vault_accounting_snapshot,
+)
+from crypto_signal.paper.epochs import EPOCH_2_SPEC, PaperVaultId
+from crypto_signal.paper.models import PaperPosition, PaperSymbol
 from crypto_signal.product.final_product_read_model import (
     FinalProductReadError,
     FinalProductReadModel,
@@ -39,13 +46,6 @@ from crypto_signal.product.intelligence_stream_system_view import (
     STREAM_SYSTEM_VIEW_SCHEMA_VERSION,
     IntelligenceStreamSystemViewRuntime,
 )
-from crypto_signal.paper.epoch2_accounting import (
-    Epoch2CanonicalLedger,
-    build_consolidated_epoch2_snapshot,
-    build_epoch2_vault_accounting_snapshot,
-)
-from crypto_signal.paper.epochs import EPOCH_2_SPEC, PaperVaultId
-from crypto_signal.paper.models import PaperPosition, PaperSymbol
 
 
 def _sha(label: str) -> str:
@@ -1090,15 +1090,15 @@ def _seed_measured_epoch2(tmp_path: Path) -> Path:
         activation,
         vault_id=PaperVaultId.CORE,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("500"),
+        cash_usdt=Decimal(500),
         positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal("1.25")),),
-        marked_exposure_usdt=Decimal("110"),
-        realized_pnl_usdt=Decimal("5"),
-        unrealized_pnl_usdt=Decimal("5"),
-        fee_usdt=Decimal("1"),
+        marked_exposure_usdt=Decimal(110),
+        realized_pnl_usdt=Decimal(5),
+        unrealized_pnl_usdt=Decimal(5),
+        fee_usdt=Decimal(1),
         spread_usdt=Decimal("0.5"),
         slippage_usdt=Decimal("0.5"),
-        turnover_notional_usdt=Decimal("200"),
+        turnover_notional_usdt=Decimal(200),
         closed_trade_count=1,
         win_count=1,
         loss_count=0,
@@ -1111,15 +1111,15 @@ def _seed_measured_epoch2(tmp_path: Path) -> Path:
         activation,
         vault_id=PaperVaultId.TACTICAL,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("250"),
+        cash_usdt=Decimal(250),
         positions=(PaperPosition(PaperSymbol.ETHUSDT, Decimal("0.5")),),
-        marked_exposure_usdt=Decimal("45"),
-        realized_pnl_usdt=Decimal("-3"),
-        unrealized_pnl_usdt=Decimal("-2"),
+        marked_exposure_usdt=Decimal(45),
+        realized_pnl_usdt=Decimal(-3),
+        unrealized_pnl_usdt=Decimal(-2),
         fee_usdt=Decimal("0.4"),
         spread_usdt=Decimal("0.3"),
         slippage_usdt=Decimal("0.3"),
-        turnover_notional_usdt=Decimal("100"),
+        turnover_notional_usdt=Decimal(100),
         closed_trade_count=1,
         win_count=0,
         loss_count=1,
@@ -1132,15 +1132,15 @@ def _seed_measured_epoch2(tmp_path: Path) -> Path:
         activation,
         vault_id=PaperVaultId.OPPORTUNITY_RESERVE,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("100"),
+        cash_usdt=Decimal(100),
         positions=(),
-        marked_exposure_usdt=Decimal("0"),
-        realized_pnl_usdt=Decimal("0"),
-        unrealized_pnl_usdt=Decimal("0"),
-        fee_usdt=Decimal("0"),
-        spread_usdt=Decimal("0"),
-        slippage_usdt=Decimal("0"),
-        turnover_notional_usdt=Decimal("0"),
+        marked_exposure_usdt=Decimal(0),
+        realized_pnl_usdt=Decimal(0),
+        unrealized_pnl_usdt=Decimal(0),
+        fee_usdt=Decimal(0),
+        spread_usdt=Decimal(0),
+        slippage_usdt=Decimal(0),
+        turnover_notional_usdt=Decimal(0),
         closed_trade_count=0,
         win_count=0,
         loss_count=0,
