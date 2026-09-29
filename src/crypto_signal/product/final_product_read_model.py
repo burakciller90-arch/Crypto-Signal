@@ -285,7 +285,7 @@ class WorkspaceSummaryView:
     uncertainty_label: str
     probability_label: str
     evidence_label: str
-    decision_proof_label: str
+    decision_evidence_label: str
     capital_consequence_label: str | None
     resolution_label: str | None
     audit: WorkspaceAudit | None = None
@@ -573,6 +573,153 @@ class FinalProductReadModel:
             raise FinalProductReadError(
                 "five-family source cannot be projected safely"
             ) from exc
+
+    def workspace_summary(
+        self,
+        *,
+        narrative_identity: str,
+        observed_at_ms: int,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> WorkspaceSummaryView:
+        _sha_text(narrative_identity, "workspace narrative identity")
+        if observed_at_ms < 0:
+            raise ValueError("workspace observation time must be non-negative")
+        if stale_after_ms <= 0:
+            raise ValueError("workspace stale_after_ms must be positive")
+        if not self.stream_ledger_path.is_file():
+            return _workspace_unavailable(
+                availability_label="Veri eksik",
+                message_kind_label="Çalışma alanı",
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            detail = reader.read_message_detail(narrative_identity)
+        except StreamReadModelError as exc:
+            raise FinalProductReadError(
+                "workspace Stream source cannot be read safely"
+            ) from exc
+        if detail is None:
+            return _workspace_unavailable(
+                availability_label="Mesaj bulunamadı",
+                message_kind_label="Çalışma alanı",
+            )
+
+        capital_kind = _capital_detail_kind(detail)
+        if capital_kind is not None:
+            return _workspace_capital_deferred(
+                detail,
+                capital_kind=capital_kind,
+                observed_at_ms=observed_at_ms,
+                stale_after_ms=stale_after_ms,
+                include_audit=include_audit,
+            )
+
+        if "system_view" in detail:
+            try:
+                return _workspace_system_view(
+                    detail,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                if isinstance(exc, FinalProductReadError):
+                    raise
+                raise FinalProductReadError(
+                    "system-view workspace source is invalid"
+                ) from exc
+
+        try:
+            fact = _required_mapping(detail, "fact_bundle")
+            if isinstance(fact.get("projector_id"), str):
+                evidence = self._workspace_exact_evidence(
+                    narrative_identity=narrative_identity,
+                )
+                return _workspace_family(
+                    detail,
+                    evidence=evidence,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+
+            evidence = self._workspace_exact_evidence(
+                narrative_identity=narrative_identity,
+            )
+            proof, proof_label = self._workspace_decision_proof(fact)
+            return _workspace_decision(
+                detail,
+                evidence=evidence,
+                decision_proof=proof,
+                decision_evidence_label=proof_label,
+                observed_at_ms=observed_at_ms,
+                stale_after_ms=stale_after_ms,
+                include_audit=include_audit,
+            )
+        except (
+            DecisionLedgerConflictError,
+            StreamExactEvidenceError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "workspace source cannot be projected safely"
+            ) from exc
+
+    def _workspace_exact_evidence(
+        self,
+        *,
+        narrative_identity: str,
+    ) -> dict[str, Any] | None:
+        signal_path = (
+            self.signal_ledger_path
+            if self.signal_ledger_path is not None
+            and self.signal_ledger_path.is_file()
+            else None
+        )
+        decision_path = (
+            self.decision_evidence_path
+            if self.decision_evidence_path is not None
+            and self.decision_evidence_path.is_file()
+            else None
+        )
+        return IntelligenceStreamExactEvidenceReadModel(
+            stream_ledger_path=self.stream_ledger_path,
+            signal_ledger_path=signal_path,
+            decision_evidence_path=decision_path,
+        ).read_for_narrative(narrative_identity)
+
+    def _workspace_decision_proof(
+        self,
+        fact: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str]:
+        forecast_identity = _required_sha(fact, "forecast_identity")
+        expected_proof_identity = _required_sha(fact, "proof_identity")
+        if (
+            self.decision_evidence_path is None
+            or not self.decision_evidence_path.is_file()
+        ):
+            return None, "Ek karar kanıtı kaynağı bağlı değil"
+
+        proof = ImmutableDecisionEvidenceLedger(
+            self.decision_evidence_path
+        ).read_proof_for_forecast(forecast_identity)
+        if proof is None:
+            return None, "Ek karar kanıtı bulunamadı"
+        if proof.get("forecast_identity") != forecast_identity:
+            raise FinalProductReadError(
+                "Decision Evidence forecast lineage mismatch"
+            )
+        if proof.get("proof_identity") != expected_proof_identity:
+            raise FinalProductReadError(
+                "Decision Evidence proof lineage mismatch"
+            )
+        return proof, "Ek karar kanıtı doğrulandı"
 
 
 def _attention_candidate(
