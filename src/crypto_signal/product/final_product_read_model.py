@@ -144,6 +144,16 @@ _EVENT_COVERAGE_LABELS = {
     "UNAVAILABLE": "Takvim kapsamı kullanılamıyor",
     "SOURCE_SCOPED_ONLY": "Takvim kapsamı kaynak bazında",
 }
+_PORTFOLIO_VAULT_ORDER = {
+    PaperVaultId.CORE: 0,
+    PaperVaultId.TACTICAL: 1,
+    PaperVaultId.OPPORTUNITY_RESERVE: 2,
+}
+_PORTFOLIO_VAULT_LABELS = {
+    PaperVaultId.CORE: "Core",
+    PaperVaultId.TACTICAL: "Taktik",
+    PaperVaultId.OPPORTUNITY_RESERVE: "Fırsat Rezervi",
+}
 
 
 class FinalProductReadError(ValueError):
@@ -915,9 +925,15 @@ class FinalProductReadModel:
             return _portfolio_unavailable("Epoch 2 henüz etkin değil")
 
         consolidated = state.consolidated_snapshot
+        ordered_vaults = tuple(
+            sorted(
+                state.vault_snapshots,
+                key=lambda item: _PORTFOLIO_VAULT_ORDER[item.vault_id],
+            )
+        )
         vaults = tuple(
             _portfolio_vault_view(item, include_audit=include_audit)
-            for item in state.vault_snapshots
+            for item in ordered_vaults
         )
         total_pnl = (
             consolidated.realized_pnl_usdt
@@ -930,7 +946,7 @@ class FinalProductReadModel:
                 consolidated_snapshot_identity=consolidated.snapshot_identity,
                 vault_snapshot_identities=tuple(
                     item.snapshot_identity
-                    for item in state.vault_snapshots
+                    for item in ordered_vaults
                 ),
             )
         return PortfolioSummaryView(
@@ -963,7 +979,7 @@ class FinalProductReadModel:
             ),
             open_position_count=sum(
                 len(item.positions)
-                for item in state.vault_snapshots
+                for item in ordered_vaults
             ),
             closed_trade_count=consolidated.closed_trade_count,
             win_count=consolidated.win_count,
@@ -1064,11 +1080,6 @@ def _portfolio_vault_view(
     *,
     include_audit: bool,
 ) -> PortfolioVaultView:
-    vault_labels = {
-        PaperVaultId.CORE: "Core",
-        PaperVaultId.TACTICAL: "Taktik",
-        PaperVaultId.OPPORTUNITY_RESERVE: "Fırsat Rezervi",
-    }
     positions = tuple(
         PortfolioPositionView(
             symbol=item.symbol.value,
@@ -1084,7 +1095,7 @@ def _portfolio_vault_view(
             source_record_identities=snapshot.source_record_identities,
         )
     return PortfolioVaultView(
-        vault_label=vault_labels[snapshot.vault_id],
+        vault_label=_PORTFOLIO_VAULT_LABELS[snapshot.vault_id],
         starting_budget_usdt=_money_text(snapshot.starting_cash_usdt),
         cash_usdt=_money_text(snapshot.cash_usdt),
         used_capital_usdt=_money_text(snapshot.marked_exposure_usdt),
