@@ -130,13 +130,16 @@ class CanonicalCapitalOutcomeEvidence:
             raise ValueError("S11 EXIT outcome must flatten the symbol")
         if self.action is PaperAction.REDUCE and self.position_quantity_after <= 0:
             raise ValueError("S11 REDUCE outcome must leave a positive remainder")
-        if self.cost_basis_before_usdt != (
-            self.average_cost_per_unit_usdt * self.position_quantity_before
+        if self.average_cost_per_unit_usdt != (
+            self.cost_basis_before_usdt / self.position_quantity_before
         ):
-            raise ValueError("S11 outcome basis-before does not reconcile")
-        if self.removed_cost_basis_usdt != (
-            self.average_cost_per_unit_usdt * self.quantity
-        ):
+            raise ValueError("S11 outcome average cost does not reconcile")
+        expected_removed = (
+            self.cost_basis_before_usdt
+            if self.action is PaperAction.EXIT
+            else self.average_cost_per_unit_usdt * self.quantity
+        )
+        if self.removed_cost_basis_usdt != expected_removed:
             raise ValueError("S11 removed cost basis does not reconcile")
         if self.remaining_cost_basis_usdt != (
             self.cost_basis_before_usdt - self.removed_cost_basis_usdt
@@ -205,7 +208,7 @@ def reconstruct_open_cost_basis(
         if quantity <= 0 or fill_quantity > quantity:
             raise ValueError("S11 historical sell exceeds reconstructed position")
         average = basis / quantity
-        removed = average * fill_quantity
+        removed = basis if action is PaperAction.EXIT else average * fill_quantity
         expected_realized = notional - fee - removed
         stored_realized = _raw_decimal(fill_raw, "realized_pnl_delta_usdt")
         if stored_realized != expected_realized:
@@ -252,7 +255,11 @@ def build_capital_outcome_evidence(
     if action is PaperAction.REDUCE and fill.quantity >= basis.open_quantity:
         raise ValueError("S11 REDUCE must leave an open quantity")
 
-    removed = basis.average_cost_per_unit_usdt * fill.quantity
+    removed = (
+        basis.remaining_cost_basis_usdt
+        if action is PaperAction.EXIT
+        else basis.average_cost_per_unit_usdt * fill.quantity
+    )
     remaining_quantity = basis.open_quantity - fill.quantity
     remaining_basis = basis.remaining_cost_basis_usdt - removed
     if remaining_quantity == 0:
