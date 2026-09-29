@@ -1492,61 +1492,62 @@ class FinalProductReadModel:
             else "Karar kanıtı araması kullanılamıyor"
         )
 
-        try:
-            screener = self.screener(
-                symbols=symbols,
-                observed_at_ms=observed_at_ms,
-                include_audit=True,
-            )
-            for row in screener.items:
-                base_asset = (
-                    row.symbol[:-4]
-                    if row.symbol.endswith("USDT")
-                    else row.symbol
+        if symbols:
+            try:
+                screener = self.screener(
+                    symbols=symbols,
+                    observed_at_ms=observed_at_ms,
+                    include_audit=True,
                 )
-                exact_asset = lowered in {
-                    row.symbol.casefold(),
-                    base_asset.casefold(),
-                }
-                partial_asset = (
-                    lowered in row.symbol.casefold()
-                    or lowered in base_asset.casefold()
-                )
-                if not partial_asset:
-                    continue
-                source_identity = (
-                    row.audit.narrative_identity
-                    if row.audit is not None
-                    else row.symbol
-                )
-                item = GlobalSearchItem(
-                    kind_label="Varlık",
-                    title=f"{row.symbol} · {row.stance_label}",
-                    summary=row.summary,
-                    symbol=row.symbol,
-                    timestamp_ms=row.updated_at_ms,
-                    source_label="Crypto Signal Screener",
-                    audit=(
-                        GlobalSearchAudit(
-                            source_identity=source_identity,
-                            stream_narrative_identity=(
-                                row.audit.narrative_identity
-                                if row.audit is not None
-                                else None
-                            ),
-                        )
-                        if include_audit
-                        else None
-                    ),
-                )
-                _append_search_candidate(
-                    candidates,
-                    priority=1 if exact_asset else 2,
-                    item=item,
-                    source_key=("asset", source_identity),
-                )
-        except FinalProductReadError:
-            stream_coverage = "Stream araması doğrulanamadı"
+                for row in screener.items:
+                    base_asset = (
+                        row.symbol[:-4]
+                        if row.symbol.endswith("USDT")
+                        else row.symbol
+                    )
+                    exact_asset = lowered in {
+                        row.symbol.casefold(),
+                        base_asset.casefold(),
+                    }
+                    partial_asset = (
+                        lowered in row.symbol.casefold()
+                        or lowered in base_asset.casefold()
+                    )
+                    if not partial_asset:
+                        continue
+                    source_identity = (
+                        row.audit.narrative_identity
+                        if row.audit is not None
+                        else row.symbol
+                    )
+                    item = GlobalSearchItem(
+                        kind_label="Varlık",
+                        title=f"{row.symbol} · {row.stance_label}",
+                        summary=row.summary,
+                        symbol=row.symbol,
+                        timestamp_ms=row.updated_at_ms,
+                        source_label="Crypto Signal Screener",
+                        audit=(
+                            GlobalSearchAudit(
+                                source_identity=source_identity,
+                                stream_narrative_identity=(
+                                    row.audit.narrative_identity
+                                    if row.audit is not None
+                                    else None
+                                ),
+                            )
+                            if include_audit
+                            else None
+                        ),
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=1 if exact_asset else 2,
+                        item=item,
+                        source_key=("asset", source_identity),
+                    )
+            except FinalProductReadError:
+                stream_coverage = "Stream araması doğrulanamadı"
 
         if self.stream_ledger_path.is_file():
             reader = IntelligenceStreamReadModel(self.stream_ledger_path)

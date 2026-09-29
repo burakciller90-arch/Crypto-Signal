@@ -2111,7 +2111,7 @@ def test_screener_reuses_market_pulse_current_truth_and_is_read_only(
     assert len(view.items) == 1
     row = view.items[0]
     assert row.symbol == "BTCUSDT"
-    assert row.timeframe == "system"
+    assert row.timeframe == "15m"
     assert row.stance_label
     assert row.support_score_0_100
     assert row.evidence_coverage_0_100
