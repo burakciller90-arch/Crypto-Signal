@@ -6535,3 +6535,21 @@ Post-FP4-B Workbench:
 
 Exact nextAction:
 Finish post-merge Workbench proof for main `906db410e692a5119b752998301cb58a3eba8b6a`. Then rebase `fp4d/instrument-fee-schedule-v2` onto the latest docs-complete main, run exact-head acceptance, and continue to the final FP4 cost/rule bridge.
+
+
+### FP4-B POST-MERGE WORKBENCH FINAL PROOF — 2026-09-29
+
+This final proof supersedes the earlier pending Workbench note in this checkpoint.
+
+- run/job: `36624554107` / `109598075039` — PASS
+- canonical Workbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- `REPO_HEAD=906db410e692a5119b752998301cb58a3eba8b6a`
+- `REPO_BRANCH=main`
+- `REPO_DIRTY_COUNT=0`
+- `BOOTSTRAP_SHA=906db410e692a5119b752998301cb58a3eba8b6a`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+- Product/Development deploy: NO; historical backfill: NO
+
+Exact nextAction:
+Merge this docs-only handoff after its own mechanical checks, then rebase `fp4d/instrument-fee-schedule-v2` onto the resulting main before running FP4-D acceptance.
