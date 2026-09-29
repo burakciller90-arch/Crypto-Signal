@@ -4288,3 +4288,53 @@ Current blocker:
 Exact nextAction:
 Implement Screener and federated Global Search customer/audit contracts in final_product_read_model.py plus focused tests, without touching routes/frontend/runtime or source persistence.
 
+
+
+## FP1-F IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_START
+verifiedMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+implementationHead: 91bd1b664e1480b8da1a0f438c0e1b28a67b5b9c
+branchAheadMain: 9
+branchBehindMain: 0
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- ScreenerRow / ScreenerView over accepted Market Pulse current truth only;
+- deterministic symbol/timeframe order, no invented ranking/confidence score;
+- GlobalSearchItem / GlobalSearchView as read-only federation;
+- configured-asset search via Screener;
+- Stream text/symbol/exact narrative search via existing Stream query/read APIs;
+- bounded Event Rail text/asset/provider search;
+- Stream capital execution classification as Trade when exact R22 bundle lineage exists;
+- exact R22 bundle lookup through accepted Trade Passport;
+- exact frozen-signal lookup through DashboardReader;
+- exact Decision Evidence signal/forecast lookup through accepted ledger APIs;
+- raw proof-identity direct lookup remains explicitly unavailable;
+- deterministic priority/newest/stable ordering and source-key dedupe;
+- missing/corrupt source coverage remains explicit;
+- no routes/frontend/runtime/source persistence changes.
+
+Focused tests added:
+- Screener reuses Market Pulse and remains read-only;
+- Screener customer payload hides identity/internal state vocabulary;
+- missing federated sources are explicit/non-creating;
+- exact configured asset precedes Stream results;
+- bounded verified Event Rail search;
+- exact R22 bundle -> Trade Passport result;
+- exact signal/forecast -> Decision Evidence result;
+- raw proof identity explicit unavailable;
+- customer text search hides exact identities;
+- source DB bytes unchanged.
+
+Acceptance blocker:
+- UID504 exact-head pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire existing MI1 UID504 acceptance to this branch including final_product_read_model.py and test_final_product_read_model.py; inspect exact mechanical logs, fix only evidenced failures, restore workflow to current-main blob after PASS.
+
