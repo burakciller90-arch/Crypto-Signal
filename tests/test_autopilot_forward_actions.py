@@ -389,55 +389,37 @@ def test_fp3_c_wait_and_stop_update_never_mutate_r21_r22(
     assert epoch2_path.read_bytes() == before_epoch
 
 
-def test_fp3_c_open_requires_zero_position_and_scale_in_requires_position(
+def test_fp3_c_scale_in_is_explicitly_unavailable_in_c1(
     tmp_path: Path,
 ) -> None:
-    (
-        epoch2_path,
-        stream_path,
-        autopilot_path,
-        issuance,
-        front,
-        _,
-        sizing,
-        assessment,
-        selection,
-        eligibility,
-    ) = _sized_chain(tmp_path)
-    requested_at_ms = selection.selected_at_ms + 10
-    scale = build_fp3_action_intent(
+    epoch2_path, stream_path, autopilot_path, issuance, front = _front(tmp_path)
+    bridge = _action_bridge(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+        autopilot_path=autopilot_path,
+    )
+    before = epoch2_path.read_bytes()
+    intent = build_fp3_action_intent(
         front_receipt_identity=front.receipt_identity,
-        sizing_receipt_identity=sizing.receipt_identity,
+        sizing_receipt_identity=None,
         forecast_identity=issuance.forecast.forecast_identity,
         proof_identity=issuance.proof.proof_identity,
         vault_id=PaperVaultId.CORE,
         symbol=PaperSymbol.BTCUSDT,
         reason=FP3ActionReason.SCALE_IN,
-        action_evidence_identity=sizing.sizing_event_identity,
-        requested_at_ms=requested_at_ms,
+        action_evidence_identity=_sha("fp3c-scale-in-unavailable"),
+        requested_at_ms=front.processed_at_ms + 1,
     )
 
-    with pytest.raises(ValueError, match="SCALE_IN requires positive current position"):
-        _action_bridge(
-            epoch2_path=epoch2_path,
-            stream_path=stream_path,
-            autopilot_path=autopilot_path,
-        ).process_buy(
-            scale,
-            issuance,
-            sizing_assessment=assessment,
-            sizing_selection=selection,
-            eligibility_proof=eligibility,
-            reference_price=Decimal(101),
-            reference_price_evidence_identity=_sha("fp3c-scale-reference"),
-            mark_prices={PaperSymbol.BTCUSDT: Decimal(101)},
-            mark_evidence_identity=_sha("fp3c-scale-mark"),
-            execution_snapshot=_execution_snapshot(),
-            filled_at_ms=requested_at_ms + 10,
-            mutated_at_ms=requested_at_ms + 11,
-            snapshot_at_ms=requested_at_ms + 20,
-            processed_at_ms=requested_at_ms + 30,
-        )
+    result = bridge.process_no_trade(
+        intent,
+        processed_at_ms=intent.requested_at_ms + 1,
+    )
+
+    assert result.disposition is FP3ActionProcessDisposition.UNAVAILABLE
+    assert result.receipt.stage_status is FP3ActionStageStatus.UNAVAILABLE
+    assert result.receipt.canonical_action is None
+    assert epoch2_path.read_bytes() == before
 
 
 def test_fp3_c_partial_take_profit_then_close_uses_canonical_sell_lineage(
