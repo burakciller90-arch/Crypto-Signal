@@ -116,6 +116,78 @@ def _quick_check(path: Path) -> dict[str, object]:
     }
 
 
+def _bounded_market_tape_probe(path: Path) -> dict[str, object]:
+    started_ns = time.monotonic_ns()
+    required_tables = {
+        "market_tape_meta",
+        "market_tape_orderbooks",
+        "market_tape_trades",
+        "market_tape_derivatives",
+        "market_tape_liquidations",
+        "market_tape_liquidation_coverage",
+    }
+    with _ro_connect(path) as db:
+        schema_row = db.execute(
+            """
+            SELECT value
+            FROM market_tape_meta
+            WHERE key='schema_version'
+            """
+        ).fetchone()
+        if schema_row is None:
+            raise ObservationFailure("Market Tape schema version missing")
+        table_names = {
+            str(row[0])
+            for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        missing = sorted(required_tables - table_names)
+        if missing:
+            raise ObservationFailure(
+                f"Market Tape required tables missing: {missing!r}"
+            )
+        latest_orderbook = db.execute(
+            """
+            SELECT snapshot_identity, event_at_ms, ingested_at_ms
+            FROM market_tape_orderbooks
+            ORDER BY rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        latest_trade = db.execute(
+            """
+            SELECT trade_identity, event_at_ms, ingested_at_ms
+            FROM market_tape_trades
+            ORDER BY rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        if latest_orderbook is None or latest_trade is None:
+            raise ObservationFailure(
+                "Market Tape bounded read requires orderbook and trade rows"
+            )
+        page_count = int(db.execute("PRAGMA page_count").fetchone()[0])
+        page_size = int(db.execute("PRAGMA page_size").fetchone()[0])
+    elapsed_ms = (time.monotonic_ns() - started_ns) // 1_000_000
+    return {
+        "path": str(path),
+        "integrity_mode": "bounded_read_lock_schema",
+        "schema_version": str(schema_row[0]),
+        "required_tables_present": True,
+        "latest_orderbook_identity": str(latest_orderbook["snapshot_identity"]),
+        "latest_orderbook_event_at_ms": int(latest_orderbook["event_at_ms"]),
+        "latest_orderbook_ingested_at_ms": int(latest_orderbook["ingested_at_ms"]),
+        "latest_trade_identity": str(latest_trade["trade_identity"]),
+        "latest_trade_event_at_ms": int(latest_trade["event_at_ms"]),
+        "latest_trade_ingested_at_ms": int(latest_trade["ingested_at_ms"]),
+        "page_count": page_count,
+        "page_size": page_size,
+        "elapsed_ms": elapsed_ms,
+        "read_only": True,
+    }
+
+
 def _inspect_product(root: Path, expected_sha: str) -> dict[str, object]:
     dev = root / "Development"
     product = root / "Product"
@@ -184,7 +256,6 @@ def _inspect_product(root: Path, expected_sha: str) -> dict[str, object]:
 def _inspect_collector(
     root: Path,
     *,
-    now_ms: int,
     max_ingestion_age_ms: int,
 ) -> dict[str, object]:
     runtime = root / "Development/runtime/market_tape"
@@ -195,7 +266,7 @@ def _inspect_collector(
 
     runtime_check = _quick_check(runtime_db)
     gap_check = _quick_check(gaps_db)
-    market_check = _quick_check(market_db)
+    market_check = _bounded_market_tape_probe(market_db)
 
     with _ro_connect(runtime_db) as db:
         instance = db.execute(
@@ -561,13 +632,15 @@ def build_observation(
     product = _inspect_product(root, expected_runtime_sha)
     market_tape = _inspect_collector(
         root,
-        now_ms=now_ms,
         max_ingestion_age_ms=max_ingestion_age_ms,
     )
     stream = _inspect_stream(root)
     frozen = _inspect_frozen_proofs(root)
     supporting = _inspect_supporting_sqlite(root)
     explicit_degradation_count = int(market_tape["explicit_degradation_count"])
+    completed_at_ms = time.time_ns() // 1_000_000
+    if completed_at_ms < now_ms:
+        raise ObservationFailure("observation completion timestamp moved backwards")
     status = (
         "pass_with_explicit_degradation"
         if explicit_degradation_count > 0
@@ -578,8 +651,10 @@ def build_observation(
         "epoch_id": epoch_id,
         "expected_runtime_sha": expected_runtime_sha,
         "observer_contract_sha256": observer_contract_sha256,
-        "observed_at_ms": now_ms,
-        "observed_at_utc": _utc_iso(now_ms),
+        "started_at_ms": now_ms,
+        "started_at_utc": _utc_iso(now_ms),
+        "observed_at_ms": completed_at_ms,
+        "observed_at_utc": _utc_iso(completed_at_ms),
         "status": status,
         "product": product,
         "market_tape": market_tape,
