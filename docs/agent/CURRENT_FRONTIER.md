@@ -6181,3 +6181,50 @@ Blocker remains unchanged:
 
 Exact nextAction remains:
 Do not manufacture forward evidence. On a genuine post-activation issuance, rerun FP3-D UID504 and require all liveness/replay/non-mutation markers. Continue preserving every scheduled RDP11 observer result, including curl/reset gaps, until the 72h final evidence gate becomes eligible.
+
+
+## FP4-A DEPTH-AWARE EXECUTION V2 START — 2026-09-29
+
+status: FP4A_IMPLEMENTATION_START
+taskStartMain: 07c813cb7128e4748ca48aaf6a7e1ca584d1c7b2
+activeBranch: fp4a/depth-aware-execution-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+classification: EXTEND existing immutable paper execution v1 with isolated versioned depth-aware adapter
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate audit:
+- existing `paper/execution.py` is deterministic v1 full-fill only;
+- existing v1 already freezes fee/spread/slippage, venue-rule identity, quantity/min-notional constraints and adverse execution;
+- `partial_fills_supported` is deliberately required to be false in v1;
+- no current main implementation or open PR was found for FP4 depth-aware VWAP/partial/not-filled/not-proven execution;
+- FP4 is explicitly listed as safe isolated parallel work while FP0/RDP11 remains active.
+
+FP4-A bounded scope:
+- add a separate versioned frozen order-book execution contract; do not rewrite v1;
+- consume only caller-supplied contemporaneous frozen depth with explicit observed/as-of identity;
+- deterministic market-style depth consumption with exact Decimal VWAP;
+- explicit FULL / PARTIAL / NOT_FILLED / FILL_NOT_PROVEN outcomes;
+- missing/insufficient/uncertain depth fails pessimistically; no optimistic synthetic liquidity;
+- bind all assumptions and consumed levels into deterministic identity/replay;
+- no canonical R21/R22 mutation in this slice;
+- no runtime deployment or active-soak change.
+
+PASS gate for this slice:
+- exact replay gives identical outcome identity;
+- full and partial fills reconcile exactly to consumed depth;
+- no-fill/not-proven paths create no invented fill;
+- future depth relative to execution cutoff is rejected;
+- v1 execution tests remain unchanged/passing;
+- full repository regression + Product/Development non-mutation on UID504.
+
+Current blocker:
+- implementation and focused acceptance do not yet exist.
+
+Exact nextAction:
+Implement the isolated FP4-A frozen depth execution adapter and focused tests, then run exact-head UID504 acceptance without touching the frozen RDP11 runtime.
