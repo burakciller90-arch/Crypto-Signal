@@ -109,6 +109,7 @@ def _size_existing_issuance(
     issuance,
 ):
     IntelligenceStreamForwardRuntime(stream_path).project_issuance(issuance)
+    event_context = _event_context(as_of_ms=issuance.forecast.source_as_of_ms)
     assessed_at_ms = issuance.forecast.issued_at_ms + 1
     front_runtime = CanonicalPaperAutopilotForwardRuntime(
         epoch2_path=epoch2_path,
@@ -117,7 +118,7 @@ def _size_existing_issuance(
     )
     front_result = front_runtime.process_issuance(
         issuance,
-        event_context=_event_context(),
+        event_context=event_context,
         base_asset="BTC",
         assessed_at_ms=assessed_at_ms,
         processed_at_ms=assessed_at_ms + 5,
@@ -140,7 +141,7 @@ def _size_existing_issuance(
     )
     sized = sizing_bridge.process(
         issuance,
-        event_context=_event_context(),
+        event_context=event_context,
         base_asset="BTC",
         vault_id=PaperVaultId.CORE,
         policy=_policy(),
@@ -154,11 +155,11 @@ def _size_existing_issuance(
 
     auxiliary = build_capital_forward_auxiliary_evidence(
         issuance,
-        event_context=_event_context(),
+        event_context=event_context,
     )
     capital = assess_unified_decision_capital(
         issuance,
-        event_context=_event_context(),
+        event_context=event_context,
         base_asset="BTC",
         assessed_at_ms=front.assessed_at_ms,
         tactical_microstructure=auxiliary.tactical,
