@@ -328,3 +328,16 @@ Do not rebuild FP1-A, FP1-B or accepted FP1-C source/query semantics.
 
 Exact next action:
 Audit and freeze the Trade Passport field/source contract over canonical R22/R21/RDP10 truth before implementation.
+
+
+## 10.2 Progress update — FP1-F
+
+- FP1-D merged via PR #1676.
+- FP1-E Trade Passport merged via PR #1677 at main `ef408ee105e1f226b199b7b1a185a1fdb990159f`.
+- Current slice: **FP1-F — Screener + federated global search contract**.
+- Persistent search index remains unauthorized.
+- Do not rebuild Stream search/history/SSE.
+- Do not use legacy radar semantics as final current-truth screener rows without source audit.
+
+Exact next action:
+Audit and freeze the screener/federated-query source contract before implementation.
