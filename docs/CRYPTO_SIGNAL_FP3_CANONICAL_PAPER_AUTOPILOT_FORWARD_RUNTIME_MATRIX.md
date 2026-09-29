@@ -288,3 +288,41 @@ FP3-B PASS:
 
 Exact nextAction:
 Implement the isolated FP3-B sizing bridge + sizing-stage receipt and focused tests. Do not implement FP3-C action/trade commits in this slice.
+
+
+## 11. FP3-B UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head:
+- head SHA: `d73cde9dd8d3a42dadac4fe85704c2a112d98e42`;
+- run: `36595609945`;
+- job: `109499792310`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 workflow wiring restored in `2faa27fe79685ba42b4ab0905d68d675e74fba0c`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted FP3-B result:
+- only canonical ELIGIBLE vaults enter sizing;
+- exact R21 drawdown lineage is enforced;
+- fixed-fractional is the only promotable sizing method;
+- HOLD/BLOCK/risk-gated outcomes do not create a trade;
+- CanonicalSizingEvent + Stream sizing projection are idempotent;
+- sizing chronology cannot precede the latest canonical vault decision;
+- replay/recovery cannot duplicate sizing event or Stream sizing message;
+- no R21/R22 trade/fill/accounting mutation was introduced;
+- no Product/Development deploy or RDP11 soaked-runtime mutation occurred.
+
+Next mechanically allowed slice:
+**FP3-C — preregistered action bridge + canonical R21/R22 commit.**
