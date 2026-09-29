@@ -6141,3 +6141,17 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - FP3-D remains WAITING; global RDP11 remains ACTIVE / NOT PASS
 - REAL_CAPITAL=0; no deploy/backfill; frozen runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: docs-only F10 -> merge -> final Workbench -> FP5 start checkpoint
+
+
+## 2026-09-29 — FP5-A portfolio-risk envelope start
+
+- task-start main: `5d5852a422ae48d2a53e0e99303372289197e251`
+- branch: `fp5a/portfolio-risk-envelope-v2`
+- FP4 final durable closeout is merged and Workbench exact-main verified
+- duplicate audit: no FP5 branch/PR; existing FP3 sizing/risk and Smart Capital Slice1 must be reused, not duplicated
+- FP5-A scope: live portfolio metrics + explicit correlation clusters + hard gross/cluster/cash/drawdown/event/liquidity/conflict gates
+- Kelly stays disabled; fixed-fractional/risk-budgeted only; 100% cash valid
+- missing portfolio/cluster truth fails closed
+- no R21/R22 mutation, deploy/backfill or real capital
+- REAL_CAPITAL=0; Durdurulmaz/Quantum untouched
+- nextAction: implement isolated immutable envelope + tests, then exact-head UID504 acceptance
