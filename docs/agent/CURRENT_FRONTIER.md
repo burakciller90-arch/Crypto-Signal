@@ -3566,3 +3566,39 @@ Current blocker:
 
 Exact nextAction:
 Wait only for the already-running post-merge bootstrap checks to complete. If clean, record exact run/job/head/dirty/non-mutation markers, then perform the FP1-D duplicate/source audit and write a field-source matrix before any production code change.
+
+
+## FP1-D POST-MERGE BOOTSTRAP PASS CHECKPOINT — 2026-09-29
+
+status: FP1_D_AUDIT_UNLOCKED
+activeBranch: fp1d/portfolio-capital-read-model
+taskStartMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Post-merge Workbench bootstrap:
+- run/job: 36568787266 / 109407249663
+- conclusion: SUCCESS
+- GITHUB_SHA=e7fc9044f18b9a5c5006e498c4b68e6c15828758
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES
+- final REPO_HEAD=e7fc9044f18b9a5c5006e498c4b68e6c15828758
+- REPO_BRANCH=main
+- REPO_DIRTY_COUNT=0
+- SSD504_WORKBENCH_PASS=YES
+- REAL_CAPITAL=0.
+
+Post-merge Agent Memory bootstrap:
+- run/job: 36568787358 / 109407251933
+- conclusion: SUCCESS
+- CRYPTO_AGENT_BOOTSTRAP_COMPLETE=YES
+- RDP9_BOOTSTRAP_FOCUSED_TESTS=PASS
+- RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS
+- PRODUCTION_RUNTIME_MUTATED=NO
+- REAL_CAPITAL=0.
+
+FP1-D production-code audit is now unlocked.
+
+Exact nextAction:
+Inspect canonical Epoch2 accounting, R22 atomic tape/history, R24 performance/trust, Stream Capital read/query surfaces and legacy Mission Control boundaries. Record the exact Portfolio Summary + Capital Movements source matrix before writing any production code.
