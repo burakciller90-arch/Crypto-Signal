@@ -77,7 +77,7 @@ class FP3ActionProcessDisposition(StrEnum):
 
 _REASON_ACTION: dict[FP3ActionReason, PaperAction | None] = {
     FP3ActionReason.OPEN: PaperAction.BUY,
-    FP3ActionReason.SCALE_IN: PaperAction.BUY,
+    FP3ActionReason.SCALE_IN: None,
     FP3ActionReason.PARTIAL_TAKE_PROFIT: PaperAction.REDUCE,
     FP3ActionReason.TAKE_PROFIT: PaperAction.EXIT,
     FP3ActionReason.STOP: PaperAction.EXIT,
@@ -141,12 +141,16 @@ class FP3PreregisteredActionIntent:
         if self.exit_reason_codes != expected_exit_codes:
             raise ValueError("FP3-C exit reason codes differ from preregistered policy")
         _require_non_negative_int(self.requested_at_ms, "FP3-C requested time")
-        trade_reason = self.reason not in {FP3ActionReason.WAIT, FP3ActionReason.STOP_UPDATE}
+        trade_reason = self.reason not in {
+            FP3ActionReason.WAIT,
+            FP3ActionReason.STOP_UPDATE,
+            FP3ActionReason.SCALE_IN,
+        }
         if trade_reason and self.sizing_receipt_identity is None:
             raise ValueError("FP3-C trade intent requires accepted FP3-B receipt")
         if not trade_reason and self.sizing_receipt_identity is not None:
             raise ValueError("FP3-C no-trade intent cannot invent sizing receipt")
-        if self.reason in {FP3ActionReason.OPEN, FP3ActionReason.SCALE_IN}:
+        if self.reason is FP3ActionReason.OPEN:
             if self.quantity is not None:
                 raise ValueError("FP3-C BUY action quantity comes from canonical sizing")
         elif self.reason is FP3ActionReason.PARTIAL_TAKE_PROFIT:
@@ -162,6 +166,7 @@ class FP3PreregisteredActionIntent:
             FP3ActionReason.CLOSE,
             FP3ActionReason.WAIT,
             FP3ActionReason.STOP_UPDATE,
+            FP3ActionReason.SCALE_IN,
         }:
             if self.quantity is not None:
                 raise ValueError("FP3-C action requires omitted quantity")
@@ -469,8 +474,12 @@ class FP3PreregisteredActionBridge:
         *,
         processed_at_ms: int,
     ) -> FP3ActionProcessResult:
-        if intent.reason not in {FP3ActionReason.WAIT, FP3ActionReason.STOP_UPDATE}:
-            raise ValueError("FP3-C no-trade API accepts WAIT/STOP_UPDATE only")
+        if intent.reason not in {
+            FP3ActionReason.WAIT,
+            FP3ActionReason.STOP_UPDATE,
+            FP3ActionReason.SCALE_IN,
+        }:
+            raise ValueError("FP3-C no-trade API accepts WAIT/STOP_UPDATE/SCALE_IN only")
         front = self.autopilot_store.read_receipt_for_forecast(intent.forecast_identity)
         if front is None:
             raise ValueError("FP3-C requires accepted FP3-A receipt")
@@ -521,7 +530,7 @@ class FP3PreregisteredActionBridge:
         processed_at_ms: int,
     ) -> FP3ActionProcessResult:
         if intent.canonical_action is not PaperAction.BUY:
-            raise ValueError("FP3-C BUY API requires OPEN/SCALE_IN intent")
+            raise ValueError("FP3-C BUY API requires OPEN intent in C1")
         front, sizing = self._validate_trade_inputs(
             intent,
             issuance=issuance,
@@ -568,10 +577,10 @@ class FP3PreregisteredActionBridge:
             vault_id=intent.vault_id,
             symbol=intent.symbol,
         )
-        if intent.reason is FP3ActionReason.OPEN and current_quantity != Decimal(0):
+        if intent.reason is not FP3ActionReason.OPEN:
+            raise ValueError("FP3-C C1 supports OPEN as the only BUY reason")
+        if current_quantity != Decimal(0):
             raise ValueError("FP3-C OPEN requires zero current position")
-        if intent.reason is FP3ActionReason.SCALE_IN and current_quantity <= Decimal(0):
-            raise ValueError("FP3-C SCALE_IN requires positive current position")
         if sizing.front_receipt_identity != front.receipt_identity:
             raise ValueError("FP3-C sizing/front receipt mismatch")
 
@@ -592,6 +601,8 @@ class FP3PreregisteredActionBridge:
             filled_at_ms=filled_at_ms,
             mutated_at_ms=mutated_at_ms,
             snapshot_at_ms=snapshot_at_ms,
+            additional_source_evidence_identities=(intent.action_evidence_identity,),
+            additional_reason_codes=("fp3_action_open",),
         )
         return self._finalize_buy(
             intent=intent,
@@ -669,6 +680,7 @@ class FP3PreregisteredActionBridge:
             filled_at_ms=filled_at_ms,
             mutated_at_ms=mutated_at_ms,
             snapshot_at_ms=snapshot_at_ms,
+            additional_source_evidence_identities=(intent.action_evidence_identity,),
         )
         return self._finalize_sell(
             intent=intent,
@@ -849,32 +861,13 @@ def _find_existing_exact_trade_bundle(
         if not set(exit_reason_codes).issubset(reason_codes):
             continue
         fill_identity = _required_text(raw_fill, "fill_identity")
-        matches.append(_resolve_bundle_identity_for_fill(epoch2_path, fill_identity))
+        bundle_identity = tape.read_bundle_identity_for_fill(fill_identity)
+        if bundle_identity is None:
+            raise ValueError("FP3-C canonical fill lost R22 bundle")
+        matches.append(bundle_identity)
     if len(matches) > 1:
         raise ValueError("FP3-C exact replay matched multiple canonical bundles")
     return None if not matches else matches[0]
-
-
-def _resolve_bundle_identity_for_fill(epoch2_path: Path, fill_identity: str) -> str:
-    _require_sha256(fill_identity, "FP3-C replay fill")
-    if not epoch2_path.is_file():
-        raise ValueError("FP3-C replay requires canonical Epoch2 ledger")
-    with closing(_connect_read_only(epoch2_path)) as connection:
-        row = connection.execute(
-            """
-            SELECT bundle_identity
-            FROM r22_epoch2_bundles
-            WHERE fill_identity = ?
-            """,
-            (fill_identity,),
-        ).fetchone()
-    if row is None:
-        raise ValueError("FP3-C canonical fill lost R22 bundle")
-    bundle_identity = str(row[0])
-    audited = R22Epoch2AtomicTape(epoch2_path).audit_bundle_read_only(bundle_identity)
-    if audited.get("fill_identity") != fill_identity:
-        raise ValueError("FP3-C recovered bundle/fill lineage mismatch")
-    return bundle_identity
 
 
 def _current_position_quantity(
