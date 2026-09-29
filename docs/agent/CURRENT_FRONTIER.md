@@ -6385,3 +6385,99 @@ Current blocker:
 
 Exact nextAction:
 Implement settled funding observation + Bybit history adapter + isolated paper funding-cost projection and focused tests, then run exact-head UID504 acceptance.
+
+
+## FP4-B LATENCY / PASSIVE QUEUE / TIMEOUT START — 2026-09-29
+
+status: FP4B_IMPLEMENTATION_START
+taskStartMain: 10af3c32f3c83e17aa66b5d8e12503e006e33550
+activeBranch: fp4b/latency-queue-timeout-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+classification: BUILD isolated V2 passive-limit timing/queue proof over accepted Market Tape truth; REUSE FP4-A for marketable depth execution
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate audit:
+- no current main implementation/open PR owns configurable paper latency, passive queue position proof, timeout/cancel or trade-backed limit-fill proof;
+- accepted `OrderBookSnapshot` provides immutable bid/ask depth and PIT timestamps;
+- accepted `PublicTradeObservation` provides immutable aggressor side, price, size and PIT timestamps;
+- FP4-A now owns marketable/depth-consumption execution; FP4-B must not duplicate it;
+- existing candle execution input remains reference-price truth only and candle wick/touch is explicitly insufficient for a limit fill.
+
+FP4-B bounded contract:
+- passive limit only; a marketable limit is rejected and routed conceptually to FP4-A;
+- configurable non-negative latency produces an exact effective-arrival timestamp;
+- caller supplies immutable arrival book plus immutable public trades; no network/live mutation;
+- arrival book must not be future-known and must satisfy an explicit maximum age;
+- exact displayed queue ahead at the limit is derived only when queue-position proof is explicitly accepted; otherwise FILL_NOT_PROVEN;
+- only eligible opposite-aggressor public trades at/through the limit after arrival may deplete displayed queue and then the simulated order;
+- trade evidence ingested after the terminal cutoff cannot be used to claim a fill;
+- timeout and explicit cancel are separate terminal states;
+- partial fill is explicit/versioned; if a partial would occur while partial support is disabled, fail as FILL_NOT_PROVEN rather than fabricate full/no-fill certainty;
+- passive fill price is the limit price (never optimistic price improvement);
+- deterministic identity binds latency, queue, timeout/cancel, immutable book/trades and outcome;
+- no R21/R22 mutation in this slice.
+
+PASS gate:
+- pre-arrival trades cannot fill;
+- proven queue must be consumed before own quantity;
+- unknown/stale/late evidence fails closed;
+- timeout/cancel/full/partial outcomes are deterministic and replayable;
+- v1 + FP4-A compatibility remains PASS;
+- whole repository regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation and exact-head acceptance do not yet exist.
+
+Exact nextAction:
+Implement the isolated passive-limit timing/queue engine and focused tests, then add exact-head UID504 acceptance without touching the frozen RDP11 runtime.
+
+
+### FP4-B CANONICAL OWNER / DUPLICATE RESOLUTION — 2026-09-29
+
+status: FP4B_CANONICAL_PR_1692
+canonicalPr: 1692
+canonicalBranch: fp4b/latency-queue-timeout-v2
+canonicalHeadAtCheckpoint: 97db5f05c1984cf62e7524135d1efcc5c783315e
+supersededPr: 1691
+supersededBranch: fp4b/timing-queue-uncertainty-v2
+supersededState: CLOSED_UNMERGED
+realCapital: 0
+
+Decision:
+- PR #1691 timing-only contract is preserved as historical attempt evidence but MUST NOT MERGE.
+- PR #1692 is the sole FP4-B owner because it subsumes latency/timeout/cancel semantics and additionally requires immutable public-trade queue depletion proof, supports explicit partial outcomes, and routes marketable limits to FP4-A.
+- no second timing/queue engine may be merged.
+- RDP11 pre-soak run 36621349201 PASS on #1692 exact head; dedicated FP4-B and WC6 gates still pending at this checkpoint.
+
+Exact nextAction:
+Require #1692 dedicated FP4-B + WC6 + full regression + frozen runtime non-mutation PASS before merge; ignore #1691 for merge decisions.
+
+
+### FP4-B ACCEPTANCE STATUS / FRESH F10 RETRIGGER — 2026-09-29
+
+canonicalPr: 1692
+dedicatedRun: 36622263837
+dedicatedStatus: PASS
+wc6Run: 36622263802
+wc6Status: PASS
+rdp11PreSoakRun: 36622264114
+rdp11PreSoakStatus: PASS
+f10Run: 36622263731
+f10Status: STARTUP_FAILURE_NON_RETRYABLE
+realCapital: 0
+
+Interpretation:
+- dedicated FP4-B exact-head acceptance PASS, including focused compatibility, whole-repository regression and frozen runtime non-mutation;
+- WC6 PASS;
+- RDP11 pre-soak PASS;
+- F10 did not execute user code; GitHub classified the run as startup_failure and refused retry;
+- do not treat startup_failure as FP4-B failure and do not treat existing PASS runs as final for a new head.
+
+Exact nextAction:
+Use this docs-only checkpoint commit to trigger a fresh exact-head workflow set. Require new-head FP4-B + WC6 + RDP11 + F10 PASS before merge.
