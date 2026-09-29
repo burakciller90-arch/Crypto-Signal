@@ -4956,3 +4956,48 @@ Current blocker:
 Exact nextAction:
 Recheck current main and overlap state, open one FP3-A PR, verify the exact docs/module/tests-only diff and PR checks, merge if isolated, then start FP3-B on fresh main with a new task-start checkpoint.
 
+
+
+## FP3-B ELIGIBLE FIXED-FRACTIONAL SIZING TASK START — 2026-09-29
+
+status: FP3_B_SIZING_BRIDGE_START
+taskStartMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+fp3Contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE accepted eligibility/sizing truth + EXTEND FP3 owner only
+duplicateCheck: no open FP3-B PR and no FP3-B branch existed at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: FORBIDDEN
+ProductDevelopmentDeploy: FORBIDDEN
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP3-A closure:
+- PR #1680 merged;
+- merge SHA: 1347ee8550e04a8491c20227bad50d9aeb3fba4e;
+- accepted exact head: 5bcad4b766f41bcdf6c3b2deb2432a404f317087;
+- UID504 run 36590509829 / job 109482068773 PASS;
+- PR RDP11 pre-soak fulltest PASS;
+- F10 closeout PASS;
+- WC6 recovery reconciliation PASS.
+
+Bounded FP3-B goal:
+- process only vaults whose canonical FP3-A decision is ELIGIBLE;
+- promote exact allocator eligibility with existing promote_vault_eligibility;
+- accept caller-supplied exact sizing-risk inputs only; do not invent risk metrics;
+- evaluate existing Position Sizing Intelligence with preregistered policy;
+- only existing FIXED_FRACTIONAL result may become canonical;
+- persist existing CanonicalSizingEvent and project it to Stream;
+- HOLD/BLOCK remain untouched;
+- risk-gated or unavailable sizing remains explicit and causes no trade;
+- no BUY/REDUCE/EXIT commit in FP3-B;
+- replay must not duplicate sizing event or Stream sizing message.
+
+Current blocker:
+- exact signatures/lineage requirements across eligibility proof, PositionSizingRiskContext, PositionSizingPolicy and canonical sizing event have not yet been re-audited against merged FP3-A.
+
+Exact nextAction:
+Audit the accepted eligibility/sizing APIs and current FP3-A receipt model, freeze the minimal FP3-B input/result contract, then implement only the eligible fixed-fractional sizing bridge with focused replay/idempotence tests.
+
