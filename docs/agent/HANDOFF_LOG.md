@@ -6056,3 +6056,13 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - FP4-D source contract: exact symbol/account commission snapshot; no API credentials persisted; discount only with explicit payment proof
 - REAL_CAPITAL=0; no backfill/deploy; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: close Workbench proof, then rebase FP4-D and run exact-head acceptance
+
+
+## 2026-09-29 — FP4-B post-merge Workbench final proof
+
+- supersedes the earlier pending Workbench note
+- run/job `36624554107` / `109598075039` PASS
+- exact Workbench HEAD `906db410e692a5119b752998301cb58a3eba8b6a`, branch `main`, dirty `0`
+- `SSD504_WORKBENCH_PASS=YES`; `BOOTSTRAP_SHA=906db410e692a5119b752998301cb58a3eba8b6a`; `REAL_CAPITAL=0`
+- no Product/Development deployment, no historical backfill
+- nextAction: merge docs handoff, rebase FP4-D onto resulting main, then run exact-head acceptance
