@@ -5637,3 +5637,29 @@ Bounded repair:
 
 Exact nextAction:
 Apply only the fixture target-label correction, rerun exact PR fulltest and inspect the next mechanical failure or complete pytest/Ruff/mypy/non-mutation PASS.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 2 FAIL / DISTINCT SIGNAL FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_2_DISTINCT_FROZEN_SIGNAL
+pr: 1683
+evidenceRun: 36604239843
+evidenceJob: 109529058060
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical failure:
+- WC6 exact-source, focused paper execution-lab and paper regression stages all PASS;
+- full regression reached the FP3-C2 two-entry test and failed while processing the second issuance into Capital Forward;
+- error: \`StreamLedgerConflictError: immutable Stream source-event identity conflict\`;
+- root cause is test-fixture aliasing: the second issuance changed issue time but reused the exact same frozen SignalDecision identity, which caused capital Stream projection to attempt rebinding an immutable source identity;
+- WC6 cleanup reported Development non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- preserve same valid frozen geometry/target and market context;
+- create a genuinely distinct second frozen signal identity for the second issuance, rather than weakening Stream immutability;
+- no production or ledger contract relaxation.
+
+Exact nextAction:
+Patch only the second-issuance fixture to carry a distinct frozen signal identity, then rerun full acceptance and inspect exact failure/PASS output.
