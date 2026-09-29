@@ -3800,3 +3800,49 @@ Current blocker:
 
 Exact nextAction:
 Audit the canonical Epoch 2 / R22 / R24 / Stream Capital sources and write a durable FP1-D field/source matrix before changing final_product_read_model.py.
+
+
+## FP1-D1 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_D1_IMPLEMENTATION_START
+taskStartMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+activeBranch: fp1d/portfolio-capital-movements
+auditDocument: docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+auditCommit: 7f5f13d3a28f85f27203e8dbd9439ef981b4c4e2
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+D1 bounded goal:
+- extend FinalProductReadModel with optional epoch2_path;
+- add Portfolio Summary customer/audit contracts;
+- read canonical state only through read_epoch2_state_read_only;
+- expose current Epoch 2 NAV/cash/marked exposure/realized+unrealized PnL/current drawdown/costs/turnover/trade counts/expectancy;
+- expose Core/Tactical/Opportunity rows and exact symbol/quantity positions;
+- total PnL may be composed only as realized + unrealized from reconciled R21 state;
+- used capital = exact marked exposure;
+- open-position count = exact non-zero R21 positions;
+- do not call/build R24;
+- do not call legacy Mission Control;
+- do not claim historical max drawdown from R21 current drawdown;
+- missing Epoch2 file returns explicit unavailable and must not create a file;
+- no route/frontend/deploy/new writer/schema.
+
+D1 PASS:
+- missing/nonactivated state explicit;
+- corrupt/incomplete R21 fails closed;
+- exact Epoch 2 only;
+- three canonical vaults preserved;
+- default customer payload no SHA/raw metrics enum/database vocabulary;
+- audit preserves activation/consolidated/vault/source identities;
+- unmeasured expectancy stays unavailable;
+- source DB/sidecars byte-stable;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect accepted Epoch2 builders/test fixtures, implement PortfolioSummary in final_product_read_model.py plus focused temporary R21 ledger tests, then start UID504 acceptance only after implementation-complete checkpoint.
