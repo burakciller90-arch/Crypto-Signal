@@ -10,6 +10,12 @@ from crypto_signal.decision_ledger import (
     DecisionLedgerConflictError,
     ImmutableDecisionEvidenceLedger,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2MetricsStatus,
+    Epoch2VaultAccountingSnapshot,
+    read_epoch2_state_read_only,
+)
+from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
     EventSourceCalendarEventTruth,
@@ -137,6 +143,16 @@ _EVENT_COVERAGE_LABELS = {
     "INCOMPLETE": "Takvim kapsamı eksik",
     "UNAVAILABLE": "Takvim kapsamı kullanılamıyor",
     "SOURCE_SCOPED_ONLY": "Takvim kapsamı kaynak bazında",
+}
+_PORTFOLIO_VAULT_ORDER = {
+    PaperVaultId.CORE: 0,
+    PaperVaultId.TACTICAL: 1,
+    PaperVaultId.OPPORTUNITY_RESERVE: 2,
+}
+_PORTFOLIO_VAULT_LABELS = {
+    PaperVaultId.CORE: "Core",
+    PaperVaultId.TACTICAL: "Taktik",
+    PaperVaultId.OPPORTUNITY_RESERVE: "Fırsat Rezervi",
 }
 
 
@@ -386,6 +402,82 @@ class EventRailView:
 
 
 @dataclass(frozen=True, slots=True)
+class PortfolioPositionView:
+    symbol: str
+    quantity: str
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultAudit:
+    snapshot_identity: str
+    source_record_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultView:
+    vault_label: str
+    starting_budget_usdt: str
+    cash_usdt: str
+    used_capital_usdt: str
+    nav_usdt: str
+    realized_pnl_usdt: str
+    unrealized_pnl_usdt: str
+    total_pnl_usdt: str
+    current_drawdown_percent: str
+    fee_usdt: str
+    spread_usdt: str
+    slippage_usdt: str
+    turnover_percent: str
+    open_position_count: int
+    positions: tuple[PortfolioPositionView, ...]
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    audit: PortfolioVaultAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioAudit:
+    activation_identity: str
+    consolidated_snapshot_identity: str
+    vault_snapshot_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioSummaryView:
+    availability_label: str
+    program_label: str
+    snapshot_at_ms: int | None
+    starting_capital_usdt: str | None
+    current_equity_usdt: str | None
+    cash_usdt: str | None
+    used_capital_usdt: str | None
+    realized_pnl_usdt: str | None
+    unrealized_pnl_usdt: str | None
+    total_pnl_usdt: str | None
+    current_drawdown_percent: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    turnover_percent: str | None
+    open_position_count: int
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    vaults: tuple[PortfolioVaultView, ...]
+    audit: PortfolioAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
@@ -404,11 +496,13 @@ class FinalProductReadModel:
         decision_evidence_path: Path | None = None,
         signal_ledger_path: Path | None = None,
         event_source_runtime_path: Path | None = None,
+        epoch2_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.decision_evidence_path = decision_evidence_path
         self.signal_ledger_path = signal_ledger_path
         self.event_source_runtime_path = event_source_runtime_path
+        self.epoch2_path = epoch2_path
 
     def market_pulse(
         self,
@@ -814,6 +908,94 @@ class FinalProductReadModel:
                 "event rail source cannot be projected safely"
             ) from exc
 
+    def portfolio_summary(
+        self,
+        *,
+        include_audit: bool = False,
+    ) -> PortfolioSummaryView:
+        if self.epoch2_path is None or not self.epoch2_path.is_file():
+            return _portfolio_unavailable("Epoch 2 portföy verisi kullanılamıyor")
+        try:
+            state = read_epoch2_state_read_only(self.epoch2_path)
+        except ValueError as exc:
+            raise FinalProductReadError(
+                "Epoch 2 portföy kaynağı güvenli okunamadı"
+            ) from exc
+        if state is None:
+            return _portfolio_unavailable("Epoch 2 henüz etkin değil")
+
+        consolidated = state.consolidated_snapshot
+        ordered_vaults = tuple(
+            sorted(
+                state.vault_snapshots,
+                key=lambda item: _PORTFOLIO_VAULT_ORDER[item.vault_id],
+            )
+        )
+        vaults = tuple(
+            _portfolio_vault_view(item, include_audit=include_audit)
+            for item in ordered_vaults
+        )
+        total_pnl = (
+            consolidated.realized_pnl_usdt
+            + consolidated.unrealized_pnl_usdt
+        )
+        audit = None
+        if include_audit:
+            audit = PortfolioAudit(
+                activation_identity=state.activation.activation_identity,
+                consolidated_snapshot_identity=consolidated.snapshot_identity,
+                vault_snapshot_identities=tuple(
+                    item.snapshot_identity
+                    for item in ordered_vaults
+                ),
+            )
+        return PortfolioSummaryView(
+            availability_label="Doğrulanmış veri",
+            program_label="Paper Capital · Epoch 2",
+            snapshot_at_ms=consolidated.snapshot_at_ms,
+            starting_capital_usdt=_money_text(
+                state.activation.starting_cash_usdt
+            ),
+            current_equity_usdt=_money_text(consolidated.nav_usdt),
+            cash_usdt=_money_text(consolidated.cash_usdt),
+            used_capital_usdt=_money_text(
+                consolidated.marked_exposure_usdt
+            ),
+            realized_pnl_usdt=_signed_money_text(
+                consolidated.realized_pnl_usdt
+            ),
+            unrealized_pnl_usdt=_signed_money_text(
+                consolidated.unrealized_pnl_usdt
+            ),
+            total_pnl_usdt=_signed_money_text(total_pnl),
+            current_drawdown_percent=_fraction_percent_text(
+                consolidated.drawdown_fraction
+            ),
+            fee_usdt=_money_text(consolidated.fee_usdt),
+            spread_usdt=_money_text(consolidated.spread_usdt),
+            slippage_usdt=_money_text(consolidated.slippage_usdt),
+            turnover_percent=_fraction_percent_text(
+                consolidated.turnover_fraction
+            ),
+            open_position_count=sum(
+                len(item.positions)
+                for item in ordered_vaults
+            ),
+            closed_trade_count=consolidated.closed_trade_count,
+            win_count=consolidated.win_count,
+            loss_count=consolidated.loss_count,
+            breakeven_count=consolidated.breakeven_count,
+            expectancy_label=_expectancy_label(
+                consolidated.metrics_status,
+                consolidated.expectancy_usdt_per_closed_trade,
+            ),
+            performance_status_label=_metrics_status_label(
+                consolidated.metrics_status
+            ),
+            vaults=vaults,
+            audit=audit,
+        )
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -863,6 +1045,131 @@ class FinalProductReadModel:
                 "Decision Evidence proof lineage mismatch"
             )
         return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _portfolio_unavailable(reason: str) -> PortfolioSummaryView:
+    return PortfolioSummaryView(
+        availability_label=reason,
+        program_label="Paper Capital · Epoch 2",
+        snapshot_at_ms=None,
+        starting_capital_usdt=None,
+        current_equity_usdt=None,
+        cash_usdt=None,
+        used_capital_usdt=None,
+        realized_pnl_usdt=None,
+        unrealized_pnl_usdt=None,
+        total_pnl_usdt=None,
+        current_drawdown_percent=None,
+        fee_usdt=None,
+        spread_usdt=None,
+        slippage_usdt=None,
+        turnover_percent=None,
+        open_position_count=0,
+        closed_trade_count=0,
+        win_count=0,
+        loss_count=0,
+        breakeven_count=0,
+        expectancy_label="Henüz ölçülmedi",
+        performance_status_label="Henüz ölçülmedi",
+        vaults=(),
+    )
+
+
+def _portfolio_vault_view(
+    snapshot: Epoch2VaultAccountingSnapshot,
+    *,
+    include_audit: bool,
+) -> PortfolioVaultView:
+    positions = tuple(
+        PortfolioPositionView(
+            symbol=item.symbol.value,
+            quantity=_plain_decimal_text(item.quantity),
+        )
+        for item in snapshot.positions
+    )
+    total_pnl = snapshot.realized_pnl_usdt + snapshot.unrealized_pnl_usdt
+    audit = None
+    if include_audit:
+        audit = PortfolioVaultAudit(
+            snapshot_identity=snapshot.snapshot_identity,
+            source_record_identities=snapshot.source_record_identities,
+        )
+    return PortfolioVaultView(
+        vault_label=_PORTFOLIO_VAULT_LABELS[snapshot.vault_id],
+        starting_budget_usdt=_money_text(snapshot.starting_cash_usdt),
+        cash_usdt=_money_text(snapshot.cash_usdt),
+        used_capital_usdt=_money_text(snapshot.marked_exposure_usdt),
+        nav_usdt=_money_text(snapshot.nav_usdt),
+        realized_pnl_usdt=_signed_money_text(snapshot.realized_pnl_usdt),
+        unrealized_pnl_usdt=_signed_money_text(
+            snapshot.unrealized_pnl_usdt
+        ),
+        total_pnl_usdt=_signed_money_text(total_pnl),
+        current_drawdown_percent=_fraction_percent_text(
+            snapshot.drawdown_fraction
+        ),
+        fee_usdt=_money_text(snapshot.fee_usdt),
+        spread_usdt=_money_text(snapshot.spread_usdt),
+        slippage_usdt=_money_text(snapshot.slippage_usdt),
+        turnover_percent=_fraction_percent_text(snapshot.turnover_fraction),
+        open_position_count=len(snapshot.positions),
+        positions=positions,
+        closed_trade_count=snapshot.closed_trade_count,
+        win_count=snapshot.win_count,
+        loss_count=snapshot.loss_count,
+        breakeven_count=snapshot.breakeven_count,
+        expectancy_label=_expectancy_label(
+            snapshot.metrics_status,
+            snapshot.expectancy_usdt_per_closed_trade,
+        ),
+        performance_status_label=_metrics_status_label(
+            snapshot.metrics_status
+        ),
+        audit=audit,
+    )
+
+
+def _metrics_status_label(status: Epoch2MetricsStatus) -> str:
+    if status is Epoch2MetricsStatus.AVAILABLE:
+        return "Ölçülebilir"
+    return "Henüz ölçülmedi"
+
+
+def _expectancy_label(
+    status: Epoch2MetricsStatus,
+    value: Decimal | None,
+) -> str:
+    if status is not Epoch2MetricsStatus.AVAILABLE or value is None:
+        return "Henüz ölçülmedi"
+    return f"{_signed_money_text(value)} / kapalı işlem"
+
+
+def _fraction_percent_text(value: Decimal) -> str:
+    if not value.is_finite() or value < Decimal(0):
+        raise ValueError("portfolio fraction must be finite and non-negative")
+    percent = (value * Decimal(100)).quantize(Decimal("0.01"))
+    return f"{percent:.2f}%"
+
+
+def _money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio amount must be finite")
+    return f"{value.quantize(Decimal('0.01')):.2f}"
+
+
+def _signed_money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio PnL must be finite")
+    return f"{value.quantize(Decimal('0.01')):+.2f}"
+
+
+def _plain_decimal_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio quantity must be finite")
+    raw = format(value, "f")
+    if "." in raw:
+        raw = raw.rstrip("0").rstrip(".")
+    return raw or "0"
 
 
 def _event_rail_view(
