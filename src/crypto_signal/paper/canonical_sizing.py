@@ -113,26 +113,26 @@ class CanonicalPaperSizingSelection:
             ):
                 raise ValueError("S11 V1 sizing cannot carry FP5 portfolio-risk fields")
         else:
+            portfolio_risk_identity = self.portfolio_risk_assessment_identity
+            portfolio_source_identity = self.portfolio_source_identity
+            portfolio_risk_cap = self.portfolio_risk_cap_usdt
             if (
-                self.portfolio_risk_assessment_identity is None
-                or self.portfolio_source_identity is None
-                or self.portfolio_risk_cap_usdt is None
+                portfolio_risk_identity is None
+                or portfolio_source_identity is None
+                or portfolio_risk_cap is None
             ):
                 raise ValueError("S11 V2 sizing requires exact FP5 portfolio-risk lineage")
             _require_sha256(
-                self.portfolio_risk_assessment_identity,
+                portfolio_risk_identity,
                 "S11 FP5 portfolio-risk assessment",
             )
             _require_sha256(
-                self.portfolio_source_identity,
+                portfolio_source_identity,
                 "S11 FP5 portfolio source",
             )
-            if (
-                not self.portfolio_risk_cap_usdt.is_finite()
-                or self.portfolio_risk_cap_usdt <= 0
-            ):
+            if not portfolio_risk_cap.is_finite() or portfolio_risk_cap <= 0:
                 raise ValueError("S11 FP5 portfolio-risk cap must be positive finite")
-            if self.canonical_notional_usdt > self.portfolio_risk_cap_usdt:
+            if self.canonical_notional_usdt > portfolio_risk_cap:
                 raise ValueError("S11 V2 notional cannot exceed FP5 portfolio-risk cap")
             if "portfolio_risk_v2_bound" not in self.reason_codes:
                 raise ValueError("S11 V2 sizing must declare portfolio-risk binding")
@@ -317,9 +317,11 @@ def promote_portfolio_risk_bounded_sizing(
     if portfolio_assessment.status is not PortfolioRiskStatus.DEPLOYABLE:
         raise ValueError("S11 V2 unsupported FP5 portfolio-risk status")
 
-    if portfolio_assessment.source_portfolio_identity is None:
+    portfolio_source_identity = portfolio_assessment.source_portfolio_identity
+    portfolio_snapshot_identity = portfolio_assessment.snapshot_identity
+    if portfolio_source_identity is None:
         raise ValueError("S11 V2 DEPLOYABLE requires proven portfolio source")
-    if portfolio_assessment.snapshot_identity is None:
+    if portfolio_snapshot_identity is None:
         raise ValueError("S11 V2 DEPLOYABLE requires FP5 portfolio snapshot")
     if portfolio_assessment.max_deployable_notional_usdt <= 0:
         raise ValueError("S11 V2 DEPLOYABLE requires positive FP5 capacity")
@@ -380,7 +382,7 @@ def promote_portfolio_risk_bounded_sizing(
                 current_vault.snapshot_identity,
                 current_portfolio.snapshot_identity,
                 portfolio_assessment.assessment_identity,
-                portfolio_assessment.snapshot_identity,
+                portfolio_snapshot_identity,
                 risk_input_identity,
             }
         )
