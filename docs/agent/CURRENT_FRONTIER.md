@@ -7268,3 +7268,18 @@ Change the test literal only; no source code or acceptance semantics.
 
 Exact nextAction:
 Apply one-line test style repair and rerun every required lane on the new exact head. `f47cec13...` remains stale for merge.
+
+
+
+### FP5-B TEST-RUFF REPAIR APPLIED — 2026-09-30
+
+repairCommit: 87e07ecae0512fdbf62b0cc3bf425c49cdbc0d4e
+repairType: TEST_STYLE_ONLY
+sourceCodeChanged: NO
+behaviorChange: NO
+
+Change:
+- replaced `Decimal("12")` with Ruff-preferred `Decimal(12)` in the cap assertion only.
+
+Acceptance rule:
+Fresh exact-head dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 are required again after this checkpoint; all earlier results are stale.
