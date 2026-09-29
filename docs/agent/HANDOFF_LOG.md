@@ -5902,3 +5902,21 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; Durdurulmaz untouched; Quantum Capital untouched
 - blocker: genuine post-activation issuance absent; RDP11 soak time/continuity acceptance incomplete
 - nextAction: rerun FP3-D only on genuine forward issuance; preserve scheduled RDP11 observations until final 72h evidence eligibility
+
+
+## 2026-09-29 — FP4-A depth-aware execution implementation checkpoint
+
+- task-start main: `07c813cb7128e4748ca48aaf6a7e1ca584d1c7b2`
+- branch: `fp4a/depth-aware-execution-v2`
+- session-local worktree: not created in connector session; canonical Workbench remains `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- classification: EXTEND; preserve v1 full-fill execution unchanged
+- implemented isolated `execution_depth_v2.py` over accepted immutable `OrderBookSnapshot`
+- explicit statuses: FULL / PARTIAL / NOT_FILLED / FILL_NOT_PROVEN
+- BUY consumes asks best-first; REDUCE/EXIT consumes bids best-first
+- exact consumed-level notional and VWAP reconciliation; deterministic outcome identity
+- execution cutoff rejects future-ingested depth; missing/uncertain execution never invents liquidity
+- no R21/R22 mutation, no Product/Development deploy, no historical backfill
+- dedicated UID504 workflow: `.github/workflows/fp4a-depth-execution-uid504.yml`
+- REAL_CAPITAL=0; Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not run yet
+- nextAction: open isolated PR and require focused/v1/full regression plus frozen runtime non-mutation PASS before merging
