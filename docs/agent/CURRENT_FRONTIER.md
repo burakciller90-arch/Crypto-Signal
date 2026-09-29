@@ -1964,3 +1964,58 @@ No implementation blocker for roadmap authoring. Final product implementation re
 ### Exact nextAction
 
 Write the canonical Final Product Master Roadmap and a root ACTIVE_ROADMAP pointer, then wire AGENTS/READ_FIRST/CURRENT_STATUS to that authority without superseding the active RDP11 mechanical gate.
+
+
+## FINAL PRODUCT ROADMAP AUTHORING CHECKPOINT — 2026-09-29
+
+status: ROADMAP_AUTHORITY_AUTHORED_PR_PENDING
+canonicalMainAtAuthoring: 4817eca11f6081038a4820cd22ce0dc54a5b916e
+branch: product/final-master-roadmap-v1
+worktree: NONE
+realCapital: 0
+historicalFrozenMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+User-source synthesis:
+- Command Center target: answer -> action -> reason -> proof; 10-second Market Pulse + Paper Portfolio + top material situations + accepted Intelligence Stream; progressive drill-down; Market Story Chart; Live vs Signal-Time frozen view; five family human visual proof; Markets/Event/Watchlist/semantic-alert/search/history capabilities.
+- Paper Capital target: autonomous virtual capital under policy; immutable append-only history; no destructive reset; cash valid; dynamic policy sleeves; execution-aware accounting; Trade Passport; conservative fill semantics; portfolio-risk sizing; return + drawdown/cost transparency.
+
+Repository duplicate audit:
+- REUSE: RDP0-RDP10, Intelligence Stream S0-S16, Stream F0-F10, MI1-MI6, R21, R22, R24, Smart Capital Allocator, fixed-fractional sizing, S11 Capital Story, historical GALACTECH adapters, Stream SSE/search/history/sound, alert/outbox, visual-audit stack.
+- EXTEND: canonical capital forward liveness, execution realism, capital risk/correlation, exact family visual projection, customer read models.
+- BUILD: Paper Vault V3 policy/version layer, Trade Passport UX/read model, final Command Center composition, Asset/Screener, Event Center, Watchlist, semantic alerts/global command search, unified Portfolio/History experience.
+- EXPLICITLY_UNAVAILABLE stays unavailable until source/contract exists; no UI may manufacture missing on-chain/execution/evidence truth.
+
+New authority:
+- root pointer: ACTIVE_ROADMAP.md
+- umbrella: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+- phases: FP0 through FP18 all present
+- FP0 maps to the existing RDP11 real soak; no duplicate soak is created
+- isolated FP1+ implementation may proceed during FP0 in disjoint branches/worktrees using fixtures/temp DB/read-only canonical evidence, but may not mutate/deploy into the frozen soak target
+- final integrated runtime acceptance/cutover requires FP0 PASS
+
+Authority-discovery wiring completed on branch:
+- AGENTS.md -> ACTIVE_ROADMAP first
+- READ_FIRST_CRYPTO_SIGNAL.md -> final-product banner + current RDP state
+- CURRENT_STATUS.md -> final-product authority banner
+- PROJECT_CHRONICLE.md -> new final-program entry
+- README.md -> active-program pointer/read order
+- ACTIVE_ROADMAP.md -> mandatory agent read order + duplicate guard
+
+Static authority validation:
+- final roadmap line count: 1312
+- exact FP phase set: FP0..FP18, no phase number missing
+- final Definition of Done present
+- root/AGENTS/READ_FIRST/CURRENT_STATUS/README all point to the same final-product authority
+- branch is 14 commits ahead / 0 behind the task-start main at the validation checkpoint
+- changed files are documentation/authority files only
+
+Current mechanical blocker:
+- RDP11 remains ACTIVE / NOT PASS.
+- anchored soak start = 2026-09-29T09:13:21.134000Z.
+- earliest 72h eligibility = 2026-10-02T09:13:21.134000Z.
+- elapsed time alone does not constitute PASS.
+
+Exact nextAction:
+Open one docs-only PR from product/final-master-roadmap-v1 to current main, recheck for parallel-main movement and duplicate roadmap PRs, inspect the exact diff, then merge with expected-head guard if the authority files remain docs-only and internally consistent.
