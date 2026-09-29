@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
+from crypto_signal.data.microstructure import OrderBookSnapshot, PublicTradeObservation
+from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.execution_depth_v2 import DepthExecutionOutcome
 from crypto_signal.paper.execution_limit_v2 import PassiveLimitExecutionOutcome
@@ -203,6 +205,8 @@ def build_execution_receipt_v2(
     bound_pretrade: PaperVenueBoundPretrade,
     outcome: ExecutionOutcomeV2,
     fee_projection: InstrumentFeeProjection | None,
+    orderbook: OrderBookSnapshot,
+    public_trades: tuple[PublicTradeObservation, ...] = (),
 ) -> ExecutionReceiptV2:
     pretrade = bound_pretrade.pretrade
     if pretrade.status is not PaperPretradeStatus.PLANNED:
@@ -212,7 +216,12 @@ def build_execution_receipt_v2(
     if pretrade.plan is None or pretrade.planned_quantity is None:
         raise ExecutionReceiptRejectedError("planned pretrade lost exact plan lineage")
 
-    mode, status, expected_fee_role, market_evidence = _outcome_contract(outcome)
+    mode, status, expected_fee_role, market_evidence = _outcome_contract(
+        outcome=outcome,
+        orderbook=orderbook,
+        public_trades=public_trades,
+        symbol=pretrade.symbol,
+    )
 
     if outcome.action is not pretrade.action:
         raise ExecutionReceiptRejectedError("execution outcome action mismatch")
@@ -386,14 +395,33 @@ def compute_execution_receipt_identity(
 
 
 def _outcome_contract(
+    *,
     outcome: ExecutionOutcomeV2,
+    orderbook: OrderBookSnapshot,
+    public_trades: tuple[PublicTradeObservation, ...],
+    symbol: PaperSymbol,
 ) -> tuple[
     ExecutionReceiptMode,
     ExecutionReceiptStatus,
     InstrumentFeeRole,
     tuple[str, ...],
 ]:
+    if orderbook.snapshot_identity != outcome.orderbook_snapshot_identity:
+        raise ExecutionReceiptRejectedError("orderbook evidence identity mismatch")
+    if (
+        orderbook.exchange is not Exchange.BINANCE
+        or orderbook.market_type is not MarketType.SPOT
+        or orderbook.symbol != symbol.value
+    ):
+        raise ExecutionReceiptRejectedError(
+            "execution market evidence must match Binance Spot pretrade symbol"
+        )
+
     if isinstance(outcome, DepthExecutionOutcome):
+        if public_trades:
+            raise ExecutionReceiptRejectedError(
+                "depth receipt must not attach passive trade evidence"
+            )
         status = ExecutionReceiptStatus(outcome.status.value)
         return (
             ExecutionReceiptMode.DEPTH,
@@ -401,7 +429,23 @@ def _outcome_contract(
             InstrumentFeeRole.TAKER,
             (outcome.orderbook_snapshot_identity,),
         )
+
     if isinstance(outcome, PassiveLimitExecutionOutcome):
+        supplied = {trade.trade_identity: trade for trade in public_trades}
+        expected = set(outcome.evidence_trade_identities)
+        if set(supplied) != expected:
+            raise ExecutionReceiptRejectedError(
+                "passive trade evidence identities do not match outcome"
+            )
+        for trade in supplied.values():
+            if (
+                trade.exchange is not orderbook.exchange
+                or trade.market_type is not orderbook.market_type
+                or trade.symbol != orderbook.symbol
+            ):
+                raise ExecutionReceiptRejectedError(
+                    "passive trade evidence venue/symbol mismatch"
+                )
         status = ExecutionReceiptStatus(outcome.status.value)
         market_evidence = (
             outcome.orderbook_snapshot_identity,
