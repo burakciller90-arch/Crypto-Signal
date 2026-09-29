@@ -6268,3 +6268,77 @@ nextAction:
 - require exact-head branch/PR dry-run plus pre-soak regression acceptance;
 - recheck main immediately before merge;
 - after merge require a successful non-dry-run observation creating a fresh immutable anchor against the same frozen runtime SHA.
+
+
+---
+
+## 2026-09-30 — RDP11 R2 active-soak handoff
+
+status: RDP11_R2_SOAK_ACTIVE_NOT_PASS
+repository: burakciller90-arch/Crypto-Signal
+exactAnchorMainSha: 62540a3746c101530cd843353507a6746579bf15
+roadmapGate: FP0 / RDP11 Continuous soak + final Evidence PASS
+reanchorBranch: rdp11/reanchor-invalidated-epoch-r2
+reanchorWorktree: no session-local /Volumes worktree
+reanchorPr: 1699
+reanchorAcceptedHead: c0b1e11e7d0e189c5eb52eddbecce116b82f642a
+reanchorMergeSha: 62540a3746c101530cd843353507a6746579bf15
+closeoutBranch: rdp11/r2-anchor-closeout
+closeoutWorktree: no session-local /Volumes worktree
+runtimeTargetSha: 3d9f33db3f1189571d40566125fbeabd00c04930
+oldEpoch: rdp11-3d9f33db-20260929
+oldEpochState: INVALIDATED_IMMUTABLE
+oldInvalidationRunJob: 36622461578 / 109591020809
+activeEpoch: rdp11-3d9f33db-20260930-r2
+
+acceptanceRuns:
+- PR-head pre-soak: 36636794442 / 109639308133 / SUCCESS
+- PR-head observer dry-run: 36636845090 / 109639797301 / SUCCESS
+- PR-head F10: 36636845076 / 109639471686 / SUCCESS
+- post-merge Workbench: 36637452142 / 109641453293 / SUCCESS
+- merged-main observer run: 36637452090
+  - attempt 1 / 109641453750 / FAILURE BEFORE ANCHOR
+    - finite SSE pre-probe: curl error 18, transfer closed with outstanding read data
+    - observer live step skipped; no R2 anchor/invalidation created
+  - attempt 2 / 109642444475 / SUCCESS
+    - one controlled rerun only
+    - RDP11_RUNTIME_TARGET_EXACT=YES
+    - RDP11_PRODUCT_ENDPOINT_TIMING_PROBE=PASS
+    - RDP11_SOAK_ANCHOR_CREATED=YES
+    - RDP11_SOAK_OBSERVATION_PASS=YES
+    - RDP11_SOAK_SIDE_CAR_ONLY=YES
+    - RDP11_CANONICAL_RUNTIME_MUTATED=NO
+    - HISTORICAL_BACKFILL=NO
+    - REAL_CAPITAL=0
+
+workbenchProof:
+- REPO_HEAD=62540a3746c101530cd843353507a6746579bf15
+- REPO_BRANCH=main
+- REPO_DIRTY_COUNT=0
+- SSD504_WORKBENCH_PASS=YES
+
+soak:
+- epoch: rdp11-3d9f33db-20260930-r2
+- startUtc: 2026-09-29T22:10:09.650000Z
+- earliest72hUtc: 2026-10-02T22:10:09.650000Z
+- earliest72hEuropeIstanbul: 2026-10-03T01:10:09.650000+03:00
+- eligible72h: NO
+- sidecarOnly: YES
+- canonicalRuntimeMutated: NO
+- historicalBackfill: NO
+- realCapital: 0
+
+blocker:
+- the replacement epoch's real 72-hour minimum has not elapsed;
+- the epoch must remain non-invalidated;
+- final accumulated RDP11 evidence audit remains required.
+
+nextAction:
+- keep scheduled UID504 R2 observation active every 20 minutes;
+- do not retry away any post-anchor mandatory failure: it must invalidate the epoch;
+- do not mutate Product/Development frozen target, observer contract, R2 sidecar, or historical/frozen evidence;
+- at/after 2026-10-02T22:10:09.650000Z audit the complete R2 epoch and mark RDP11/FP0 PASS only on mechanical evidence;
+- isolated FP1+ engineering may continue under the active-soak isolation contract.
+
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
