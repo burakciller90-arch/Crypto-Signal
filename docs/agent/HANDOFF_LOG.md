@@ -5701,3 +5701,16 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - cleanup: Development non-mutating PASS; REAL_CAPITAL=0
 - repair scope: fixture only — use a distinct frozen signal identity while preserving the same valid geometry/target/context
 - nextAction: patch second issuance frozen signal identity and rerun acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 3 exposed same-cycle candidate alias
+
+- PR: #1683
+- tested head: \`57176f484bfca78ab19f01b8f8966b15680e1936\`
+- WC6 run/job: \`36604895788\` / \`109531303801\`
+- F10 run: \`36604895638\` PASS
+- exact-source, focused execution-lab and paper-regression: PASS
+- full regression failure: second fixture still reused the same SmartCapitalCandidate identity because candidate truth is keyed by market \`as_of\` + confluence + Event Risk, not forecast/signal identity
+- cleanup: Development non-mutating PASS; REAL_CAPITAL=0
+- repair scope: fixture only — generate a genuinely later bullish market cycle with rebuilt confluence/Event Risk evidence
+- nextAction: patch second market cycle and rerun exact acceptance
