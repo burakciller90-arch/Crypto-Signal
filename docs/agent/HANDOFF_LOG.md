@@ -2738,3 +2738,37 @@ Accepted implementation:
 
 Exact nextAction:
 Open an FP1-A implementation PR against main, inspect its actual changed-file diff, and fail closed if either temporary workflow file appears or any unrelated project/runtime file is present.
+
+
+## FP1-A PR DIFF VERIFIED CHECKPOINT — 2026-09-29
+
+status: FP1_A_PR_OPEN_DIFF_CLEAN
+pullRequest: 1671
+pullRequestUrl: https://github.com/burakciller90-arch/Crypto-Signal/pull/1671
+baseMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+prHeadAtOpen: 3e7b16e6128b8fd83a42e8f536e999d18a55312d
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+acceptedUid504Run: 36554409727
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Verified PR changed-file set is exactly:
+1. docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+2. docs/agent/CURRENT_FRONTIER.md
+3. docs/agent/HANDOFF_LOG.md
+4. src/crypto_signal/product/final_product_read_model.py
+5. tests/test_final_product_read_model.py
+
+Guard result:
+- temporary Stage10 workflow edit is absent from PR diff;
+- temporary MI1 acceptance-harness edit is absent from PR diff;
+- no frontend file;
+- no Product API route;
+- no runtime/deploy/config file;
+- no Durdurulmaz or Quantum Capital file;
+- no canonical DB writer.
+
+Exact nextAction:
+Read PR #1671 mergeability/check state and current main. If the PR remains based on the verified main with no mechanical blocker, merge FP1-A without deploying Product/Development, then bootstrap from the new main and checkpoint FP1-B before changing any further production code.
