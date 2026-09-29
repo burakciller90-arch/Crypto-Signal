@@ -121,8 +121,10 @@ class PaperVaultV3AllocationPolicy:
         )
         if self.minimum_market_exposure_fraction != Decimal(0):
             raise ValueError("Paper Vault V3 cannot force minimum market exposure")
-        if self.maximum_market_exposure_fraction <= Decimal(0):
-            raise ValueError("Paper Vault V3 maximum market exposure must be positive")
+        if self.maximum_market_exposure_fraction != Decimal(1):
+            raise ValueError(
+                "Paper Vault V3 maximum market exposure must be exactly one"
+            )
         if (
             self.minimum_market_exposure_fraction
             > self.maximum_market_exposure_fraction
