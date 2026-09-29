@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - fp1/human-read-model-contract
 
 permissions:
   contents: read
