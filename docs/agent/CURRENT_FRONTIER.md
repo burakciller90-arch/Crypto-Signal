@@ -4638,3 +4638,37 @@ Current blocker:
 Exact nextAction:
 Audit paper write-tick/orchestration/same-cycle/shadow/runtime modules, S11 canonical decision+sizing+lifecycle, R21/R22 append APIs, activation/watermark/replay semantics and existing forward-evidence policies; freeze FP3 reuse/extend/build and forward-runtime persistence contract before production code.
 
+
+
+## FP3 SOURCE AUDIT COMPLETE / FP3-A IMPLEMENTATION START — 2026-09-29
+
+status: FP3_A_OWNER_REPLAY_IMPLEMENTATION_START
+baseMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+auditDocument: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE accepted S11/R21/R22/WC2/R25 truth + BUILD isolated owner/receipt store only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen FP3-A boundary:
+- reuse IntelligenceStreamCapitalForwardRuntime as canonical front-half owner for candidate + three vault decisions + HOLD/BLOCK R22 intents;
+- build no second allocator/accounting/tape/sizing/evidence engine;
+- use one separate .fp3-paper-autopilot.sqlite3 activation/receipt store;
+- activation is future-bound and immutable;
+- same issuance replay must return unchanged without duplicate decision/HOLD writes;
+- crash after accepted front-half writes but before FP3 receipt must recover by deterministic replay and append only missing receipt;
+- receipt truth stores references to canonical identities only;
+- UPDATE/DELETE forbidden;
+- no eligible sizing or trade execution in FP3-A;
+- STOP_UPDATE remains explicitly unavailable; later FP3-C maps only supported BUY/REDUCE/EXIT under preregistered policy.
+
+Current blocker:
+- none for FP3-A implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement autopilot_forward_runtime.py FP3-A activation + receipt store + front-half composition and focused tests; do not enter FP3-B/C in this commit.
+
