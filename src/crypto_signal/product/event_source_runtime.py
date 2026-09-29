@@ -899,7 +899,7 @@ def _calendar_event_truth(
     for key, expected in row_pairs:
         actual = payload.get(key)
         if isinstance(expected, int):
-            if int(actual) != expected:
+            if _required_non_negative_int(actual, key) != expected:
                 raise ValueError(f"event source calendar event row mismatch: {key}")
         elif str(actual) != expected:
             raise ValueError(f"event source calendar event row mismatch: {key}")
@@ -1090,6 +1090,20 @@ def _optional_text(value: Any) -> str | None:
 
 def _optional_int(value: Any) -> int | None:
     return None if value is None else int(value)
+
+
+def _required_non_negative_int(value: object, label: str) -> int:
+    if isinstance(value, bool):
+        raise TypeError(f"{label} must be a non-negative integer")
+    if isinstance(value, int):
+        result = value
+    elif isinstance(value, str) and value.isdigit():
+        result = int(value)
+    else:
+        raise TypeError(f"{label} must be a non-negative integer")
+    if result < 0:
+        raise ValueError(f"{label} must be non-negative")
+    return result
 
 
 def _require_sha256(value: str, label: str) -> None:
