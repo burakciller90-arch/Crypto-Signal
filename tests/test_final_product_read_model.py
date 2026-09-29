@@ -1252,7 +1252,7 @@ def test_portfolio_summary_projects_measured_epoch2_exactly(
     assert core.audit is not None
     assert len(core.audit.snapshot_identity) == 64
 
-    tactical = view.vaults[2]
+    tactical = view.vaults[1]
     assert tactical.vault_label == "Taktik"
     assert tactical.total_pnl_usdt == "-5.00"
     assert tactical.positions[0].symbol == "ETHUSDT"
