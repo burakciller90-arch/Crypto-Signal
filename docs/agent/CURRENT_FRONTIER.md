@@ -2316,3 +2316,33 @@ Repair scope:
 
 Exact nextAction:
 Delete the unused test import, rerun the same UID504 exact-source pytest/Ruff/mypy harness, and require all focused + non-mutation/project-isolation markers before advancing.
+
+
+## FP1-A SECOND UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_TYPE_REPAIR_REQUIRED
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: be2383435f0a7e14e853ed27b3ce9a5d4df0165c
+uid504Run: 36554189472
+uid504Job: 109359474913
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 environment PASS;
+- focused pytest including new FP1-A tests PASS;
+- Ruff PASS;
+- mypy reached the new production module and found exactly one error:
+  src/crypto_signal/product/final_product_read_model.py:184
+  No overload variant of int matches argument type object;
+- Product/Development non-mutation PASS;
+- no deploy or RDP11 mutation.
+
+Repair scope:
+- replace the direct int(row[1]) conversion with an explicit verified non-negative integer helper;
+- preserve point-in-time selection and all customer semantics unchanged.
+
+Exact nextAction:
+Implement only the typed integer validation repair, rerun the same UID504 harness, and require pytest + Ruff + mypy + non-mutation/project-isolation PASS.
