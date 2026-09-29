@@ -326,3 +326,130 @@ Accepted FP3-B result:
 
 Next mechanically allowed slice:
 **FP3-C — preregistered action bridge + canonical R21/R22 commit.**
+
+
+## 12. FP3-C frozen action / replay contract
+
+Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+
+### 12.1 Preregistered action vocabulary
+
+Accepted customer/policy reasons:
+- `OPEN` -> canonical `BUY`;
+- `SCALE_IN` -> canonical `BUY`, only when an exact current position already exists and FP3-B produces a new eligible fixed-fractional sizing selection;
+- `PARTIAL_TAKE_PROFIT` -> canonical `REDUCE`;
+- `TAKE_PROFIT` -> canonical `EXIT`;
+- `STOP` -> canonical `EXIT`;
+- `CLOSE` -> canonical `EXIT`;
+- `WAIT` -> no trade commit;
+- `STOP_UPDATE` -> **UNAVAILABLE_EXPLICIT** in FP3 because no accepted canonical stop-order update state/event exists.
+
+No other reason/action pair is accepted.
+
+The policy is versioned and immutable. Runtime cannot reinterpret an unknown reason.
+
+### 12.2 BUY source contract
+
+BUY requires:
+- exact FP3-A receipt;
+- exact FP3-B sized receipt for the same forecast + vault;
+- exact canonical fixed-fractional sizing selection/event;
+- exact canonical eligibility proof;
+- exact `UnifiedDecisionIssuance`;
+- exact caller-supplied reference-price evidence, mark evidence and frozen execution snapshot;
+- chronology satisfying accepted S11 commit guards.
+
+`OPEN` requires no existing open quantity in the target vault/symbol.
+`SCALE_IN` requires existing positive open quantity.
+
+Mutation owner:
+`commit_canonical_paper_buy` only.
+
+### 12.3 REDUCE / EXIT source contract
+
+REDUCE/EXIT must use the exact original open-position lineage already enforced by
+`commit_canonical_paper_sell`:
+- original forecast;
+- original Decision Proof;
+- original fixed-fractional sizing assessment/result;
+- current R21 position;
+- reconstructed R22 open cost basis;
+- exact caller-supplied exit evidence identity;
+- sorted unique preregistered exit reason codes;
+- exact mark/reference/execution snapshot inputs.
+
+`PARTIAL_TAKE_PROFIT` requires REDUCE and an exact quantity that leaves positive holdings.
+`TAKE_PROFIT`, `STOP`, `CLOSE` require EXIT.
+No new exit forecast or current-market reconstruction is invented.
+
+Mutation owner:
+`commit_canonical_paper_sell` only.
+
+### 12.4 Replay / crash recovery
+
+Before mutation:
+- scan verified `R22Epoch2AtomicTape.read_trade_history(vault, symbol)`;
+- match exact action + forecast + proof + sizing-decision lineage;
+- for sell, also require exact preregistered exit reason/evidence lineage.
+
+When an exact fill already exists:
+- resolve its bundle identity through a read-only lookup of the canonical
+  `r22_epoch2_bundles` fill-identity index;
+- immediately validate the resolved identity with
+  `R22Epoch2AtomicTape.audit_bundle_read_only`;
+- do not call BUY/SELL commit again;
+- project missing Stream lifecycle state idempotently;
+- append only the missing FP3-C stage receipt.
+
+The read-only bundle lookup creates no truth and performs no write.
+
+### 12.5 Stream projection sequence
+
+After a new or recovered canonical bundle:
+`project_capital_bundle_lifecycle_to_stream(epoch2_path, stream_path, bundle_identity)`
+
+This owns:
+- execution story;
+- accounting lifecycle;
+- optional sell outcome lifecycle.
+
+Projection is replay-safe and must not be replaced by custom messages.
+
+### 12.6 FP3-C persistence
+
+Use the existing isolated FP3 autopilot SQLite file.
+Add append-only action-stage receipts keyed by exact action-intent identity.
+
+Receipt references only:
+- FP3-A receipt identity;
+- optional FP3-B sizing receipt/selection/event identities;
+- action policy version;
+- action reason;
+- canonical PaperAction;
+- action evidence identity;
+- exit reason codes where applicable;
+- R22 intent/fill/bundle identities;
+- optional S11 outcome identity;
+- R21 after-vault / after-consolidated snapshot identities;
+- terminal disposition NEW / RECOVERED / REPLAYED;
+- REAL_CAPITAL=0.
+
+Receipt rows are UPDATE/DELETE protected.
+
+### 12.7 FP3-C PASS
+
+- WAIT produces no R21/R22 mutation;
+- STOP_UPDATE remains explicit unavailable;
+- OPEN -> BUY only with zero prior position;
+- SCALE_IN -> BUY only with positive prior position and new accepted FP3-B sizing;
+- PARTIAL_TAKE_PROFIT -> REDUCE only with exact quantity/reason/evidence;
+- TAKE_PROFIT / STOP / CLOSE -> EXIT only with exact reason/evidence;
+- exact R22 replay preflight prevents duplicate accounting;
+- crash after canonical commit but before FP3-C receipt recovers exact bundle read-only and appends only missing receipt/projection;
+- Stream lifecycle projection is canonical/idempotent;
+- no second accounting/execution engine;
+- REAL_CAPITAL=0;
+- no RDP11 soaked-runtime mutation.
+
+Exact nextAction:
+Implement FP3-C action policy + action-stage receipt + read-only R22 bundle recovery adapter and focused tests. Do not start FP3-D genuine-forward liveness until FP3-C mechanical acceptance PASS.
