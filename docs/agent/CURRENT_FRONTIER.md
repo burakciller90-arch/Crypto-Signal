@@ -4117,3 +4117,35 @@ Current blocker:
 Exact nextAction:
 Audit DashboardReader market-radar semantics, current Stream system-view/family records, StreamMessageQuery full-text/deep-link capabilities, Event Rail query surface, R22/Trade Passport exact lookup and exact proof/evidence readers; freeze one FP1-F field/source matrix before implementation.
 
+
+
+## FP1-F SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_F_IMPLEMENTATION_START
+baseMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+auditDocument: docs/CRYPTO_SIGNAL_FP1F_SCREENER_SEARCH_FIELD_SOURCE_MATRIX.md
+classification: REUSE Market Pulse/Stream/Event Rail/Trade Passport/Decision Evidence + EXTEND federation
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen source contract:
+- Screener is a deterministic projection of accepted Market Pulse current truth;
+- legacy market_radar remains latest-signal/navigation history, not current screener authority;
+- global search federates existing read-only readers and creates no search DB;
+- Stream full-text/exact narrative lookup reused unchanged;
+- Event matches are bounded to explicit verified Event Rail window;
+- exact R22 bundle may open Trade Passport;
+- exact Decision Evidence search supports signal/forecast identities through accepted APIs;
+- direct proof-id lookup remains explicit unavailable in FP1-F;
+- missing sources contribute no fabricated result and remain explicit in source coverage.
+
+Current blocker:
+- none for implementation; mechanical acceptance pending.
+
+Exact nextAction:
+Implement Screener and federated Global Search customer/audit contracts in final_product_read_model.py plus focused tests, without touching routes/frontend/runtime or source persistence.
+
