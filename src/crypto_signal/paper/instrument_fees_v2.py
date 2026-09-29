@@ -6,10 +6,11 @@ module does not fetch credentials or place orders. REAL_CAPITAL remains 0.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
-from typing import Any, Mapping
+from typing import Any
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
