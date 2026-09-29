@@ -4728,3 +4728,231 @@ Current blocker:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP2 PR, inspect exact changed-file set and PR checks, then merge only if isolated and no RDP11 soaked-runtime conflict exists.
 
+
+
+## FP3 CANONICAL PAPER CAPITAL AUTOPILOT FORWARD RUNTIME TASK START — 2026-09-29
+
+status: FP3_FORWARD_RUNTIME_AUDIT_START
+taskStartMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE S11/R21/R22/Smart Capital/fixed-fractional truth + EXTEND isolated forward orchestrator only
+duplicateCheck: no open FP3 PR, no fp3 branch and no FP3 commit existed on current main at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: FORBIDDEN
+ProductDevelopmentDeploy: FORBIDDEN
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP2 closure:
+- FP2 Paper Vault V3 merged via PR #1679;
+- merge SHA: 439f304d423a643597b089653bbf53f030981a45;
+- accepted UID504 run 36587124704 / job 109470381739 PASS;
+- PR RDP11 pre-soak fulltest PASS;
+- PR F10 closeout PASS;
+- WC6 Paper Recovery Reconciliation PASS;
+- Epoch 1/2 and soaked runtime were not mutated.
+
+Bounded FP3 goal:
+- make accepted S11/R21/R22 machinery operate as one canonical forward paper-capital runtime;
+- reuse exact Smart Capital Allocator, fixed-fractional sizing, canonical vault decisions/lifecycle, R21 accounting, R22 tape, Decision Proof lineage and Capital Stream projectors;
+- support HOLD_CASH plus canonical trade lifecycle actions only when preregistered exact policy permits;
+- every accepted event remains append-only and freezes exact decision/proof/evidence/action/quantity/notional/execution-policy/cost/accounting/reason/time lineage;
+- restart/replay must be idempotent;
+- all three sleeves must independently HOLD/BLOCK/ELIGIBLE under exact rules;
+- genuine forward liveness evidence is mandatory; fixtures cannot satisfy the final liveness requirement;
+- no discretionary fear veto after all preregistered gates pass;
+- no gate weakening merely to generate a trade;
+- no runtime/deploy/main behavior change that can invalidate the active RDP11 soak.
+
+Current blocker:
+- existing forward-runtime pieces are numerous and historically layered; exact overlap among paper write tick, same-cycle runtime, S11 canonical capital, R21/R22 and activation/watermark/replay paths has not yet been re-audited on current main.
+- production implementation is forbidden until one canonical owner/orchestration boundary and idempotence contract are frozen.
+
+Exact nextAction:
+Audit paper write-tick/orchestration/same-cycle/shadow/runtime modules, S11 canonical decision+sizing+lifecycle, R21/R22 append APIs, activation/watermark/replay semantics and existing forward-evidence policies; freeze FP3 reuse/extend/build and forward-runtime persistence contract before production code.
+
+
+
+## FP3 SOURCE AUDIT COMPLETE / FP3-A IMPLEMENTATION START — 2026-09-29
+
+status: FP3_A_OWNER_REPLAY_IMPLEMENTATION_START
+baseMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+auditDocument: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE accepted S11/R21/R22/WC2/R25 truth + BUILD isolated owner/receipt store only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen FP3-A boundary:
+- reuse IntelligenceStreamCapitalForwardRuntime as canonical front-half owner for candidate + three vault decisions + HOLD/BLOCK R22 intents;
+- build no second allocator/accounting/tape/sizing/evidence engine;
+- use one separate .fp3-paper-autopilot.sqlite3 activation/receipt store;
+- activation is future-bound and immutable;
+- same issuance replay must return unchanged without duplicate decision/HOLD writes;
+- crash after accepted front-half writes but before FP3 receipt must recover by deterministic replay and append only missing receipt;
+- receipt truth stores references to canonical identities only;
+- UPDATE/DELETE forbidden;
+- no eligible sizing or trade execution in FP3-A;
+- STOP_UPDATE remains explicitly unavailable; later FP3-C maps only supported BUY/REDUCE/EXIT under preregistered policy.
+
+Current blocker:
+- none for FP3-A implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement autopilot_forward_runtime.py FP3-A activation + receipt store + front-half composition and focused tests; do not enter FP3-B/C in this commit.
+
+
+
+## FP3-A IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_START
+verifiedMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+implementationHead: 5a33d6293349d18f32b01635320d998dc4086c76
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented FP3-A:
+- isolated .fp3-paper-autopilot.sqlite3 activation/receipt store;
+- immutable future-bound activation referencing accepted Stream Capital and Epoch2 activation identities;
+- canonical owner over existing IntelligenceStreamCapitalForwardRuntime;
+- first process commits/reuses candidate + three vault decisions + HOLD/BLOCK R22 intents through accepted front-half only;
+- receipt stores exact forecast/proof/candidate/assessment/decision identities and canonical vault dispositions;
+- same forecast replay returns receipt without touching canonical ledgers again;
+- crash-style recovery: when canonical front-half truth exists but receipt is absent, rerun front-half idempotently and append only missing receipt;
+- pre-activation issuance skips without receipt/backfill;
+- receipt/activation UPDATE/DELETE forbidden;
+- no sizing/trade execution implemented in FP3-A.
+
+Focused tests:
+- first process + exact replay byte stability;
+- crash recovery after front-half commit;
+- pre-activation skip/no receipt;
+- immutable future-bound activation;
+- receipt/activation SQL immutability;
+- missing store read non-creating;
+- autopilot DB cannot alias Epoch2/Stream path.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance to include autopilot_forward_runtime.py and test_autopilot_forward_runtime.py; inspect exact logs and fix only evidenced failures, then restore workflow to current-main blob after PASS.
+
+
+
+## FP3-A ACCEPTANCE ATTEMPT 1 — PYTEST PASS / RUFF FIX START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_FIX_1_STYLE_ONLY
+acceptanceRun: 36589928271
+acceptanceJob: 109480058124
+attemptedHead: c90cf4e024238c4cdecaa184f414e2b961671f54
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest reached 100% PASS;
+- no FP3-A semantic/product assertion failure;
+- Ruff blocked the gate on one unused test import only.
+
+Exact Ruff finding:
+- F401 unused PaperVaultId import in tests/test_autopilot_forward_runtime.py.
+
+Bounded fix:
+- remove unused import only;
+- no runtime, receipt, replay, activation or persistence semantic change.
+
+Exact nextAction:
+Remove the one unused import, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to current-main content.
+
+
+
+## FP3-A ACCEPTANCE ATTEMPT 2 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_FIX_2_TYPING_ONLY
+acceptanceRun: 36590133359
+acceptanceJob: 109481017176
+attemptedHead: 553da0f4575914f40e1413c0cc80fa6e495f1994
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- canonical non-mutation PASS;
+- strict mypy blocked the gate with exactly four local typing/narrowing errors.
+
+Exact mypy findings:
+1. timestamp validation loop reuses prior str-typed local name `value`;
+2. same reuse causes _require_non_negative_int arg-type error;
+3. decision loop reuses dict-typed local name `raw` for dict.get optional result;
+4. heterogeneous provisional payload indexes hold_or_block_count as object.
+
+Bounded fix:
+- rename timestamp loop local;
+- use a separate decision_raw local after explicit None guard;
+- compute hold_or_block_count as an int local before payload construction;
+- no runtime/replay/receipt/persistence semantics change.
+
+Exact nextAction:
+Apply only the typing/narrowing fixes, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
+
+
+
+## FP3-A UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_A_REVIEW_READY
+verifiedMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+acceptedHead: 5bcad4b766f41bcdf6c3b2deb2432a404f317087
+acceptedRun: 36590509829
+acceptedJob: 109482068773
+cleanupHead: 08fc8491bd3dd32ee21f8ff550755a7dba3a01dd
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-A semantics:
+- future-bound immutable FP3 activation;
+- separate append-only processing receipt store;
+- accepted Capital forward front-half remains canonical owner for candidate + three vault decisions + HOLD/BLOCK intents;
+- first process / replay / crash-recovery semantics are deterministic;
+- replay cannot duplicate canonical decisions/HOLD intents;
+- no eligible sizing/trade commit in FP3-A;
+- no unsupported STOP_UPDATE invention.
+
+Current blocker:
+- none inside FP3-A; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-A PR, verify the exact docs/module/tests-only diff and PR checks, merge if isolated, then start FP3-B on fresh main with a new task-start checkpoint.
+
