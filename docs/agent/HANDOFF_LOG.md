@@ -5774,3 +5774,18 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - classification: test/proof gap, not production-runtime defect
 - safety: REAL_CAPITAL=0; RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: extend focused C2 test with REDUCE/replay/reconcile, then rerun exact-head acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 7 found weighted-average Decimal invariant bug
+
+- PR: #1683
+- tested head: \`7c2319c562bb06447d0f6a6d95910ee1b869bf47\`
+- RDP11: \`36608541557\` / job \`109543735446\`
+- WC6: \`36608541741\` / job \`109543738406\`
+- F10: \`36608541361\` PASS
+- WC6 exact-source/focused/paper-regression: PASS
+- shared C2 failure: first two-entry REDUCE reaches S11 outcome and fails exact \`basis == average * quantity\` round-trip
+- repair: directional division invariant; REDUCE removes average×partial quantity; EXIT removes exact remaining basis; reconstruction mirrors same policy
+- no epsilon/tolerance, no backfill, REAL_CAPITAL=0, soaked runtime untouched
+- RDP11 also showed one unrelated final-product read-model failure; re-evaluate after C2 repair
+- nextAction: patch S11 invariant + focused regression, rerun exact acceptance
