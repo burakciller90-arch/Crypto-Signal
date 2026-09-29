@@ -5690,3 +5690,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - cleanup: Product/Development non-mutation PASS; REAL_CAPITAL=0
 - repair scope: test fixture only — reuse canonical \`target_1\`, retain distinct later issuance time
 - nextAction: patch fixture target only and rerun full PR acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 2 failed on aliased source identity
+
+- PR: #1683
+- WC6 run/job: \`36604239843\` / \`109529058060\`
+- exact-source + focused + paper-regression stages: PASS
+- full regression failure: second test issuance reused first frozen SignalDecision identity and Capital Forward correctly rejected immutable Stream source-event rebinding
+- cleanup: Development non-mutating PASS; REAL_CAPITAL=0
+- repair scope: fixture only — use a distinct frozen signal identity while preserving the same valid geometry/target/context
+- nextAction: patch second issuance frozen signal identity and rerun acceptance
