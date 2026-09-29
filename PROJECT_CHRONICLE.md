@@ -1,5 +1,24 @@
 # PROJECT CHRONICLE
 
+## 2026-09-29 — Final Product Master Roadmap opened; RDP11 remains the mechanical gate
+
+The user explicitly opened the post-Stream/post-Evidence final-product scope from two product briefs: a single progressive-disclosure Command Center with human-readable exact visual evidence, and a Paper Capital Autopilot that demonstrates immutable, execution-aware virtual capital decisions and outcomes.
+
+A repository-wide duplicate audit was performed before roadmap authoring. The new program does **not** rebuild accepted foundations: Intelligence Stream S0-S16/F0-F10/MI1-MI6, RDP0-RDP10, R21 Epoch 2 accounting, R22 Transaction & Decision Tape, R24 Performance & Trust, Smart Capital/fixed-fractional sizing, S11 three-vault Capital Story, historical GALACTECH Command/Markets/Capital/Archive/Performance adapters, Stream SSE/search/history/sound, alert/outbox and shared Chromium visual-audit infrastructure are reuse inputs.
+
+The audit identified genuine remaining final-product gaps rather than reopening old work: natural forward canonical Capital liveness/productization; a new versioned non-destructive Paper Vault layer without rewriting Epoch 1/2; execution realism beyond current deterministic full-fill fee/spread/slippage v1; Trade Passport UX; richer deterministic non-Geometry family visual proof; the final 10-second Command Center; Asset Intelligence/Screener; Event Center; Watchlist; semantic alerts; global command search; and unified Portfolio/History product UX.
+
+Canonical umbrella authority is now:
+- `ACTIVE_ROADMAP.md`;
+- `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`.
+
+The new program is FP0–FP18. **FP0 is the existing RDP11 real soak**, not a duplicate gate. RDP11 remains ACTIVE / NOT PASS with anchored start `2026-09-29T09:13:21.134000Z` and earliest 72h eligibility `2026-10-02T09:13:21.134000Z`. Later FP implementation must not mutate the soaked runtime/observer contract or frozen/historical evidence merely to advance the roadmap.
+
+Normal customer UX will hide SHA/internal enums/database/runtime vocabulary; internal identities remain exact provenance. Final product principles are Answer → Action → Reason → Proof, immutable historical truth, no destructive paper reset, conservative fill realism, cash as a valid allocation, confluence != probability and REAL_CAPITAL=0.
+
+Durdurulmaz and Quantum Capital were not touched.
+
+
 ## 2026-09-28 — RDP9 PASS; RDP10 exact frozen customer-proof contract activated
 
 RDP9 is mechanically closed without treating commit/workflow success as acceptance. RDP9-A/B/C are merged on main through PRs #1633/#1634/#1635 as `4763bb27ad432a761e3abcee4aceb75e588cb6eb`, `2fcbefabec0360a58424a177048828d49d16c7d7` and `371bc013337e2e304fac465c4ab284d37539efc9`. The accepted overlap run `36447590945` / job `109013794664` emitted `DUPLICATE_EVIDENCE_WEIGHT_INFLATION=BLOCKED` and `OVERLAP_LINEAGE_IN_DECISION_PROOF=YES`. The accepted decision-layer run `36447590574` / job `109013790085` emitted `MATERIAL_VENUE_DISAGREEMENT_VISIBLE=YES` while preserving `CROSS_VENUE_SCORE_AUTHORITY=NO` and `CROSS_VENUE_DIRECTIONAL_AUTHORITY=NO`.
