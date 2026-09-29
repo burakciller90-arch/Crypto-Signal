@@ -6481,3 +6481,75 @@ Interpretation:
 
 Exact nextAction:
 Use this docs-only checkpoint commit to trigger a fresh exact-head workflow set. Require new-head FP4-B + WC6 + RDP11 + F10 PASS before merge.
+
+
+## FP4-B + FP4-C MERGED PASS HANDOFF — 2026-09-29
+
+status: FP4_B_C_PASS_MERGED
+exactMainAtCheckpoint: 906db410e692a5119b752998301cb58a3eba8b6a
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP4-C:
+- source PR: #1693
+- accepted head: `146c0dcd36f763653720a147d77209614d7d464b`
+- merge SHA: `356b30add6eedb8f7d041abb2f39f58b87db08f7`
+- dedicated run/job: `36621772972` / `109588673572` PASS
+- RDP11 pre-soak run/job: `36621772753` / `109588672190` PASS
+- WC6 run/job: `36621772743` / `109588672162` PASS
+- F10 run `36621772814` was cancelled by concurrency and was NOT counted as PASS
+- post-merge Workbench run/job for FP4-C: `36623260855` / `109593712386` PASS with exact main `356b30add6eedb8f7d041abb2f39f58b87db08f7`, branch main, dirty 0
+
+FP4-B canonicalization:
+- superseded timing-only PR #1691 remains CLOSED_UNMERGED and MUST NOT MERGE
+- canonical source PR: #1692 / `fp4b/latency-queue-timeout-v2`
+- accepted rebased head: `d5fcb23e2d45f1781ce9c8e7e71042ff9db8b4f8`
+- base after FP4-C: `356b30add6eedb8f7d041abb2f39f58b87db08f7`
+- merge SHA: `906db410e692a5119b752998301cb58a3eba8b6a`
+- dedicated FP4-B run/job: `36623439449` / `109594330532` PASS
+- WC6 run/job: `36623439542` / `109594323112` PASS
+- RDP11 pre-soak run/job: `36623439412` / `109594450093` PASS
+- F10 run/job: `36623439500` / `109594316993` PASS
+- full regression + frozen Product/Development non-mutation PASS
+
+Accepted FP4 behavior now on main:
+- FP4-A: exact immutable depth, deterministic VWAP, FULL/PARTIAL/NOT_FILLED/FILL_NOT_PROVEN, PIT/replay
+- FP4-B: passive-limit latency, explicit queue proof, public-trade queue depletion, partial fills, timeout/cancel, late/stale/future fail-closed
+- FP4-C: exact settled funding evidence + exact-settlement mark requirement; missing evidence => NOT_PROVEN
+- existing precision/min/max quantity/min-notional/tick-size venue rule snapshot remains authoritative
+
+Remaining FP4 work:
+- instrument-specific fee schedule
+- bridge exact fee + existing precision/rules + A/B/C execution outcomes without double-counting costs
+- final canonical FP4 acceptance/closeout
+
+Post-FP4-B Workbench:
+- run/job `36624554107` / `109598075039`
+- bootstrap checkout and SSD504 create/verify steps PASS at this checkpoint
+- final job/artifact/log markers still pending; do not invent exact `REPO_HEAD` marker until job completes
+
+Exact nextAction:
+Finish post-merge Workbench proof for main `906db410e692a5119b752998301cb58a3eba8b6a`. Then rebase `fp4d/instrument-fee-schedule-v2` onto the latest docs-complete main, run exact-head acceptance, and continue to the final FP4 cost/rule bridge.
+
+
+### FP4-B POST-MERGE WORKBENCH FINAL PROOF — 2026-09-29
+
+This final proof supersedes the earlier pending Workbench note in this checkpoint.
+
+- run/job: `36624554107` / `109598075039` — PASS
+- canonical Workbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- `REPO_HEAD=906db410e692a5119b752998301cb58a3eba8b6a`
+- `REPO_BRANCH=main`
+- `REPO_DIRTY_COUNT=0`
+- `BOOTSTRAP_SHA=906db410e692a5119b752998301cb58a3eba8b6a`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+- Product/Development deploy: NO; historical backfill: NO
+
+Exact nextAction:
+Merge this docs-only handoff after its own mechanical checks, then rebase `fp4d/instrument-fee-schedule-v2` onto the resulting main before running FP4-D acceptance.
