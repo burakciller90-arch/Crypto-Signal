@@ -152,7 +152,7 @@ Before every FP phase/sub-slice, classify the target as:
 
 Record that classification in CURRENT_FRONTIER before coding. Intelligence Stream S0-S16/F0-F10/MI1-MI6, R21, R22, R24 and other accepted foundations must not be rebuilt merely because their presentation is being redesigned.
 
-While the RDP11 soak is active, do not mutate the frozen soaked runtime/observer contract or historical/frozen evidence merely to advance a later final-product phase.
+While the RDP11 soak is active, do not mutate the frozen soaked runtime/observer contract or historical/frozen evidence merely to advance a later final-product phase. FP1+ engineering may proceed in isolated branches/worktrees using fixtures, temporary databases and read-only canonical inputs; do not deploy or merge behavior-changing runtime work into the soak target unless the epoch consequence is explicitly handled.
 
 ## End-of-turn handoff is mandatory
 
