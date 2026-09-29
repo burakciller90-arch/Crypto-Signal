@@ -4966,3 +4966,30 @@ Bounded test fix:
 Exact nextAction:
 Apply only the chronology guard + canonical test expectation, rerun exact-head UID504 acceptance, then address any later Ruff/mypy findings separately.
 
+
+
+## FP3-B ACCEPTANCE ATTEMPT 2 FAIL / TEST-SETUP FIX — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_2_TEST_SETUP_ONLY
+acceptanceRun: 36594933651
+acceptanceJob: 109497352268
+attemptedHead: 2ff78476b33af77568b71715d4e28814ffc12180
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- canonical chronology fix is active;
+- only one focused test failure remained;
+- drawdown-mismatch test still supplied legacy selected_at_ms=risk.as_of_ms+1;
+- production correctly rejected that input first at the newer canonical decision chronology guard, so the test never reached the intended R21 drawdown assertion;
+- Product/Development non-mutation PASS.
+
+Bounded fix:
+- test-only: derive selected_at_ms with the canonical _selected_at_ms helper before exercising drawdown mismatch;
+- no production code or runtime semantics change.
+
+Exact nextAction:
+Patch that one focused test and rerun exact-head UID504 acceptance; if pytest passes, inspect Ruff and strict mypy separately.
+
