@@ -6660,3 +6660,50 @@ Current blocker:
 
 Exact nextAction:
 Implement isolated receipt + focused tests on child branch. Do not open/merge acceptance PR until FP4-D is mechanically PASS and merged; then replay/rebase onto latest main.
+
+
+## FP4 FINAL CLOSEOUT START — 2026-09-29
+
+status: FP4_CLOSEOUT_PENDING_POST_MERGE_WORKBENCH
+taskStartMain: 2de42a57b6d8e1d3e222c45a51a53ced0db8375c
+closeoutBranch: handoff/fp4-final-pass-20260929
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Merged FP4 slices:
+- FP4-A depth/VWAP: merge `918e269e70f1e87df492fd0db00f8b21b397d3e1`
+- FP4-C settled funding: merge `356b30add6eedb8f7d041abb2f39f58b87db08f7`
+- FP4-B passive queue/latency/partial/timeout: merge `906db410e692a5119b752998301cb58a3eba8b6a`
+- B/C durable handoff: merge `7f902c5ed58e1574c477ea849bb03c89ffd1c363`
+- FP4-D instrument fee schedule: merge `767cfdd52a816054899165cfb65727199619dc88`
+- FP4-E canonical execution receipt: merge `2de42a57b6d8e1d3e222c45a51a53ced0db8375c`
+
+FP4-E accepted exact head:
+- `f9eba84df23765571cd0800ae866a4ee38731cd6`
+- dedicated FP4-E run/job `36627549969` / `109608319498` PASS
+- WC6 run/job `36627549985` / `109608509804` PASS
+- RDP11 pre-soak run/job `36627549934` / `109608320536` PASS
+- F10 run/job `36627550022` / `109608316313` PASS
+
+Roadmap coverage:
+- exact contemporaneous order-book depth + VWAP/impact: FP4-A
+- configurable latency + queue/limit uncertainty + partial + timeout/cancel + fill-not-proven: FP4-B
+- perpetual funding exact settled evidence: FP4-C
+- instrument-specific fee schedule: FP4-D
+- exchange precision/min/max quantity/min-notional/tick rules: existing authoritative venue-rule snapshot, reused
+- final immutable cost/evidence binding and no-double-count receipt: FP4-E
+- funding remains separate settlement event; v1 spread/slippage are not reapplied in V2 receipt
+- full/partial/not-filled/not-proven deterministic replay + fail-closed PIT boundaries accepted
+
+Current blocker:
+- post-FP4-E Workbench bootstrap run `36628287272` is queued/pending at closeout start.
+- Do not mark FP4 final PASS until exact main/branch/dirty0 Workbench markers are observed.
+- Post-merge Stage10/WC0 push failures are not classified as FP4 acceptance evidence and their causes must not be invented.
+
+Exact nextAction:
+Wait for Workbench bootstrap `36628287272`, capture exact `REPO_HEAD/BRANCH/DIRTY_COUNT/SSD504_WORKBENCH_PASS` markers, then mark FP4 PASS in this docs-only closeout, run F10, merge, verify final Workbench, and start FP5 from resulting main.
