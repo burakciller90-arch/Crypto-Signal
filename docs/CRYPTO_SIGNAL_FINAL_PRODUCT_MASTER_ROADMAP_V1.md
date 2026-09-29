@@ -12,7 +12,7 @@ Current mechanically active gate:
 
 **FP0 / RDP11 — Continuous soak + final Evidence PASS**
 
-The final product program is open, but no implementation phase may invalidate or silently bypass the active RDP11 soak.
+The final product program is open. The active RDP11 soak blocks mutation/cutover of the soaked runtime and blocks final Evidence PASS, but it does **not** require engineering to sit idle: later Paper Capital and Product/UI slices may be developed and tested in isolated branches/worktrees with fixtures, temporary databases and read-only canonical inputs as long as they cannot mutate the soaked Product/Development target, observer contract or frozen/historical evidence.
 
 ---
 
@@ -301,10 +301,19 @@ PASS requires the RDP11 roadmap's real accumulated evidence, not elapsed time al
 ### During FP0
 
 Allowed:
-- documentation;
-- read-only audits;
-- isolated design/contract preparation that cannot alter soaked runtime;
-- test fixtures that do not mutate Product/Development/frozen evidence.
+- documentation and read-only audits;
+- isolated FP1+ implementation branches/worktrees;
+- unit/contract/browser development against deterministic fixtures;
+- temporary/copy-on-write paper databases;
+- read-only canonical evidence inputs;
+- new Product/UI preview code that is not deployed into the soaked Product/Development target;
+- parallel Paper Capital and frontend work when file/schema ownership is disjoint.
+
+Required isolation:
+- no FP1+ branch may alter the active soak anchor, observer contract or frozen runtime subject;
+- no acceptance may relabel fixture success as final forward/live acceptance;
+- merge to main is allowed only when the change cannot alter the active soaked runtime behavior, otherwise hold the merge/deploy until the soak boundary is deliberately closed/restarted;
+- final integrated Product deployment/cutover waits for FP0 PASS.
 
 Forbidden:
 - changing soaked Product/Development target;
@@ -313,7 +322,7 @@ Forbidden:
 - deploying a new Product runtime into the active epoch;
 - claiming RDP11 PASS early.
 
-FP0 PASS unlocks FP1 implementation.
+FP0 PASS unlocks **final integrated runtime acceptance/cutover**. FP1+ engineering may proceed in parallel during the soak under the isolation rules above.
 
 ---
 
@@ -1151,7 +1160,9 @@ Parallel work is allowed only when workspaces and authority boundaries are disjo
 
 One agent/task = one branch/worktree.
 
-Safe examples after FP0:
+During FP0, safe isolated parallel work is explicitly encouraged so the 72-hour soak is not idle time. Work that changes the soaked runtime behavior stays unmerged/undeployed until its effect on the epoch is resolved.
+
+Safe examples during/after FP0:
 - Paper execution realism adapter;
 - family visual renderer;
 - global search read model;
