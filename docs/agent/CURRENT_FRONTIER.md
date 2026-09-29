@@ -6759,3 +6759,58 @@ Global gates remain independent:
 
 Exact nextAction:
 Run docs-only closeout F10 and merge this handoff. Verify final Workbench exact-main sync. Then start FP5 Capital Allocator V2 from the resulting exact main, reusing existing FP3 sizing/risk evidence and adding only missing live portfolio/cluster risk controls.
+
+
+## FP5-A PORTFOLIO RISK ENVELOPE V2 START — 2026-09-29
+
+status: FP5A_IMPLEMENTATION_START
+taskStartMain: 5d5852a422ae48d2a53e0e99303372289197e251
+activeBranch: fp5a/portfolio-risk-envelope-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+classification: EXTEND existing FP3 fixed-fractional/risk inputs with missing live portfolio + correlation-cluster hard-cap layer
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP4 prerequisite:
+- FP4 is PASS and durable closeout merged on exact main `5d5852a422ae48d2a53e0e99303372289197e251`.
+- final Workbench run/job `36628675283/109612066152` PASS: exact main `5d5852a422ae48d2a53e0e99303372289197e251`, branch main, dirty 0, SSD504_WORKBENCH_PASS=YES.
+
+Duplicate/ownership audit:
+- no FP5 branch or open FP5 Capital Allocator PR exists at task start;
+- existing FP3 sizing already owns expected win/loss R, transaction cost R, absolute correlation scalar, drawdown, volatility, liquidity and fixed-fractional promotion;
+- existing Smart Capital allocator Slice1 owns evidence/event-risk eligibility and static Epoch2 vault envelopes, but explicitly forbids live portfolio metrics/notional sizing;
+- existing read-only portfolio view owns current cash/NAV/positions when exact marks are available;
+- DO NOT rebuild those owners.
+
+FP5-A bounded scope:
+- immutable live portfolio-risk snapshot from caller-supplied accepted portfolio metrics;
+- explicit per-asset gross exposure and named correlation-cluster exposure;
+- hard portfolio gross-exposure cap and per-cluster cap;
+- current drawdown + cash reserve gates;
+- accepted event/liquidity/conflict eligibility flags remain explicit and fail closed;
+- transaction-cost and stop/invalidation risk budget inputs bind the envelope;
+- fixed-fractional/risk-budgeted capacity only; no Kelly enablement;
+- 100% cash is a valid outcome;
+- missing/unknown cluster or portfolio metrics => HOLD_CASH / NOT_PROVEN rather than optimistic capacity;
+- no leverage/borrowing/forced deployment;
+- no R21/R22 mutation or runtime deploy in this slice.
+
+PASS gate:
+- cluster exposure is explicit and deterministic;
+- same asset exposure cannot escape its cluster cap;
+- drawdown/event/liquidity/conflict/cash gates fail closed;
+- exact replay identity stable;
+- cash-only portfolio remains valid;
+- eligible portfolio can expose non-zero deployable risk budget without forced under-use;
+- Kelly remains disabled;
+- whole repo regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation + exact-head acceptance not yet exist.
+
+Exact nextAction:
+Implement isolated FP5-A immutable portfolio-risk envelope + focused tests, preserving existing FP3 sizing and Smart Capital owners; then run UID504 acceptance.
