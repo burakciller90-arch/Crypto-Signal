@@ -5679,3 +5679,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - unchanged: weighted-average cost-basis algorithm, canonical BUY/SELL mutation ownership, REAL_CAPITAL=0, RDP11 frozen runtime
 - blocker: exact PR/full UID504 acceptance not yet run
 - nextAction: open isolated FP3-C2 PR and inspect full acceptance output
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 1 failed in test fixture
+
+- PR: #1683
+- run/job: \`36603817819\` / \`109527616375\`
+- virtual merge SHA under test: \`b3c6406557\`
+- failure: new second-issuance test used nonexistent frozen-geometry target \`target_scale_in\`; R20 rejected it before C2 runtime behavior
+- cleanup: Product/Development non-mutation PASS; REAL_CAPITAL=0
+- repair scope: test fixture only — reuse canonical \`target_1\`, retain distinct later issuance time
+- nextAction: patch fixture target only and rerun full PR acceptance
