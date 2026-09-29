@@ -4075,3 +4075,288 @@ Current blocker:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP1-E PR with only docs/read-model/tests changes, inspect PR checks and merge only if no overlap/runtime conflict exists.
 
+
+
+## FP1-F SCREENER + FEDERATED GLOBAL SEARCH TASK START — 2026-09-29
+
+status: FP1_F_AUDIT_START
+taskStartMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE accepted query/read surfaces + EXTEND customer screener/federation only
+duplicateCheck: no open FP1-F PR and no fp1f branch existed at task start
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP1-E Trade Passport merged via PR #1677;
+- merge SHA: ef408ee105e1f226b199b7b1a185a1fdb990159f;
+- FP1-E UID504 acceptance run 36577967469 / job 109438394874 PASS;
+- PR pre-soak fulltest PASS;
+- RDP11 soaked runtime remained unmodified.
+
+Bounded FP1-F goal:
+- add customer-safe Screener rows over accepted current market/system-view/family truth;
+- add one federated read-only global search contract that composes existing Stream search, Event Rail/event-source truth, exact signal/message identity, R22 Trade Passport lookup and proof/evidence lookup only where already supported;
+- do not create a persistent search index/database;
+- do not duplicate Stream full-text/history/SSE;
+- do not reinterpret radar rows as current truth when only historical/latest-signal semantics exist;
+- do not invent unavailable event/trade/proof matches;
+- preserve exact identity/provenance in audit metadata only;
+- no Product route/frontend/deploy/runtime writer in FP1-F.
+
+Current blocker:
+- exact source precedence, query bounds, result taxonomy, screener row semantics and direct-identity fallback order are not yet re-audited on current main; production code is forbidden until frozen.
+
+Exact nextAction:
+Audit DashboardReader market-radar semantics, current Stream system-view/family records, StreamMessageQuery full-text/deep-link capabilities, Event Rail query surface, R22/Trade Passport exact lookup and exact proof/evidence readers; freeze one FP1-F field/source matrix before implementation.
+
+
+
+## FP1-F SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_F_IMPLEMENTATION_START
+baseMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+auditDocument: docs/CRYPTO_SIGNAL_FP1F_SCREENER_SEARCH_FIELD_SOURCE_MATRIX.md
+classification: REUSE Market Pulse/Stream/Event Rail/Trade Passport/Decision Evidence + EXTEND federation
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen source contract:
+- Screener is a deterministic projection of accepted Market Pulse current truth;
+- legacy market_radar remains latest-signal/navigation history, not current screener authority;
+- global search federates existing read-only readers and creates no search DB;
+- Stream full-text/exact narrative lookup reused unchanged;
+- Event matches are bounded to explicit verified Event Rail window;
+- exact R22 bundle may open Trade Passport;
+- exact Decision Evidence search supports signal/forecast identities through accepted APIs;
+- direct proof-id lookup remains explicit unavailable in FP1-F;
+- missing sources contribute no fabricated result and remain explicit in source coverage.
+
+Current blocker:
+- none for implementation; mechanical acceptance pending.
+
+Exact nextAction:
+Implement Screener and federated Global Search customer/audit contracts in final_product_read_model.py plus focused tests, without touching routes/frontend/runtime or source persistence.
+
+
+
+## FP1-F IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_START
+verifiedMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+implementationHead: 91bd1b664e1480b8da1a0f438c0e1b28a67b5b9c
+branchAheadMain: 9
+branchBehindMain: 0
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- ScreenerRow / ScreenerView over accepted Market Pulse current truth only;
+- deterministic symbol/timeframe order, no invented ranking/confidence score;
+- GlobalSearchItem / GlobalSearchView as read-only federation;
+- configured-asset search via Screener;
+- Stream text/symbol/exact narrative search via existing Stream query/read APIs;
+- bounded Event Rail text/asset/provider search;
+- Stream capital execution classification as Trade when exact R22 bundle lineage exists;
+- exact R22 bundle lookup through accepted Trade Passport;
+- exact frozen-signal lookup through DashboardReader;
+- exact Decision Evidence signal/forecast lookup through accepted ledger APIs;
+- raw proof-identity direct lookup remains explicitly unavailable;
+- deterministic priority/newest/stable ordering and source-key dedupe;
+- missing/corrupt source coverage remains explicit;
+- no routes/frontend/runtime/source persistence changes.
+
+Focused tests added:
+- Screener reuses Market Pulse and remains read-only;
+- Screener customer payload hides identity/internal state vocabulary;
+- missing federated sources are explicit/non-creating;
+- exact configured asset precedes Stream results;
+- bounded verified Event Rail search;
+- exact R22 bundle -> Trade Passport result;
+- exact signal/forecast -> Decision Evidence result;
+- raw proof identity explicit unavailable;
+- customer text search hides exact identities;
+- source DB bytes unchanged.
+
+Acceptance blocker:
+- UID504 exact-head pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire existing MI1 UID504 acceptance to this branch including final_product_read_model.py and test_final_product_read_model.py; inspect exact mechanical logs, fix only evidenced failures, restore workflow to current-main blob after PASS.
+
+
+
+## FP1-F ACCEPTANCE ATTEMPT 1 FAIL / BOUNDED FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_1
+acceptanceRun: 36582112768
+acceptanceJob: 109452679451
+acceptedHeadAttempted: 826cad58af96f80cd56bbe260748666f3e3f178d
+realCapital: 0
+historicalBackfill: NO
+
+Exact failures:
+1. test_screener_reuses_market_pulse_current_truth_and_is_read_only expected timeframe "system", but accepted system-view truth returns "15m". This is a focused-test expectation bug; production truth is correct.
+2. global_search(...) unconditionally called screener(...) even when configured_symbols=(), triggering the accepted market-pulse guard "market pulse requires at least one symbol". This is a bounded FP1-F implementation bug.
+
+No other semantic failure is authorized to infer from this run because pytest stopped acceptance before a clean Ruff/mypy gate.
+
+Bounded fix:
+- production: skip the Screener asset federation branch when configured symbol set is empty;
+- test: expect the accepted system-view timeframe "15m";
+- no source contract/ranking/query/persistence changes.
+
+Exact nextAction:
+Apply only these two changes, rerun exact-head UID504 acceptance, and inspect pytest/Ruff/mypy/non-mutation/isolation markers.
+
+
+
+## FP1-F ACCEPTANCE ATTEMPT 2 FAIL / BOUNDED FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_2
+acceptanceRun: 36582659170
+acceptanceJob: 109454598842
+attemptedHead: 54434756aff265b8f7c619434bcb9fe34f16c6ba
+runStatusObserved: completed
+runConclusionObserved: failure
+realCapital: 0
+historicalBackfill: NO
+
+Exact remaining failure:
+- global_search(...) still normalizes configured_symbols with _normalize_symbols(...) before the empty-universe branch guard.
+- configured_symbols=() is valid for federated event/trade/proof-only search and must not invoke the Market Pulse non-empty-symbol contract.
+
+Bounded fix:
+- set normalized screener symbols to () when configured_symbols is empty;
+- keep _normalize_symbols unchanged for actual Screener/Market Pulse callers;
+- no query/ranking/source/persistence semantics change.
+
+Exact nextAction:
+Apply the one-line empty-universe normalization fix and rerun exact-head UID504 acceptance.
+
+
+
+## FP1-F ACCEPTANCE ATTEMPT 3 FAIL / STYLE-ONLY FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_3_STYLE_ONLY
+acceptanceRun: 36582841674
+acceptanceJob: 109457334434
+attemptedHead: c474c1ebd7c3015bb946c05b253b69acd584fa48
+realCapital: 0
+historicalBackfill: NO
+
+Observed acceptance progression:
+- the workflow progressed past focused/regression pytest into Ruff;
+- prior timeframe and empty configured-symbol semantic failures no longer appeared;
+- gate failed only at Ruff with exactly three style findings.
+
+Exact Ruff findings:
+1. import order: DashboardReader must precede DashboardReadError;
+2. prefer row.symbol.removesuffix("USDT") over the conditional slice;
+3. combine nested signal-ledger exact-identity if statements.
+
+Bounded fix:
+- style/refactor only;
+- no source contract, query, ordering, dedupe, coverage, ranking or persistence semantic change.
+
+Exact nextAction:
+Apply exactly the three Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to exact current-main content.
+
+
+
+## FP1-F ACCEPTANCE ATTEMPT 3 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP1_F_RUFF_FIX
+acceptanceRun: 36582841674
+acceptanceJob: 109457334434
+attemptedHead: c474c1ebd7c3015bb946c05b253b69acd584fa48
+realCapital: 0
+historicalBackfill: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest reached 100% PASS;
+- canonical non-mutation PASS;
+- Ruff blocked the gate before mypy with exactly three style findings;
+- no semantic/product assertion failure remains in this run.
+
+Exact Ruff findings:
+1. I001 import order: DashboardReader must precede DashboardReadError;
+2. FURB188: use str.removesuffix("USDT") for base-asset projection;
+3. SIM102: combine exact-identity signal path nested if statements.
+
+Bounded fix:
+- style/import only;
+- no query/ranking/source/field/persistence contract change.
+
+Workflow state:
+- temporary UID504 branch wiring restored to exact current-main blob before editing, preventing intermediate acceptance spam.
+
+Exact nextAction:
+Apply exactly the three Ruff edits, then re-wire one final exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
+
+
+## FP1-F UID504 ACCEPTANCE PASS / FP1 REVIEW READY — 2026-09-29
+
+status: FP1_F_REVIEW_READY
+verifiedMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+acceptedHead: e1137086c5044f6e52b50950073947d7b2c146b3
+acceptedRun: 36583882210
+acceptedJob: 109458903547
+cleanupHead: 09200a11130de9b24c57d034ea3e5bfab1460f73
+branchAheadMain: 28
+branchBehindMain: 0
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP1-F truth:
+- Screener is a pure current Market Pulse projection;
+- legacy market_radar is not promoted to current truth;
+- global search federates accepted readers only;
+- no new search truth DB/index exists;
+- asset/Stream/Event/Trade/Proof result taxonomy is deterministic;
+- exact R22 bundle and accepted Decision Evidence signal/forecast lookups work;
+- raw proof identity direct search remains explicitly unavailable;
+- customer default payload hides exact identities; audit preserves them;
+- no Product route/frontend/runtime/source writer changed.
+
+FP1 aggregate:
+- FP1-A/B/C/D/E/F are now accepted at read-model level;
+- FP0/RDP11 remains ACTIVE / NOT PASS and was not mutated.
+
+Current blocker:
+- FP1-F still requires PR review/merge checks against current main.
+
+Exact nextAction:
+Recheck current main + duplicate PR state, open one FP1-F PR, verify exact changed-file set and PR checks, merge if isolated, then checkpoint FP1 COMPLETE and start the next mechanically allowed Final Product roadmap slice from fresh main.
+

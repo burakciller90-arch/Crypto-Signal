@@ -1,6 +1,6 @@
 # Crypto Signal — FP1 Human Read-Model Capability Matrix
 
-Status: **FP1-A/B MERGED / FP1-C ACCEPTED ON REVIEW BRANCH / FP1-D NEXT AFTER C MERGE**
+Status: **FP1-A/B/C/D/E/F ACCEPTED / FP1 PROGRAM REVIEW READY**
 Date: 2026-09-29
 Authority: `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
 Active mechanical gate: **FP0 / RDP11 soak remains ACTIVE / NOT PASS**
@@ -328,3 +328,32 @@ Do not rebuild FP1-A, FP1-B or accepted FP1-C source/query semantics.
 
 Exact next action:
 Audit and freeze the Trade Passport field/source contract over canonical R22/R21/RDP10 truth before implementation.
+
+
+## 10.2 Progress update — FP1-F
+
+- FP1-D merged via PR #1676.
+- FP1-E Trade Passport merged via PR #1677 at main `ef408ee105e1f226b199b7b1a185a1fdb990159f`.
+- Current slice: **FP1-F — Screener + federated global search contract**.
+- Persistent search index remains unauthorized.
+- Do not rebuild Stream search/history/SSE.
+- Do not use legacy radar semantics as final current-truth screener rows without source audit.
+
+Exact next action:
+Audit and freeze the screener/federated-query source contract before implementation.
+
+
+## 10.3 FP1 completion update — 2026-09-29
+
+- FP1-A — Market Pulse: MERGED.
+- FP1-B — Attention + Workspace + Five-Family: MERGED.
+- FP1-C — Event Rail: MERGED.
+- FP1-D — Portfolio Summary + Daily Capital Movements: MERGED via PR #1676.
+- FP1-E — Trade Passport: MERGED via PR #1677.
+- FP1-F — Screener + federated Global Search: UID504 ACCEPTED / REVIEW READY.
+- Persistent search index: NOT BUILT / NOT REQUIRED.
+- REAL_CAPITAL=0.
+- FP0/RDP11 soak remains independently ACTIVE / NOT PASS.
+
+Exact next action:
+Review and merge FP1-F only if the diff remains source/read-model/test/docs-only and PR checks pass. After FP1-F merge, mark FP1 mechanically complete and proceed to the next canonical Final Product roadmap gate allowed during FP0 soak.
