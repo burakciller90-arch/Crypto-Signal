@@ -6577,3 +6577,15 @@ FP6 duplicate audit:
 - accepted FP1-E owner already exists: `FinalProductReadModel.trade_passport()` keyed by immutable R22 bundle identity and reusing R22/R21/S11/Decision Proof
 - remaining FP6 work is trade-wide lifecycle + exact per-event frozen proof + historical immutability audit/extension, not a greenfield passport
 - nextAction: isolated FP6-A owner/gap matrix after this docs-only closeout merges
+
+
+## 2026-09-30 — FP6-A owner/gap audit started
+
+- base main `c1263bc073f78caea12b088e95447c3cae91bf50` (FP5 whole-phase PASS closeout #1704)
+- branch `fp6a/trade-passport-lifecycle-audit`
+- no competing FP6/passport PR or branch
+- reuse accepted FP1-E `FinalProductReadModel.trade_passport()`; do not build a second passport ledger
+- audit target is the delta from single R22 bundle passport to trade-wide immutable lifecycle + exact per-event frozen proof
+- inspect FP3 action receipts, R22 bundle story, R21 snapshots, S11 outcomes, Capital Stream lifecycle and RDP10 proof readers
+- classify each required lifecycle/proof field READY_EXACT / EXTEND_EXISTING / UNAVAILABLE_EXPLICIT before coding
+- REAL_CAPITAL=0; no backfill/deploy; RDP11 R2 untouched
