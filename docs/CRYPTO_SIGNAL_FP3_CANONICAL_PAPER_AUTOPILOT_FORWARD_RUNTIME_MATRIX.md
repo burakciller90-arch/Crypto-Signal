@@ -233,3 +233,96 @@ Accepted FP3-A result:
 
 Next mechanically allowed slice:
 **FP3-B — eligible fixed-fractional sizing bridge**.
+
+
+## 10. FP3-B frozen sizing bridge contract
+
+Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+
+Canonical input boundary:
+- exact accepted FP3-A receipt for the forecast;
+- exact `UnifiedDecisionIssuance` + Event Risk used by FP3-A;
+- existing `PositionSizingPolicy`;
+- caller-supplied measured risk inputs with exact evidence identities;
+- exact target `PaperVaultId`;
+- sizing selection/process timestamps.
+
+Fail-closed lineage:
+- recompute accepted Capital Science assessment with the same FP3-A inputs;
+- recomputed candidate/assessment identities must equal the FP3-A receipt;
+- target FP3-A vault disposition must be `eligible`;
+- `promote_vault_eligibility` remains the sole ELIGIBLE promotion function;
+- risk context allocator candidate + assessment identities must equal FP3-A;
+- risk context time cannot predate allocator assessment;
+- caller-reported current drawdown must equal the latest canonical R21 target-vault drawdown;
+- sizing selection time cannot predate risk observation, eligibility assessment or current R21 vault snapshot.
+
+Sizing behavior:
+- evaluate existing Position Sizing Intelligence;
+- no calibrated probability is required or promoted for fixed-fractional;
+- only `SizingMethod.FIXED_FRACTIONAL` may become canonical;
+- if fixed-fractional is not `AVAILABLE_SHADOW`, persist an isolated FP3-B HOLD receipt only;
+- if available, reuse `promote_fixed_fractional_sizing`;
+- reuse `build_canonical_sizing_event` + `CanonicalSizingEventLedger.append`;
+- reuse `project_sizing_event_to_stream`;
+- do not call BUY/REDUCE/EXIT commit functions in FP3-B.
+
+Persistence/replay:
+- FP3-A receipt is never rewritten;
+- add isolated append-only sizing-stage receipts in the same .fp3-paper-autopilot.sqlite3 store;
+- unique key is exact forecast + vault;
+- exact replay returns prior receipt without duplicate sizing/Stream writes;
+- if canonical sizing event exists but FP3-B receipt is missing, deterministic rerun must append only the missing receipt/projector state and return RECOVERED;
+- conflicting policy/risk context for the same forecast+vault fails closed.
+
+FP3-B PASS:
+- eligible vault can produce canonical fixed-fractional selection/event;
+- HOLD/BLOCK vault cannot enter sizing;
+- risk gate can HOLD without event/trade;
+- fixed-fractional is the only promoted method;
+- R21 drawdown lineage is exact;
+- sizing event + Stream sizing projection are idempotent;
+- no R21/R22 trade/fill/accounting mutation;
+- REAL_CAPITAL=0;
+- no RDP11 soaked-runtime mutation.
+
+Exact nextAction:
+Implement the isolated FP3-B sizing bridge + sizing-stage receipt and focused tests. Do not implement FP3-C action/trade commits in this slice.
+
+
+## 11. FP3-B UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head:
+- head SHA: `d73cde9dd8d3a42dadac4fe85704c2a112d98e42`;
+- run: `36595609945`;
+- job: `109499792310`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 workflow wiring restored in `2faa27fe79685ba42b4ab0905d68d675e74fba0c`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted FP3-B result:
+- only canonical ELIGIBLE vaults enter sizing;
+- exact R21 drawdown lineage is enforced;
+- fixed-fractional is the only promotable sizing method;
+- HOLD/BLOCK/risk-gated outcomes do not create a trade;
+- CanonicalSizingEvent + Stream sizing projection are idempotent;
+- sizing chronology cannot precede the latest canonical vault decision;
+- replay/recovery cannot duplicate sizing event or Stream sizing message;
+- no R21/R22 trade/fill/accounting mutation was introduced;
+- no Product/Development deploy or RDP11 soaked-runtime mutation occurred.
+
+Next mechanically allowed slice:
+**FP3-C — preregistered action bridge + canonical R21/R22 commit.**

@@ -4956,3 +4956,286 @@ Current blocker:
 Exact nextAction:
 Recheck current main and overlap state, open one FP3-A PR, verify the exact docs/module/tests-only diff and PR checks, merge if isolated, then start FP3-B on fresh main with a new task-start checkpoint.
 
+
+
+## FP3-B ELIGIBLE FIXED-FRACTIONAL SIZING TASK START — 2026-09-29
+
+status: FP3_B_SIZING_BRIDGE_START
+taskStartMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+fp3Contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE accepted eligibility/sizing truth + EXTEND FP3 owner only
+duplicateCheck: no open FP3-B PR and no FP3-B branch existed at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: FORBIDDEN
+ProductDevelopmentDeploy: FORBIDDEN
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP3-A closure:
+- PR #1680 merged;
+- merge SHA: 1347ee8550e04a8491c20227bad50d9aeb3fba4e;
+- accepted exact head: 5bcad4b766f41bcdf6c3b2deb2432a404f317087;
+- UID504 run 36590509829 / job 109482068773 PASS;
+- PR RDP11 pre-soak fulltest PASS;
+- F10 closeout PASS;
+- WC6 recovery reconciliation PASS.
+
+Bounded FP3-B goal:
+- process only vaults whose canonical FP3-A decision is ELIGIBLE;
+- promote exact allocator eligibility with existing promote_vault_eligibility;
+- accept caller-supplied exact sizing-risk inputs only; do not invent risk metrics;
+- evaluate existing Position Sizing Intelligence with preregistered policy;
+- only existing FIXED_FRACTIONAL result may become canonical;
+- persist existing CanonicalSizingEvent and project it to Stream;
+- HOLD/BLOCK remain untouched;
+- risk-gated or unavailable sizing remains explicit and causes no trade;
+- no BUY/REDUCE/EXIT commit in FP3-B;
+- replay must not duplicate sizing event or Stream sizing message.
+
+Current blocker:
+- exact signatures/lineage requirements across eligibility proof, PositionSizingRiskContext, PositionSizingPolicy and canonical sizing event have not yet been re-audited against merged FP3-A.
+
+Exact nextAction:
+Audit the accepted eligibility/sizing APIs and current FP3-A receipt model, freeze the minimal FP3-B input/result contract, then implement only the eligible fixed-fractional sizing bridge with focused replay/idempotence tests.
+
+
+
+## FP3-B SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_B_IMPLEMENTATION_START
+baseMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md#10
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Frozen implementation boundary:
+- FP3-A receipt remains immutable;
+- new sizing-stage receipt is append-only and unique per forecast+vault;
+- exact Capital Science recomputation must match A receipt identities;
+- only ELIGIBLE vault enters sizing;
+- exact R21 drawdown must match supplied risk context;
+- risk observation cannot predate allocator assessment;
+- fixed-fractional only;
+- risk-gated HOLD writes no canonical sizing event;
+- available fixed-fractional reuses canonical selection/event + Stream sizing projection;
+- replay/recovery idempotent;
+- no trade commit in FP3-B.
+
+Exact nextAction:
+Implement FP3-B helper/store contract and focused tests over merged FP3-A; then run exact-head UID504 acceptance.
+
+
+
+## FP3-B IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_START
+verifiedMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+implementationHead: 5564a0f7d57b07c0ca07acb10dca6b59e2ce2e5e
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented FP3-B:
+- isolated FP3 sizing-risk input contract with exact evidence identities;
+- exact FP3-A candidate/allocation identity reconciliation before sizing;
+- ELIGIBLE-only promotion via existing canonical eligibility proof;
+- exact R21 current-drawdown equality check;
+- existing Position Sizing Intelligence reuse;
+- fixed-fractional-only canonical promotion;
+- risk-gated HOLD produces no canonical sizing event/trade;
+- accepted CanonicalSizingEvent + Stream sizing projection reuse;
+- append-only sizing-stage receipt unique per forecast+vault;
+- exact replay and crash-style missing-receipt recovery;
+- HOLD/BLOCK vaults never enter sizing;
+- R22 trade/fill/accounting remains untouched.
+
+Focused tests:
+- eligible Core sizing + exact replay;
+- risk gate HOLD without event/R22 trade;
+- HOLD vault skip;
+- R21 drawdown mismatch rejection;
+- canonical event/Stream projection recovery when stage receipt is missing;
+- physical sizing receipt immutability.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance for autopilot_forward_sizing.py + test_autopilot_forward_sizing.py; fix only evidenced failures, restore workflow after PASS.
+
+
+
+## FP3-B ACCEPTANCE ATTEMPT 1 FAIL / CHRONOLOGY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_1_CHRONOLOGY
+acceptanceRun: 36594304203
+acceptanceJob: 109495132265
+attemptedHead: 82a122b311b949cb31e1dc56ce97b564a1e89b43
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- Product/Development non-mutation PASS;
+- focused pytest reached FP3-B tests and exposed four failures;
+- three failures share one canonical chronology defect:
+  sizing Stream source event attempted to append before the latest FP3-A vault-decision Stream event, causing StreamLedgerConflictError backfill/fork rejection;
+- one failure is test-only reason-code drift:
+  accepted sizing engine emits correlation_limit_breached, while the new test incorrectly expected correlation_cap_exceeded.
+
+Bounded production fix:
+- read exact canonical vault decisions for the FP3-A allocator assessment;
+- require selected_at_ms strictly after the latest canonical decision decided_at_ms before canonical sizing/event projection;
+- do not auto-invent or bump timestamps.
+
+Bounded test fix:
+- derive valid sizing selection time after max(front decision time, risk as-of);
+- expect accepted reason code correlation_limit_breached;
+- add one focused assertion that pre-decision selection time fails closed.
+
+Exact nextAction:
+Apply only the chronology guard + canonical test expectation, rerun exact-head UID504 acceptance, then address any later Ruff/mypy findings separately.
+
+
+
+## FP3-B ACCEPTANCE ATTEMPT 2 FAIL / TEST-SETUP FIX — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_2_TEST_SETUP_ONLY
+acceptanceRun: 36594933651
+acceptanceJob: 109497352268
+attemptedHead: 2ff78476b33af77568b71715d4e28814ffc12180
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- canonical chronology fix is active;
+- only one focused test failure remained;
+- drawdown-mismatch test still supplied legacy selected_at_ms=risk.as_of_ms+1;
+- production correctly rejected that input first at the newer canonical decision chronology guard, so the test never reached the intended R21 drawdown assertion;
+- Product/Development non-mutation PASS.
+
+Bounded fix:
+- test-only: derive selected_at_ms with the canonical _selected_at_ms helper before exercising drawdown mismatch;
+- no production code or runtime semantics change.
+
+Exact nextAction:
+Patch that one focused test and rerun exact-head UID504 acceptance; if pytest passes, inspect Ruff and strict mypy separately.
+
+
+
+## FP3-B ACCEPTANCE ATTEMPT 3 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_3_TYPING_ONLY
+acceptanceRun: 36595210948
+acceptanceJob: 109498426825
+attemptedHead: 68eecb2606ab8e38f4eb1eb79ffad2cde430d5ce
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy failed with 15 local typing errors in autopilot_forward_sizing.py only.
+
+Typing clusters:
+1. one str | None assignment narrowing around optional canonical sizing identity;
+2. two FP3SizingStageReceipt constructions pass heterogeneous dict[str, object] through **kwargs, producing 14 constructor arg-type errors.
+
+Bounded fix:
+- use explicitly typed local for optional sizing identity;
+- replace heterogeneous **kwargs receipt construction with explicit typed constructor arguments;
+- no sizing, chronology, risk, replay, persistence or Stream semantics change.
+
+Exact nextAction:
+Apply typing-only refactor, rerun exact-head UID504 acceptance, require all mechanical gates PASS, then restore temporary workflow and mark FP3-B review-ready.
+
+
+
+## FP3-B ACCEPTANCE ATTEMPT 3 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_3_TYPING_ONLY
+acceptanceRun: 36595210948
+acceptanceJob: 109498426825
+attemptedHead: 68eecb2606ab8e38f4eb1eb79ffad2cde430d5ce
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest gate PASS (workflow advanced to Ruff);
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy blocked the gate with 15 diagnostics from two local typing patterns only.
+
+Exact typing roots:
+1. optional identity validation loop reused a prior str-typed local, producing one str|None assignment error;
+2. two FP3SizingStageReceipt constructors expand a generic dict[str, object] with **values, which strict mypy cannot narrow to the dataclass field types.
+
+Bounded fix:
+- rename optional loop local to preserve narrowing;
+- keep canonical identity payload generation, but construct FP3SizingStageReceipt with explicit typed arguments instead of **dict expansion;
+- no sizing/risk/replay/persistence/chronology semantic change.
+
+Exact nextAction:
+Apply the typing-only constructor/narrowing fix, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
+
+
+## FP3-B UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_B_REVIEW_READY
+verifiedMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+acceptedHead: d73cde9dd8d3a42dadac4fe85704c2a112d98e42
+acceptedRun: 36595609945
+acceptedJob: 109499792310
+cleanupHead: 2faa27fe79685ba42b4ab0905d68d675e74fba0c
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-B semantics:
+- exact FP3-A receipt and allocator lineage gate sizing;
+- only ELIGIBLE vault can enter sizing;
+- exact R21 current drawdown must match caller risk context;
+- sizing cannot predate canonical vault decision chronology;
+- only accepted fixed-fractional method can become canonical;
+- HOLD/BLOCK/risk-gated paths create no trade;
+- canonical sizing event + Stream sizing projection are exact-idempotent;
+- crash-style missing-receipt recovery is supported;
+- no BUY/REDUCE/EXIT commit occurs in FP3-B.
+
+Current blocker:
+- none inside FP3-B; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-B PR with docs/sizing-module/focused-tests only, verify PR checks, merge if isolated, then start FP3-C on fresh main with a new task-start checkpoint.
+
