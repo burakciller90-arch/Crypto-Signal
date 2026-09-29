@@ -6530,3 +6530,12 @@ QuantumCapitalTouched: NO
 - main FP5-B closeout handoff is preserved; FP5-C durable notes are preserved after it
 - pre-sync FP5-C SHAs are historical staging references only; post-sync branch is the canonical implementation line
 - no runtime deployment/backfill; REAL_CAPITAL=0; RDP11 R2 untouched
+
+
+## 2026-09-30 — FP5-C acceptance attempt 1 mypy-only blocker
+
+- PR #1703 head `8d551faf84008767fdbc9094e407e1d5aafd6b6f`
+- WC6 `36642984912/109659347750`: exact source PASS, focused PASS, full paper pytest PASS, paper Ruff PASS, Development non-mutation PASS
+- sole blocker: mypy optional-to-nonoptional local assignment at forward V2 promotion; behavior tests did not fail
+- repair is local type narrowing only; no semantic change
+- all prior head gates stale after repair; rerun exact-head quartet
