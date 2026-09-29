@@ -897,6 +897,88 @@ class FinalProductReadModel:
                 "event rail source cannot be projected safely"
             ) from exc
 
+    def portfolio_summary(
+        self,
+        *,
+        include_audit: bool = False,
+    ) -> PortfolioSummaryView:
+        if self.epoch2_path is None or not self.epoch2_path.is_file():
+            return _portfolio_unavailable("Epoch 2 portföy verisi kullanılamıyor")
+        try:
+            state = read_epoch2_state_read_only(self.epoch2_path)
+        except ValueError as exc:
+            raise FinalProductReadError(
+                "Epoch 2 portföy kaynağı güvenli okunamadı"
+            ) from exc
+        if state is None:
+            return _portfolio_unavailable("Epoch 2 henüz etkin değil")
+
+        consolidated = state.consolidated_snapshot
+        vaults = tuple(
+            _portfolio_vault_view(item, include_audit=include_audit)
+            for item in state.vault_snapshots
+        )
+        total_pnl = (
+            consolidated.realized_pnl_usdt
+            + consolidated.unrealized_pnl_usdt
+        )
+        audit = None
+        if include_audit:
+            audit = PortfolioAudit(
+                activation_identity=state.activation.activation_identity,
+                consolidated_snapshot_identity=consolidated.snapshot_identity,
+                vault_snapshot_identities=tuple(
+                    item.snapshot_identity
+                    for item in state.vault_snapshots
+                ),
+            )
+        return PortfolioSummaryView(
+            availability_label="Doğrulanmış veri",
+            program_label="Paper Capital · Epoch 2",
+            snapshot_at_ms=consolidated.snapshot_at_ms,
+            starting_capital_usdt=_money_text(
+                state.activation.starting_cash_usdt
+            ),
+            current_equity_usdt=_money_text(consolidated.nav_usdt),
+            cash_usdt=_money_text(consolidated.cash_usdt),
+            used_capital_usdt=_money_text(
+                consolidated.marked_exposure_usdt
+            ),
+            realized_pnl_usdt=_signed_money_text(
+                consolidated.realized_pnl_usdt
+            ),
+            unrealized_pnl_usdt=_signed_money_text(
+                consolidated.unrealized_pnl_usdt
+            ),
+            total_pnl_usdt=_signed_money_text(total_pnl),
+            current_drawdown_percent=_fraction_percent_text(
+                consolidated.drawdown_fraction
+            ),
+            fee_usdt=_money_text(consolidated.fee_usdt),
+            spread_usdt=_money_text(consolidated.spread_usdt),
+            slippage_usdt=_money_text(consolidated.slippage_usdt),
+            turnover_percent=_fraction_percent_text(
+                consolidated.turnover_fraction
+            ),
+            open_position_count=sum(
+                len(item.positions)
+                for item in state.vault_snapshots
+            ),
+            closed_trade_count=consolidated.closed_trade_count,
+            win_count=consolidated.win_count,
+            loss_count=consolidated.loss_count,
+            breakeven_count=consolidated.breakeven_count,
+            expectancy_label=_expectancy_label(
+                consolidated.metrics_status,
+                consolidated.expectancy_usdt_per_closed_trade,
+            ),
+            performance_status_label=_metrics_status_label(
+                consolidated.metrics_status
+            ),
+            vaults=vaults,
+            audit=audit,
+        )
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -946,6 +1028,136 @@ class FinalProductReadModel:
                 "Decision Evidence proof lineage mismatch"
             )
         return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _portfolio_unavailable(reason: str) -> PortfolioSummaryView:
+    return PortfolioSummaryView(
+        availability_label=reason,
+        program_label="Paper Capital · Epoch 2",
+        snapshot_at_ms=None,
+        starting_capital_usdt=None,
+        current_equity_usdt=None,
+        cash_usdt=None,
+        used_capital_usdt=None,
+        realized_pnl_usdt=None,
+        unrealized_pnl_usdt=None,
+        total_pnl_usdt=None,
+        current_drawdown_percent=None,
+        fee_usdt=None,
+        spread_usdt=None,
+        slippage_usdt=None,
+        turnover_percent=None,
+        open_position_count=0,
+        closed_trade_count=0,
+        win_count=0,
+        loss_count=0,
+        breakeven_count=0,
+        expectancy_label="Henüz ölçülmedi",
+        performance_status_label="Henüz ölçülmedi",
+        vaults=(),
+    )
+
+
+def _portfolio_vault_view(
+    snapshot: Any,
+    *,
+    include_audit: bool,
+) -> PortfolioVaultView:
+    vault_labels = {
+        PaperVaultId.CORE: "Core",
+        PaperVaultId.TACTICAL: "Taktik",
+        PaperVaultId.OPPORTUNITY_RESERVE: "Fırsat Rezervi",
+    }
+    positions = tuple(
+        PortfolioPositionView(
+            symbol=item.symbol.value,
+            quantity=_plain_decimal_text(item.quantity),
+        )
+        for item in snapshot.positions
+    )
+    total_pnl = snapshot.realized_pnl_usdt + snapshot.unrealized_pnl_usdt
+    audit = None
+    if include_audit:
+        audit = PortfolioVaultAudit(
+            snapshot_identity=snapshot.snapshot_identity,
+            source_record_identities=snapshot.source_record_identities,
+        )
+    return PortfolioVaultView(
+        vault_label=vault_labels[snapshot.vault_id],
+        starting_budget_usdt=_money_text(snapshot.starting_cash_usdt),
+        cash_usdt=_money_text(snapshot.cash_usdt),
+        used_capital_usdt=_money_text(snapshot.marked_exposure_usdt),
+        nav_usdt=_money_text(snapshot.nav_usdt),
+        realized_pnl_usdt=_signed_money_text(snapshot.realized_pnl_usdt),
+        unrealized_pnl_usdt=_signed_money_text(
+            snapshot.unrealized_pnl_usdt
+        ),
+        total_pnl_usdt=_signed_money_text(total_pnl),
+        current_drawdown_percent=_fraction_percent_text(
+            snapshot.drawdown_fraction
+        ),
+        fee_usdt=_money_text(snapshot.fee_usdt),
+        spread_usdt=_money_text(snapshot.spread_usdt),
+        slippage_usdt=_money_text(snapshot.slippage_usdt),
+        turnover_percent=_fraction_percent_text(snapshot.turnover_fraction),
+        open_position_count=len(snapshot.positions),
+        positions=positions,
+        closed_trade_count=snapshot.closed_trade_count,
+        win_count=snapshot.win_count,
+        loss_count=snapshot.loss_count,
+        breakeven_count=snapshot.breakeven_count,
+        expectancy_label=_expectancy_label(
+            snapshot.metrics_status,
+            snapshot.expectancy_usdt_per_closed_trade,
+        ),
+        performance_status_label=_metrics_status_label(
+            snapshot.metrics_status
+        ),
+        audit=audit,
+    )
+
+
+def _metrics_status_label(status: Epoch2MetricsStatus) -> str:
+    if status is Epoch2MetricsStatus.AVAILABLE:
+        return "Ölçülebilir"
+    return "Henüz ölçülmedi"
+
+
+def _expectancy_label(
+    status: Epoch2MetricsStatus,
+    value: Decimal | None,
+) -> str:
+    if status is not Epoch2MetricsStatus.AVAILABLE or value is None:
+        return "Henüz ölçülmedi"
+    return f"{_signed_money_text(value)} / kapalı işlem"
+
+
+def _fraction_percent_text(value: Decimal) -> str:
+    if not value.is_finite() or value < Decimal(0):
+        raise ValueError("portfolio fraction must be finite and non-negative")
+    percent = (value * Decimal(100)).quantize(Decimal("0.01"))
+    return f"{percent:.2f}%"
+
+
+def _money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio amount must be finite")
+    return f"{value.quantize(Decimal('0.01')):.2f}"
+
+
+def _signed_money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio PnL must be finite")
+    return f"{value.quantize(Decimal('0.01')):+.2f}"
+
+
+def _plain_decimal_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio quantity must be finite")
+    raw = format(value, "f")
+    if "." in raw:
+        raw = raw.rstrip("0").rstrip(".")
+    return raw or "0"
 
 
 def _event_rail_view(
