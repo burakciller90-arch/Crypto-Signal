@@ -5163,3 +5163,34 @@ Bounded fix:
 Exact nextAction:
 Apply typing-only refactor, rerun exact-head UID504 acceptance, require all mechanical gates PASS, then restore temporary workflow and mark FP3-B review-ready.
 
+
+
+## FP3-B ACCEPTANCE ATTEMPT 3 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_3_TYPING_ONLY
+acceptanceRun: 36595210948
+acceptanceJob: 109498426825
+attemptedHead: 68eecb2606ab8e38f4eb1eb79ffad2cde430d5ce
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest gate PASS (workflow advanced to Ruff);
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy blocked the gate with 15 diagnostics from two local typing patterns only.
+
+Exact typing roots:
+1. optional identity validation loop reused a prior str-typed local, producing one str|None assignment error;
+2. two FP3SizingStageReceipt constructors expand a generic dict[str, object] with **values, which strict mypy cannot narrow to the dataclass field types.
+
+Bounded fix:
+- rename optional loop local to preserve narrowing;
+- keep canonical identity payload generation, but construct FP3SizingStageReceipt with explicit typed arguments instead of **dict expansion;
+- no sizing/risk/replay/persistence/chronology semantic change.
+
+Exact nextAction:
+Apply the typing-only constructor/narrowing fix, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
