@@ -499,6 +499,46 @@ class R22Epoch2AtomicTape:
             result.append({"intent": intent, "fill": fill})
         return tuple(result)
 
+    def read_bundle_identity_for_fill(
+        self,
+        fill_identity: str,
+    ) -> str | None:
+        """Resolve one verified accounting bundle from an exact fill identity."""
+        _require_sha256(fill_identity, "R22 fill-to-bundle lookup")
+        if not self.epoch2_path.is_file():
+            raise ValueError("R22 Epoch2 ledger is missing")
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    """SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name = 'r22_epoch2_bundles'"""
+                ).fetchall()
+            }
+            if "r22_epoch2_bundles" not in tables:
+                return None
+            row = connection.execute(
+                """SELECT bundle_identity, payload_json
+                FROM r22_epoch2_bundles
+                WHERE fill_identity = ?""",
+                (fill_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        bundle_identity = str(row[0])
+        bundle = _verify_embedded_identity(
+            str(row[1]),
+            identity_field="bundle_identity",
+            expected_identity=bundle_identity,
+            label="R22 fill-to-bundle",
+        )
+        if bundle.get("fill_identity") != fill_identity:
+            raise ValueError("R22 fill-to-bundle lineage mismatch")
+        self.audit_bundle_read_only(bundle_identity)
+        return bundle_identity
+
     def append_hold_decision(self, intent: PaperTapeIntent) -> bool:
         if intent.action is not PaperAction.HOLD_CASH:
             raise ValueError("R22 hold-decision API accepts HOLD_CASH only")

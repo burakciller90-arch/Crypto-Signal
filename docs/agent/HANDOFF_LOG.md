@@ -5239,3 +5239,365 @@ Current blocker:
 Exact nextAction:
 Recheck current main and overlap state, open one FP3-B PR with docs/sizing-module/focused-tests only, verify PR checks, merge if isolated, then start FP3-C on fresh main with a new task-start checkpoint.
 
+
+
+## FP3-C PREREGISTERED ACTION BRIDGE TASK START — 2026-09-29
+
+status: FP3_C_ACTION_BRIDGE_AUDIT_START
+taskStartMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+mechanicalGate: FP0 / RDP11 remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP3-A merged via PR #1680 -> main 1347ee8550e04a8491c20227bad50d9aeb3fba4e;
+- FP3-B merged via PR #1681 -> main 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4;
+- FP3-B UID504 run 36595609945 / job 109499792310 PASS;
+- PR WC6 recovery, RDP11 pre-soak and F10 gates PASS.
+
+Bounded FP3-C goal:
+- define one versioned preregistered action policy that can select only canonical BUY / REDUCE / EXIT or explicit HOLD/WAIT;
+- consume only exact accepted FP3-A/FP3-B lineage and caller-supplied exact execution/mark/reference inputs;
+- preflight canonical R22 replay before any commit to avoid stale-state duplicate accounting;
+- reuse existing commit_canonical_paper_buy / commit_canonical_paper_sell as sole R21/R22 mutation owners;
+- reuse persisted lifecycle/Stream projectors after canonical commit;
+- support OPEN -> BUY;
+- permit SCALE_IN -> BUY only under explicit preregistered policy + exact current position/risk gates;
+- permit PARTIAL_TAKE_PROFIT -> REDUCE only with exact preregistered reason;
+- permit TAKE_PROFIT / STOP / CLOSE -> EXIT only with exact preregistered reason;
+- keep STOP_UPDATE EXPLICITLY_UNAVAILABLE because no accepted canonical stop-order update state exists;
+- no new accounting/execution engine, no new order API, no discretionary fear veto, no gate weakening.
+
+Current blocker:
+- exact source of action intent/reason, exact canonical buy/sell signatures, replay lookup key and Stream lifecycle projection sequence have not yet been re-audited on merged FP3-B main.
+
+Exact nextAction:
+Audit canonical buy/sell commit contracts, R22 trade history/bundle lookup, current-position/action prerequisites, accepted outcome/reason lineage and Stream lifecycle projectors; freeze FP3-C field/action/replay contract before production code.
+
+
+
+## FP3-C SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C_IMPLEMENTATION_START
+baseMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE canonical S11/R21/R22 commits + BUILD isolated policy/receipt/replay adapter only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Frozen implementation boundary:
+- OPEN -> BUY;
+- SCALE_IN -> BUY only with existing positive position and fresh accepted FP3-B sizing;
+- PARTIAL_TAKE_PROFIT -> REDUCE;
+- TAKE_PROFIT / STOP / CLOSE -> EXIT;
+- WAIT -> explicit no-trade receipt;
+- STOP_UPDATE -> explicit unavailable, never invented;
+- BUY mutation owner is commit_canonical_paper_buy only;
+- REDUCE/EXIT mutation owner is commit_canonical_paper_sell only;
+- sell uses original open BUY forecast/proof/sizing lineage, not a newly invented exit forecast;
+- preflight exact R22 history before mutation;
+- crash recovery resolves bundle from canonical fill via read-only bundle index + audit_bundle_read_only;
+- Stream execution/accounting/outcome is projected only by project_capital_bundle_lifecycle_to_stream;
+- FP3-C receipt stores canonical references only.
+
+Current blocker:
+- none for implementation; mechanical acceptance pending.
+
+Exact nextAction:
+Implement FP3-C policy/action-stage receipt/replay adapter and focused tests on isolated temp ledgers; do not begin genuine-forward FP3-D.
+
+
+
+## FP3-C CONTRACT CORRECTION / C1 IMPLEMENTATION BOUNDARY — 2026-09-29
+
+status: FP3_C1_IMPLEMENTATION_BOUNDARY
+activeBranch: fp3c/preregistered-action-bridge
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Correction:
+- previous SCALE_IN allowance conflicts with accepted single-lineage SELL validation;
+- FP3-C1 will not open a second BUY while a position exists;
+- SCALE_IN is EXPLICITLY_UNAVAILABLE_MULTI_ENTRY_LINEAGE in C1;
+- STOP_UPDATE remains EXPLICITLY_UNAVAILABLE;
+- OPEN / PARTIAL_TAKE_PROFIT / TAKE_PROFIT / STOP / CLOSE / WAIT remain C1 scope;
+- FP3-C2 will separately extend and accept multi-entry R22/R21 sell lineage before SCALE_IN is supported.
+
+Exact nextAction:
+Implement FP3-C1 versioned action policy/request, immutable action-stage receipt, exact R22 replay/bundle recovery and canonical Stream lifecycle projection; no multi-entry SCALE_IN code in C1.
+
+
+
+## FP3-C1 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_START
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+implementationHead: ee199ed86559541edeb13810d98a859cbae42c79
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented C1 scope:
+- immutable versioned preregistered action intent;
+- OPEN -> canonical BUY only;
+- PARTIAL_TAKE_PROFIT -> REDUCE;
+- TAKE_PROFIT / STOP / CLOSE -> EXIT;
+- WAIT -> explicit no-trade receipt;
+- STOP_UPDATE -> explicit unavailable;
+- SCALE_IN -> explicit unavailable in C1 pending separately accepted C2 multi-entry lineage;
+- exact FP3-A + FP3-B lineage validation;
+- action evidence bound into canonical R22 source evidence;
+- canonical BUY/SELL remain the sole R21/R22 mutation owners;
+- read-only R22 fill->bundle lookup + full audit for crash recovery;
+- preflight exact trade replay before any new commit;
+- canonical Stream bundle lifecycle projector only;
+- append-only action-stage receipt in isolated FP3 store;
+- no new accounting/execution/order engine.
+
+Focused tests:
+- OPEN BUY + exact replay byte stability;
+- crash after canonical BUY before action receipt -> recovery without duplicate accounting;
+- WAIT + STOP_UPDATE no R21/R22 mutation;
+- SCALE_IN explicitly unavailable in C1;
+- partial take profit REDUCE then CLOSE EXIT over original open lineage;
+- action receipt physical immutability.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Wire temporary UID504 acceptance for autopilot_forward_actions.py, canonical_capital_runtime.py, transaction_tape_atomic.py and focused action/canonical regression tests; inspect exact failures, apply only bounded fixes, restore workflow after PASS.
+
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 1 FAIL / STREAM CONTEXT FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_1_STREAM_CONTEXT
+acceptanceRun: 36598950147
+acceptanceJob: 109511028146
+attemptedHead: 9cd68680427e6a1a6aac12c3088cd7a47c579804
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- Product/Development non-mutation PASS;
+- three FP3-C trade-path tests failed at the same accepted Stream prerequisite:
+  S11 Capital Story requires existing forward Stream decision context;
+- WAIT / STOP_UPDATE / SCALE_IN-unavailable paths were not identified as the root failure;
+- failure occurs after canonical bundle commit when lifecycle projection tries to resolve the existing forecast decision context.
+
+Root cause:
+- FP3-A Capital forward projection does not own the base forecast Stream decision context;
+- that context belongs to accepted IntelligenceStreamForwardRuntime;
+- FP3-C must not create or infer this context itself.
+
+Bounded production fix:
+- before any BUY/REDUCE/EXIT commit, require exact Stream decision context for the forecast;
+- verify its forecast/proof lineage matches the preregistered action;
+- if missing/mismatched, fail closed before R21/R22 mutation.
+
+Bounded test fix:
+- seed base forecast issuance using accepted IntelligenceStreamForwardRuntime before FP3-A/FP3-B processing in trade-path fixtures;
+- no manual Stream context insertion.
+
+Exact nextAction:
+Apply the Stream-context preflight + accepted fixture projection, rerun exact-head UID504 acceptance, then inspect later Ruff/mypy failures separately.
+
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 2 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_2_STYLE_ONLY
+acceptanceRun: 36599502583
+acceptanceJob: 109512952466
+attemptedHead: 4c5c48d756b440b357baf3234aee54911adde87d
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- prior Stream decision-context prerequisite failure is closed;
+- focused/regression pytest gate PASS; workflow advanced to Ruff;
+- Product/Development non-mutation PASS;
+- Ruff blocked the gate with exactly two style findings.
+
+Exact Ruff findings:
+1. SIM102 in autopilot_forward_actions.py: combine the PARTIAL_TAKE_PROFIT nested quantity validation into one conditional;
+2. I001 in test_autopilot_forward_actions.py: organize imports so autopilot_forward_actions precedes autopilot_forward_runtime.
+
+Bounded fix:
+- style/refactor only;
+- no action policy, replay, R21/R22 mutation, Stream projection, receipt or persistence semantic change.
+
+Exact nextAction:
+Apply exactly the two Ruff fixes, rerun exact-head UID504 acceptance, then inspect strict mypy separately if it becomes the next blocker.
+
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 3 — 123/123 PYTEST PASS / FINAL RUFF FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_3_STYLE_ONLY
+acceptanceRun: 36600284263
+acceptanceJob: 109515587164
+attemptedHead: 4ee15ba455247c241e46d55befc7050cf083668f
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest: 123/123 PASS;
+- prior Stream-context failure is closed;
+- prior import-order Ruff failure is closed;
+- one Ruff finding remains only;
+- Product/Development non-mutation PASS.
+
+Exact remaining Ruff finding:
+- SIM102: combine the no-quantity action-set nested if in FP3ActionIntent validation.
+
+Bounded fix:
+- style-only conditional refactor;
+- no action policy, quantity rule, replay, R21/R22 mutation, Stream projection, persistence or lifecycle semantic change.
+
+Exact nextAction:
+Combine the final nested action/quantity guard, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 4 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_4_TYPING_ONLY
+acceptanceRun: 36600488031
+acceptanceJob: 109516473477
+attemptedHead: bf0583eae76618b9724b431e30110d5c69242dec
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy blocked the gate with exactly two missing annotation diagnostics.
+
+Exact mypy findings:
+1. _validate_trade_inputs is missing an explicit return type;
+2. _validate_front_intent is missing the FP3AutopilotReceipt parameter annotation.
+
+Bounded fix:
+- import FP3AutopilotReceipt and FP3SizingStageReceipt types;
+- annotate _validate_trade_inputs -> tuple[FP3AutopilotReceipt, FP3SizingStageReceipt];
+- annotate _validate_front_intent(front: FP3AutopilotReceipt, ...);
+- no action, replay, R21/R22, Stream, sizing or persistence semantic change.
+
+Exact nextAction:
+Apply only the typing annotations, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
+
+
+
+## FP3-C1 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_C1_REVIEW_READY
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+acceptedHead: 0d982d0fcf0456deabae332db1da9bb3763fd857
+acceptedRun: 36600881901
+acceptedJob: 109517801922
+cleanupHead: afd9c632c7e53e6e08199633fca706453ac70b56
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest gate PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 7 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-C1 semantics:
+- canonical OPEN/REDUCE/EXIT mutations reuse accepted S11/R21/R22 owners only;
+- WAIT and unavailable actions perform no R21/R22 mutation;
+- STOP_UPDATE is explicit unavailable;
+- SCALE_IN is explicit unavailable until separate FP3-C2 multi-entry lineage acceptance;
+- exact Stream decision context is required before trade commit;
+- exact action evidence persists into R22 source lineage;
+- replay/crash recovery is read-only preflight plus missing receipt/lifecycle projection only;
+- no duplicate accounting, execution engine, order API or historical backfill.
+
+Current blocker:
+- none inside FP3-C1; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-C1 PR with only the accepted matrix/agent-state/canonical action-read-support/action-bridge/tests diff, verify PR checks, merge if isolated, then start FP3-C2 on fresh main.
+
+
+
+## FP3-C1 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_C1_REVIEW_READY
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+acceptedHead: 0d982d0fcf0456deabae332db1da9bb3763fd857
+acceptedRun: 36600881901
+acceptedJob: 109517801922
+cleanupHead: afd9c632c7e53e6e08199633fca706453ac70b56
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 7 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-C1 semantics:
+- WAIT produces no R21/R22 mutation;
+- STOP_UPDATE remains explicitly unavailable;
+- SCALE_IN remains explicitly unavailable in C1 pending accepted multi-entry lineage;
+- OPEN commits only canonical BUY and only after exact Stream decision context + FP3-A/B lineage validation;
+- PARTIAL_TAKE_PROFIT commits canonical REDUCE;
+- TAKE_PROFIT / STOP / CLOSE commit canonical EXIT;
+- canonical BUY/SELL functions remain sole R21/R22 mutation owners;
+- exact preflight replay prevents duplicate accounting;
+- crash recovery resolves existing fill->bundle read-only and projects missing Stream lifecycle idempotently;
+- action-stage receipt is append-only and immutable;
+- no second execution/accounting/order engine exists.
+
+Current blocker:
+- none inside FP3-C1; PR review/merge gate remains.
+
+Exact nextAction:
+Open one FP3-C1 PR, verify exact seven-file diff and PR gates, merge if isolated, then start FP3-C2 on fresh main with a new task-start checkpoint. Do not claim SCALE_IN support before FP3-C2 acceptance PASS.
+

@@ -190,6 +190,8 @@ def commit_canonical_paper_buy(
     filled_at_ms: int,
     mutated_at_ms: int,
     snapshot_at_ms: int,
+    additional_source_evidence_identities: tuple[str, ...] = (),
+    additional_reason_codes: tuple[str, ...] = (),
 ) -> CanonicalCapitalCommitResult:
     """Commit one exact simulated BUY into canonical Epoch 2/R22 atomically."""
     _require_sha256(
@@ -197,6 +199,24 @@ def commit_canonical_paper_buy(
         "S11 reference price evidence",
     )
     _require_sha256(mark_evidence_identity, "S11 mark evidence")
+    if (
+        additional_source_evidence_identities
+        != tuple(sorted(set(additional_source_evidence_identities)))
+    ):
+        raise ValueError("S11 BUY additional source evidence must be sorted unique")
+    for identity in additional_source_evidence_identities:
+        _require_sha256(identity, "S11 BUY additional source evidence")
+    if (
+        additional_reason_codes
+        != tuple(sorted(set(additional_reason_codes)))
+        or any(not item.strip() for item in additional_reason_codes)
+    ):
+        raise ValueError("S11 BUY additional reason codes must be non-empty sorted unique")
+    action_reason_suffix = (
+        ""
+        if not additional_reason_codes
+        else f"; action_reasons={','.join(additional_reason_codes)}"
+    )
     state = Epoch2CanonicalLedger(epoch2_path).read_state()
     current = _current_vault(state, sizing_selection.vault_id)
     atomic_tape = R22Epoch2AtomicTape(epoch2_path)
@@ -257,6 +277,7 @@ def commit_canonical_paper_buy(
         reason=(
             "S11 canonical Epoch2 paper BUY from exact fixed-fractional "
             f"selection {sizing_selection.selection_identity}"
+            f"{action_reason_suffix}"
         ),
         invalidation_context=(
             f"{forecast.invalidation_trigger.value}:"
@@ -273,6 +294,7 @@ def commit_canonical_paper_buy(
         reason=(
             "S11 canonical Epoch2 paper BUY bound to exact "
             f"sizing selection {sizing_selection.selection_identity}"
+            f"{action_reason_suffix}"
         ),
         invalidation_context=(
             f"{forecast.invalidation_trigger.value}:"
@@ -289,6 +311,7 @@ def commit_canonical_paper_buy(
                 reference_price_evidence_identity,
                 mark_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *additional_source_evidence_identities,
             }
         )
     )
@@ -297,10 +320,15 @@ def commit_canonical_paper_buy(
         vault_id=sizing_selection.vault_id,
         action=PaperAction.BUY,
         decided_at_ms=decided_at_ms,
-        reason_codes=(
-            "canonical_epoch2_paper_buy",
-            "fixed_fractional_promoted",
-            f"sizing_selection:{sizing_selection.selection_identity}",
+        reason_codes=tuple(
+            sorted(
+                {
+                    "canonical_epoch2_paper_buy",
+                    "fixed_fractional_promoted",
+                    f"sizing_selection:{sizing_selection.selection_identity}",
+                    *additional_reason_codes,
+                }
+            )
         ),
         forecast=forecast,
         proof=proof,
@@ -356,6 +384,7 @@ def commit_canonical_paper_buy(
                 mark_evidence_identity,
                 reference_price_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *additional_source_evidence_identities,
                 sizing_selection.selection_identity,
                 sizing_event.event_identity,
                 eligibility_proof.proof_identity,
@@ -453,6 +482,7 @@ def commit_canonical_paper_sell(
     filled_at_ms: int,
     mutated_at_ms: int,
     snapshot_at_ms: int,
+    additional_source_evidence_identities: tuple[str, ...] = (),
 ) -> CanonicalCapitalSellCommitResult:
     """Commit one canonical simulated REDUCE/EXIT with exact outcome evidence."""
     if action not in {PaperAction.REDUCE, PaperAction.EXIT}:
@@ -460,6 +490,13 @@ def commit_canonical_paper_sell(
     _require_sha256(reference_price_evidence_identity, "S11 sell reference evidence")
     _require_sha256(exit_evidence_identity, "S11 sell exit evidence")
     _require_sha256(mark_evidence_identity, "S11 sell mark evidence")
+    if (
+        additional_source_evidence_identities
+        != tuple(sorted(set(additional_source_evidence_identities)))
+    ):
+        raise ValueError("S11 sell additional source evidence must be sorted unique")
+    for identity in additional_source_evidence_identities:
+        _require_sha256(identity, "S11 sell additional source evidence")
     if not exit_reason_codes or any(not item.strip() for item in exit_reason_codes):
         raise ValueError("S11 sell requires non-empty exit reason codes")
     reason_codes = tuple(sorted(set(exit_reason_codes)))
@@ -554,6 +591,7 @@ def commit_canonical_paper_sell(
                 reference_price_evidence_identity,
                 mark_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *additional_source_evidence_identities,
             }
         )
     )
@@ -604,6 +642,8 @@ def commit_canonical_paper_sell(
                     reference_price_evidence_identity,
                     mark_evidence_identity,
                     execution_snapshot.snapshot_identity,
+                *additional_source_evidence_identities,
+                    *additional_source_evidence_identities,
                 }
             )
         ),
@@ -649,6 +689,7 @@ def commit_canonical_paper_sell(
                 mark_evidence_identity,
                 reference_price_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *additional_source_evidence_identities,
             }
         )
     )
