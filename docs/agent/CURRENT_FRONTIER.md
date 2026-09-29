@@ -6838,3 +6838,17 @@ Required repair before PR:
 
 Exact nextAction:
 Patch existing FP5-A implementation/tests in place; do not create a second allocator. Then open PR and run fresh exact-head UID504 acceptance.
+
+
+### FP5-A ACCEPTANCE ATTEMPT 1 / MYPY-ONLY REPAIR — 2026-09-29
+
+- PR: #1698
+- tested head before repair: `62239a6808bccda8c741aa12cb21ab6b7d47326c`
+- WC6 run/job: `36629394984` / `109614470041`
+- exact source + clean/frozen Development boundary PASS
+- focused WC6 recovery acceptance PASS
+- full paper subsystem stopped only at mypy in `portfolio_risk_v2.py`
+- exact errors: loop-variable inference reused Decimal variable for bools (line 195) and Optional Decimal values (line 242)
+- Development non-mutation PASS; whole-repo step skipped after mypy failure
+- bounded repair: variable names/narrowing only; allocation semantics unchanged
+- nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 acceptance; inspect any remaining failure mechanically before merge
