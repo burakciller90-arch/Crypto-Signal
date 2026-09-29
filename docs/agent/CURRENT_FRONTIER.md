@@ -3486,3 +3486,83 @@ Cleanup verification:
 
 Exact nextAction:
 Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
+
+
+## FP1-C MERGED HANDOFF + FP1-D TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D_WAITING_POST_MERGE_BOOTSTRAP
+taskStartMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+activeBranch: fp1d/portfolio-capital-read-model
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP1-C merged handoff:
+- PR: 1673
+- PR head: b4158d054c19da78d62ebaf6b5e9aee9e4472307
+- merge SHA / new main: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+- C1 accepted head: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+- C1 UID504 run/job: 36565167503 / 109395207062 — SUCCESS
+- C2 accepted head: dee12bad640915401f49938217b0d3375900135c
+- C2 UID504 run/job: 36565945747 / 109397747476 — SUCCESS
+- PR F10 Closeout Prep: 36566367305 — SUCCESS
+- PR RDP11 Pre-Soak Fulltest UID504: 36566367266 — SUCCESS
+- hosted WC1 Event Source run 36566367172 failed before auditable job steps; job steps=null and log artifact BlobNotFound. Dedicated UID504 Event Source/Product acceptance is authoritative for FP1-C.
+- no Product/Development deploy;
+- no historical backfill;
+- no RDP11 runtime mutation;
+- REAL_CAPITAL=0.
+
+Latest soak evidence before FP1-D start:
+- RDP11 observer run/job: 36567931022 / 109404393795 — SUCCESS
+- RDP11_RUNTIME_TARGET_EXACT=YES
+- target = 3d9f33db3f1189571d40566125fbeabd00c04930
+- RDP11_SOAK_ANCHOR_REUSED=YES
+- RDP11_SOAK_OBSERVATION_PASS=YES
+- RDP11_SOAK_72H_ELIGIBLE=NO
+- RDP11_SOAK_SIDE_CAR_ONLY=YES
+- RDP11_CANONICAL_RUNTIME_MUTATED=NO
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0.
+
+Post-merge bootstrap at task start:
+- SSD504 Workbench Bootstrap run 36568787266: IN_PROGRESS at checkpoint write time.
+- Agent Memory Bootstrap run 36568787358: QUEUED at checkpoint write time.
+- production code changes are forbidden until both relevant bootstrap/runtime checks are mechanically green.
+
+Duplicate/stale check before branch creation:
+- no open PR matching FP1-D Portfolio Summary / Capital Movements;
+- no related fp1d/portfolio-summary/capital-movements branch found;
+- FP1-A/B/C are merged foundations and must not be replayed.
+
+Bounded FP1-D goal after bootstrap:
+- canonical Portfolio Summary read model;
+- daily/recent Capital Movements read model;
+- REUSE only canonical Epoch 2 / R21 / R22 / R24 / Stream Capital truth;
+- explicitly reject legacy /api/paper/mission-control as the final canonical portfolio source;
+- preserve Epoch 1 and Epoch 2 separation;
+- no ledger/accounting writer;
+- no new performance math where R24 already owns the metric;
+- no Product route/frontend/deploy in this slice;
+- customer-safe Turkish projection by default;
+- exact accounting/tape identities audit-only;
+- missing/unavailable capital truth explicit;
+- REAL_CAPITAL=0.
+
+Mandatory FP1-D pre-code audit:
+1. read_epoch2_state_read_only and R21 Epoch 2 accounting shapes;
+2. R22 trade history / bundle story read-only APIs;
+3. R24 PerformanceTrustCenter / paper metrics source;
+4. Stream capital decision/sizing/execution/lifecycle read-model filters;
+5. canonical current-vs-historical epoch boundaries;
+6. determine exact source for daily capital movement timeline without creating a duplicate ledger.
+
+Current blocker:
+- post-merge Workbench/Agent Memory bootstrap for e7fc9044f18b9a5c5006e498c4b68e6c15828758 has not yet mechanically completed.
+
+Exact nextAction:
+Wait only for the already-running post-merge bootstrap checks to complete. If clean, record exact run/job/head/dirty/non-mutation markers, then perform the FP1-D duplicate/source audit and write a field-source matrix before any production code change.
