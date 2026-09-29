@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from dataclasses import asdict
@@ -1389,7 +1390,7 @@ def _insert_capital_fixture_row(
     record: tuple[str, str, str],
 ) -> None:
     narrative_identity, payload_json, payload_sha256 = record
-    payload = __import__("json").loads(payload_json)
+    payload = json.loads(payload_json)
     statements = {
         "stream_capital_messages": """
             INSERT INTO stream_capital_messages (
