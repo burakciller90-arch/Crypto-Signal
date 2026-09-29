@@ -6223,3 +6223,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - no behavior/identity/gate formula changed
 - REAL_CAPITAL=0; frozen runtime non-mutation preserved
 - nextAction: fresh exact-head FP5-A/WC6/RDP11/F10 only; no stale run can close gate
+
+
+## 2026-09-29 — FP5-A UID504 runner-stall retry checkpoint
+
+- head `f7bec8c8bebc0220616782cba85d7c82c3b523ea`: dedicated FP5-A PASS and F10 PASS
+- WC6 `36630937756/109619699806` stalled in isolated venv/pip setup after exact-source PASS; no code/test failure observed
+- historical WC6 install stage normally completes in seconds
+- recovery is docs-only head advance to activate PR concurrency cancellation/retry
+- all old-head PASS results become stale for merge
+- REAL_CAPITAL=0; no runtime mutation/deploy/backfill
+- nextAction: fresh new-head FP5-A/WC6/RDP11/F10 only
