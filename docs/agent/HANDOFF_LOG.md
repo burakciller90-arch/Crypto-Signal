@@ -3468,3 +3468,38 @@ Acceptance harness rule:
 
 Exact nextAction:
 Inspect the existing event-source Product hosted workflow. If it proves exact source + non-mutation, temporarily wire fp1c/event-rail-read-model and C1 changed files/tests into that harness; otherwise use a bounded existing UID504 harness without touching Product/Development runtime.
+
+
+## FP1-C1 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_TEST_LINT_FIX_REQUIRED
+activeBranch: fp1c/event-rail-read-model
+acceptanceHead: 3b0a368d31ffcacd945269cc67c5da2d6ce1402f
+uid504Run: 36563163312
+uid504Job: 109388648356
+artifactId: 11030468074
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- all focused pytest tests PASS, including every new C1 Event Rail adapter test;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- acceptance stopped at Ruff before mypy/project-isolation.
+
+Exact failure:
+- Ruff B009 in tests/test_event_source_product.py;
+- helper used getattr(item, "event_identity") with a constant attribute name;
+- Ruff requires direct item.event_identity access;
+- no production code or Event Rail semantic failure occurred.
+
+Repair classification:
+- TEST LINT FIX ONLY;
+- replace constant getattr with direct typed attribute access;
+- do not alter Product query logic.
+
+Exact nextAction:
+Patch only the C1 test helper attribute access, then rerun the same UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness against the new exact head.
