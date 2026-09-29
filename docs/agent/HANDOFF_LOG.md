@@ -4653,3 +4653,34 @@ Bounded fix:
 Exact nextAction:
 Apply the exact-one maximum exposure invariant + focused test, then run UID504 acceptance on the new exact head.
 
+
+
+## FP2 ACCEPTANCE ATTEMPT 1 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP2_ACCEPTANCE_FIX_1_STYLE_ONLY
+acceptanceRun: 36586789549
+acceptanceJob: 109469211156
+attemptedHead: 1bb3bededbc96cc39271406ef5d91349ccecc520
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-head UID504 run reached focused/regression pytest 100% PASS;
+- no Paper Vault V3 semantic/product assertion failure remains in this run;
+- Ruff blocked the gate before clean mypy completion with exactly five style findings.
+
+Exact Ruff findings:
+1. SIM102 lifecycle ARCHIVE nested-if simplification;
+2. FURB157 Decimal("0") -> Decimal(0) in focused test;
+3. SIM117 combine nested sqlite/pytest context managers;
+4. FURB157 Decimal("10000") -> Decimal(10000);
+5. FURB157 Decimal("25000") -> Decimal(25000).
+
+Bounded fix:
+- style/test syntax only;
+- no identity, persistence, lifecycle, allocation, Epoch1/2, runtime or policy semantic change.
+
+Exact nextAction:
+Apply exactly the five Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore temporary workflow to current-main blob after PASS.
+
