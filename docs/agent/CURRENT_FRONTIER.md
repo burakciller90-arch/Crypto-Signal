@@ -6388,3 +6388,27 @@ Current blocker:
 
 Exact nextAction:
 Implement the isolated FP4-B timing/queue evidence classifier with focused deterministic tests, then run exact-head UID504 acceptance without changing the frozen RDP11 runtime.
+
+
+### FP4-B ACCEPTANCE ATTEMPT 1 / FIXTURE-ONLY REPAIR — 2026-09-29
+
+pr: 1691
+testedHead: 035a51641603f4b4ab5be85482f8d99fbed1e991
+wc6Run: 36620474831
+wc6Job: 109584277926
+realCapital: 0
+RDP11RuntimeMutation: NO
+
+Observed:
+- exact-source and focused existing WC6 acceptance PASS;
+- full paper subsystem reached the new FP4-B tests;
+- four FP4-B test fixtures were invalid because ask 99/100 was paired with default bid 100, creating a crossed order book;
+- accepted OrderBookSnapshot correctly rejected the invalid fixture before timing logic ran;
+- Development non-mutation PASS.
+
+Bounded repair:
+- test fixtures only: lower bid to remain strictly below ask in marketable/touch cases;
+- no FP4-B timing/queue behavior or production source change.
+
+Exact nextAction:
+Rerun exact-head FP4-B/WC6/RDP11/F10 acceptance and inspect the first remaining mechanical failure, if any.
