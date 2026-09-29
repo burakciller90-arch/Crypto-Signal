@@ -168,6 +168,23 @@ Floating/detached windows:
 
 ---
 
+### 2.5 Re-adopted final visual direction
+
+Past user-approved product decisions that do not conflict with the new final-product briefs are re-adopted here:
+
+- Turkish-first customer language;
+- light-first overall surface;
+- calm, premium, futuristic command-center / advanced-technology character;
+- high legibility and low visual fatigue;
+- information density is earned through drill-down rather than placed on the first layer;
+- semantic color only: positive/support, risk/negative, caution/event, neutral/unknown;
+- glass/neon effects, if used, are restrained and never decorative noise;
+- data/visual proof receives more visual weight than chrome;
+- desktop feels like an application/workspace, not an infinitely scrolling marketing page;
+- responsive/mobile keeps the same truth hierarchy rather than merely shrinking desktop.
+
+This is a presentation constitution, not authority to hide uncertainty, unavailable evidence or losses.
+
 ## 3. Locked first-screen hierarchy
 
 Target desktop acceptance viewport: **1440×900**.
@@ -1153,6 +1170,48 @@ Rollback target remains explicit until final acceptance.
 No real exchange order capability is part of this release.
 
 ---
+
+# 6.1 Parallel execution lanes and dependency graph
+
+The final product is intentionally organized so the active RDP11 soak does not create idle time.
+
+### Lane A — Capital / Autopilot
+- FP2 Paper Vault V3;
+- FP3 canonical forward Autopilot;
+- FP4 execution realism;
+- FP5 allocator/portfolio risk;
+- FP6 Trade Passport;
+- FP7 performance/trust read model.
+
+### Lane B — Product read models / evidence visualization
+- FP1 human read models;
+- FP9 Market Story data contract;
+- FP10 five-family visual projections;
+- FP12 Event Center read model;
+- FP13 search/watchlist/alert query contracts.
+
+### Lane C — Frontend experience
+May begin after the corresponding Lane B contracts are frozen:
+- FP8 Command Center;
+- FP9 workspace UX;
+- FP10 family workspaces;
+- FP11 Markets/Screener;
+- FP12 Events;
+- FP13 discovery/alerts;
+- FP14 Portfolio;
+- FP15 History.
+
+### Lane D — Integrated acceptance / release
+- FP16;
+- FP17;
+- FP18.
+
+Dependency rules:
+- Lane C never invents fields while Lane B is unresolved;
+- Lane A may use deterministic fixtures/temp ledgers during FP0, but genuine forward-evidence claims require canonical runtime evidence;
+- Lane B may consume canonical evidence read-only during FP0;
+- any branch that would change the frozen RDP11 runtime behavior remains undeployed until the soak consequence is explicitly resolved;
+- FP16–FP18 require FP0 PASS and all prerequisite implementation gates.
 
 # 7. Agent parallelization rules
 
