@@ -2666,3 +2666,42 @@ Required mechanical PASS:
 
 Exact nextAction:
 Inspect the automatically triggered Crypto Message Intelligence MI1 UID504 run for exact head ae5b1f4ed13f57f783cd36963116bd3324210deb. If any step fails, record the exact failure before changing code; otherwise record FP1-A acceptance PASS and revert temporary acceptance-harness workflow edits before preparing the implementation PR.
+
+
+## FP1-A UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_PASS
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+uid504Run: 36554409727
+uid504Job: 109360124852
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS evidence:
+- run conclusion SUCCESS on exact implementation head ae5b1f4ed13f57f783cd36963116bd3324210deb;
+- exact-source isolated UID504 checkout PASS;
+- focused existing Stream + FP1-A pytest step PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no canonical Product/Development checkout mutation;
+- no RDP11 soak runtime/epoch mutation.
+
+Accepted FP1-A production scope:
+- docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md;
+- src/crypto_signal/product/final_product_read_model.py;
+- tests/test_final_product_read_model.py;
+- agent checkpoint documentation.
+
+Temporary acceptance harness changes are NOT product scope and must be removed before PR:
+- fp1 branch trigger added to crypto-stage10-hosted-branch-gate.yml;
+- fp1 trigger + FP1 test/module checks added to crypto-message-intelligence-mi1-hosted.yml.
+
+Exact nextAction:
+Re-read current main and restore both temporarily modified workflow files on this FP1 branch to their exact current-main contents. Then verify the branch diff contains only FP1-A production/test/docs/handoff changes before opening the implementation PR.
