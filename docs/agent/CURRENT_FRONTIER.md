@@ -5845,3 +5845,45 @@ Bounded goal:
 
 Exact nextAction:
 Patch the focused C2 test with multi-entry REDUCE + replay proof, then run exact-head UID504 acceptance and inspect mechanical output.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 7 FAIL / WEIGHTED-AVERAGE DECIMAL INVARIANT REPAIR — 2026-09-29
+
+status: FP3_C2_CONTRACT_FIX_WEIGHTED_AVERAGE_DECIMAL
+pr: 1683
+testedHead: 7c2319c562bb06447d0f6a6d95910ee1b869bf47
+rdp11FulltestRun: 36608541557
+rdp11FulltestJob: 109543735446
+wc6Run: 36608541741
+wc6Job: 109543738406
+f10Run: 36608541361
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- F10 PASS;
+- WC6 exact-source PASS;
+- WC6 focused execution-lab PASS;
+- WC6 paper regression PASS;
+- both RDP11 fulltest and WC6 full regression hit the same C2 failure during the first genuine two-entry REDUCE;
+- failure: \`S11 outcome basis-before does not reconcile\`;
+- root cause: \`CanonicalCapitalOutcomeEvidence\` still validates \`basis == average * quantity\` with exact Decimal equality;
+- weighted-average multi-entry basis can produce a repeating Decimal quotient, so multiplying the rounded context result back by quantity need not exactly recover the original basis;
+- \`ReconstructedOpenCostBasis\` already uses the correct directional invariant \`average == basis / quantity\`;
+- full-position EXIT must remove the exact remaining basis rather than a rounded \`average * full_quantity\`, otherwise a microscopic phantom basis/PnL residual can be created.
+
+Bounded production repair:
+- validate outcome average using \`average == basis_before / position_quantity_before\`;
+- for REDUCE, removed basis remains \`average * reduced_quantity\`;
+- for EXIT, removed basis is the exact entire remaining basis;
+- reconstruction applies the same EXIT rule so immutable history verification remains deterministic;
+- keep remaining-basis and realized-PnL exact accounting invariants;
+- no tolerance/epsilon, no schema rewrite, no historical backfill.
+
+Separate observed signal:
+- RDP11 full suite also reported \`test_final_product_read_model.py::test_attention_reuses_materiality_and_prioritizes_newer_system_view\`;
+- branch does not touch that read-model code; investigate separately after C2 cost-basis failure is repaired and rerun establishes whether it is reproducible.
+
+Exact nextAction:
+Patch the S11 weighted-average outcome/reconstruction invariant plus focused regression, rerun exact-head UID504 acceptance, then isolate any remaining unrelated full-suite failure.
