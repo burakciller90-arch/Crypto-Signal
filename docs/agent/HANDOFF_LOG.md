@@ -4630,3 +4630,26 @@ Acceptance blocker:
 Exact nextAction:
 Temporarily wire MI1 UID504 acceptance to this branch with test_paper_vault_v3.py and vault_v3.py added to pytest/Ruff/mypy, inspect exact logs, fix only evidenced failures, then restore workflow to current-main blob after PASS.
 
+
+
+## FP2 PRE-ACCEPTANCE CONTRACT REVIEW / BOUNDED FIX — 2026-09-29
+
+status: FP2_PRE_ACCEPTANCE_CONTRACT_FIX
+activeBranch: fp2/paper-vault-v3-constitution
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Review finding:
+- frozen matrix requires maximum_market_exposure_fraction exactly 1;
+- builder emits Decimal(1), but PaperVaultV3AllocationPolicy.__post_init__ currently accepts any positive <=1 maximum when a caller constructs a policy directly;
+- this leaves a narrow configuration path outside the frozen constitution contract.
+
+Bounded fix:
+- require maximum_market_exposure_fraction == Decimal(1);
+- add one focused rejection assertion for Decimal("0.50");
+- no identity schema, persistence, lifecycle, Epoch1/2 or runtime semantics change.
+
+Exact nextAction:
+Apply the exact-one maximum exposure invariant + focused test, then run UID504 acceptance on the new exact head.
+
