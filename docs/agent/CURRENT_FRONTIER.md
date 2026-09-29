@@ -1825,3 +1825,39 @@ Current blocker:
 
 Exact nextAction:
 Open one PR from `rdp11/observer-live-acceptance-b` to current main, require exact PR-head dedicated observer + pre-soak regression acceptance, recheck main immediately before merge, then merge and accept the first merged-main non-dry-run observation only if it creates the exact immutable anchor without mutating canonical runtime.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 active-soak durable closeout
+
+This checkpoint is written before documentation closeout changes.
+
+- canonical operational main at task start: `02793adde16d18b681e869bbb560e736cc933ec5`
+- active docs-only branch: `rdp11/soak-active-closeout`
+- session-local /Volumes worktree: NONE
+- canonical Workbench repo: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- Workbench exact-main proof: run `36547457282` / job `109337163342` / SUCCESS
+- Product/Development frozen soak runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- RDP11 observer merge PR: #1666
+- observer merge SHA: `02793adde16d18b681e869bbb560e736cc933ec5`
+- merged-main observer run: `36547457482` / job `109337164207` / SUCCESS
+- immutable soak anchor created: YES
+- soak start UTC: `2026-09-29T09:13:21.134000Z`
+- earliest 72h eligibility UTC: `2026-10-02T09:13:21.134000Z`
+- earliest 72h eligibility Europe/Istanbul: `2026-10-02T12:13:21.134000+03:00`
+- `RDP11_SOAK_72H_ELIGIBLE=NO`
+- `RDP11_CANONICAL_RUNTIME_MUTATED=NO`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Bounded goal:
+- persist the exact active-soak state in durable agent docs;
+- repair stale roadmap status/frontier text so new agents do not repeat RDP10;
+- make no runtime, observer-contract, frozen-proof, Product or Development change.
+
+Current blocker:
+- real 72-hour soak has not elapsed; RDP11 is ACTIVE, not PASS.
+
+Exact nextAction:
+- update durable docs and roadmap only; then merge this docs-only closeout after rechecking main/head.
