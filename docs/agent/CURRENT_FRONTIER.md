@@ -1367,3 +1367,67 @@ Safety:
 
 Exact nextAction:
 Audit existing continuity workflows/scripts/runtime audit surfaces and choose the smallest reuse-oriented observer design. Record the audit result before implementation.
+
+
+
+## RDP11 observer audit checkpoint — 2026-09-29
+
+Audit completed before observer implementation.
+
+Reusable accepted surfaces:
+- `ops/r11_runtime_acceptance.py`
+  - canonical root/topology + Product health contract;
+  - SQLite source connections are read-only during recovery audit; temp backup/restore never mutates canonical DBs.
+- `crypto-stream-post-r11-live-acceptance-uid504.yml`
+  - accepted read-only Stream DB schema/activation/no-historical-backfill checks;
+  - accepted Product `/api/health`, `/api/stream/messages`, finite SSE and root continuity semantics.
+- `ops/rdp1_production_state_probe.py`
+  - canonical collector heartbeat/gap/raw Market Tape schemas and read-only access pattern.
+- `ops/run_market_tape_stream.py`
+  - canonical live Market Tape provider/source = `bybit/market_tape_stream`;
+  - symbols = `BTCUSDT ETHUSDT SOLUSDT`;
+  - raw channels = `orderbook.50` and `publicTrade`;
+  - max ingestion silence policy = 60_000 ms;
+  - collector heartbeat DB and gap ledger paths are canonical under `Development/runtime/market_tape`.
+- `FrozenProofStore`
+  - append-only store with exact update/delete rejection triggers;
+  - stored proof objects enforce market-available/observed <= as-of and REAL_CAPITAL=0;
+  - observer can verify the same invariants directly over read-only SQLite without invoking any writer.
+- Existing `Crypto 20m Continuity Wake` monitors ChatGPT/continuity delivery only and is NOT an RDP11 evidence soak observer.
+- Existing R11 recovery workflow is mutating recovery/drill tooling and must not be used as the recurring observer.
+
+Minimal implementation selected:
+1. add `ops/rdp11_soak_observer.py` using stdlib/read-only SQLite + HTTP only;
+2. bind a named soak epoch to frozen runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+3. store only in separate `/Volumes/Crypto-504/Crypto-Signal/RDP11Soak/<epoch>/` sidecar:
+   - immutable `anchor.json` created only after first successful observation;
+   - immutable per-run observation JSON files;
+   - immutable `invalidated.json` on mandatory violation after anchoring;
+4. observer contract hash is anchored so later observer-code drift invalidates the epoch;
+5. recurring checks:
+   - Development/Product exact runtime SHA + clean state;
+   - Product health + Stream messages/SSE/intelligence-center reachability;
+   - collector heartbeat freshness and monotonic evidence;
+   - raw Market Tape freshness for BTC/ETH/SOL orderbook/trade contexts;
+   - explicit gap ledger/open-gap state;
+   - read-only SQLite lock/read probes;
+   - Stream activation/no-historical-backfill boundary;
+   - FrozenProofStore quick-check, append-only triggers, proof no-future/REAL_CAPITAL/payload-hash invariants;
+6. schedule every 20 minutes on UID504 after merge; branch/PR runs execute live dry-run acceptance without creating soak state.
+
+Important interpretation:
+- the frozen soak subject is the already accepted/deployed runtime target `3d9f33db...`;
+- later observer/docs-only main commits do not silently rebind the runtime target;
+- Product/Development runtime drift away from `3d9f33db...` is a mandatory violation.
+
+Safety:
+- observer canonical DB writes: NONE
+- sidecar writes only
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- soak clock remains NOT STARTED until implementation acceptance + first successful non-dry-run observation creates anchor.
+
+Exact nextAction:
+Implement observer + focused tests + UID504 branch/PR/schedule workflow. Require exact-head branch acceptance before PR/merge.
