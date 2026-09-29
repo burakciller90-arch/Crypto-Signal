@@ -4128,3 +4128,46 @@ Current blocker:
 Exact nextAction:
 Implement TradePassport customer/audit dataclasses and trade_passport(...) in final_product_read_model.py, then add focused immutable-source tests before UID504 acceptance.
 
+
+
+## FP1-E IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_E_ACCEPTANCE_START
+verifiedMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+branchAheadMain: 8
+branchBehindMain: 0
+implementationHead: ef2c4983dee92fcd6d5f75cc3546d3fabe37afbe
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- TradePassportAudit and TradePassportView customer contracts;
+- trade_passport(bundle_identity, include_audit=False);
+- exact R22 bundle-story-context reuse;
+- exact R21 before/after vault + consolidated values copied without recomputation;
+- exact S11/R22 outcome semantics;
+- optional Decision Proof binding by forecast/proof/signal-freeze lineage;
+- explicit missing proof source / proof missing labels;
+- proof mismatch fails closed;
+- audit-only R22/R21/RDP10 identities and raw reason/action/outcome metadata;
+- missing canonical DB is non-creating;
+- no Product route/frontend/deploy/runtime writer.
+
+Focused tests:
+- missing Epoch 2 explicit/non-creating;
+- unknown bundle explicit;
+- exact R22/R21 BUY passport projection;
+- verified Decision Proof context;
+- proof lineage mismatch fail-closed;
+- customer payload hides SHA/raw enum/database vocabulary;
+- canonical Epoch 2 and Decision Evidence DB bytes unchanged by reads.
+
+Acceptance blocker:
+- UID504 exact-head pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 acceptance workflow to fp1e/trade-passport-read-model and include final_product_read_model.py plus test_final_product_read_model.py; inspect exact logs, fix only mechanical failures, then restore the workflow to exact current-main content.
+
