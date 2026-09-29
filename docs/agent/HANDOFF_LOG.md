@@ -6214,3 +6214,12 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - all pre-repair workflow runs are stale and MUST NOT close the gate
 - REAL_CAPITAL=0; no R21/R22 mutation, deploy or backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: run fresh exact-head FP5-A + WC6 + RDP11 + F10; repair only mechanically observed failures before any merge
+
+
+## 2026-09-29 — FP5-A owner-bound mypy-only repair checkpoint
+
+- stale diagnostic run/job `36630561758/109618412662` exposed only mypy Optional-Decimal loop-variable reuse after pytest completed
+- bounded source repair: `9b0caf475ecb263fb1ff7599dbe57baa2212ed5d`
+- no behavior/identity/gate formula changed
+- REAL_CAPITAL=0; frozen runtime non-mutation preserved
+- nextAction: fresh exact-head FP5-A/WC6/RDP11/F10 only; no stale run can close gate
