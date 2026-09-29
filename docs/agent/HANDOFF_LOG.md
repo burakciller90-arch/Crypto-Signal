@@ -4499,3 +4499,232 @@ Current blocker:
 Exact nextAction:
 Recheck current main + duplicate PR state, open one FP1-F PR, verify exact changed-file set and PR checks, merge if isolated, then checkpoint FP1 COMPLETE and start the next mechanically allowed Final Product roadmap slice from fresh main.
 
+
+
+## FP1 COMPLETE / FP2 PAPER VAULT V3 TASK START — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_AUDIT_START
+taskStartMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE immutable Epoch 1/2 history + BUILD versioned Paper Vault V3 constitution
+duplicateCheck: no open FP2 / Paper Vault V3 PR, no fp2 branch and no FP2 commit existed on current main at task start
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP1 closure:
+- FP1-F merged via PR #1678;
+- merge SHA: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3;
+- FP1-A/B/C/D/E/F are now merged/accepted;
+- FP1-F accepted head: e1137086c5044f6e52b50950073947d7b2c146b3;
+- UID504 acceptance run 36583882210 / job 109458903547 PASS;
+- PR F10 closeout PASS;
+- PR RDP11 pre-soak fulltest PASS;
+- scheduled RDP11 observer run 36584254051 PASS;
+- RDP11 soaked runtime/frozen target was not mutated.
+
+Bounded FP2 goal:
+- introduce a new immutable/versioned Paper Vault V3 constitution without rewriting Epoch 1 or Epoch 2;
+- preserve Epoch 1 legacy 100 USDT history and Epoch 2 accepted 1,000 USDT / 600-300-100 history byte-for-byte;
+- a new vault freezes vault identity, creation time, starting virtual capital, policy version, permitted instruments, fee/execution policy, risk policy, allocation policy and evidence-policy versions;
+- no destructive reset; new vault creation and archive/stop only;
+- allocation is versioned/replayable and may dynamically assign Core/Tactical/Opportunity/Cash;
+- 100% cash is valid;
+- no forced minimum market exposure;
+- no cross-vault borrowing unless a separately accepted future contract exists;
+- REAL_CAPITAL=0;
+- no Product/Development deploy or RDP11 soaked-runtime mutation during this isolated slice.
+
+Current blocker:
+- exact existing paper-capital/vault/policy primitives and overlap with R21/R22/S11/Smart Capital Allocator have not yet been re-audited on current main; production implementation is forbidden until REUSE/EXTEND/BUILD boundaries and immutable constitution schema are frozen.
+
+Exact nextAction:
+Audit existing paper vault IDs/models, Epoch 1/2 accounting, Smart Capital Allocator/allocation policy, execution/risk policy versioning and persistence helpers; freeze an FP2 Paper Vault V3 field/source/persistence matrix before production code.
+
+
+
+## FP2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_IMPLEMENTATION_START
+baseMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+auditDocument: docs/CRYPTO_SIGNAL_FP2_PAPER_VAULT_V3_CONSTITUTION_MATRIX.md
+classification: REUSE immutable Epoch1/2 + BUILD separate V3 constitution/store
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audit result:
+- PaperVaultId, EPOCH_2_SPEC and SmartCapitalAllocator are intentionally hard-bound to accepted Epoch 2 600/300/100 semantics and must remain unchanged;
+- R21/R22/S11 remain Epoch2 truth and are not generalized in FP2;
+- PaperSymbol plus current execution/risk policy version strings are safe reusable references;
+- V3 needs a separate immutable constitution and separate persistence namespace;
+- V3 books are policy concepts CORE/TACTICAL/OPPORTUNITY/CASH and must not alias Epoch2 accounting identities;
+- allocation constitution freezes zero minimum market exposure, cash-valid, borrowing=false and forced-deployment=false;
+- lifecycle is append-only ACTIVE -> STOPPED/ARCHIVED only; no reset/reactivation;
+- V3 DB is separate and no legacy migration/backfill is allowed.
+
+Current blocker:
+- none for isolated implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement vault_v3.py with deterministic constitution/allocation identities, explicit STOP/ARCHIVE lifecycle and immutable separate SQLite store; add focused tests proving identity, no-reset, idempotence, read-only/missing behavior and legacy byte non-mutation.
+
+
+
+## FP2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_ACCEPTANCE_START
+verifiedMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+implementationHead: bb1049720c63f693fccb8ded644e29bfcd2f35dc
+branchAheadMain: 7
+branchBehindMain: 0
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- separate Paper Vault V3 constitution namespace;
+- deterministic allocation-policy identity;
+- deterministic constitution identity over exact starting capital/policies/instruments/evidence refs;
+- default 10,000 USDT builder value frozen per constitution, custom positive capital supported;
+- V3 policy books CORE/TACTICAL/OPPORTUNITY/CASH;
+- minimum market exposure exactly 0, 100% cash valid;
+- cross-vault borrowing false and forced deployment false;
+- separate caller-supplied SQLite store; exact Epoch1/Epoch2 filenames rejected;
+- immutable constitution/lifecycle tables with UPDATE/DELETE abort triggers;
+- idempotent exact constitution/event append;
+- STOP and ARCHIVE append-only lifecycle with no reactivation/reset;
+- read-only missing-store semantics non-creating;
+- stored payload digest/canonical identity/REAL_CAPITAL/authority verification;
+- no edits to epochs.py, epoch2_accounting.py, transaction tape, Smart Capital Allocator, routes/frontend/runtime/deploy.
+
+Focused tests:
+- deterministic/canonical identity and policy freeze;
+- custom starting capital creates distinct vault instead of reset;
+- 100% cash/no forced exposure/no borrowing;
+- separate V3 persistence preserves legacy sentinel bytes;
+- SQL UPDATE/DELETE immutability;
+- STOP -> ARCHIVE lifecycle and stale-transition rejection;
+- direct ACTIVE -> ARCHIVE;
+- missing constitution/backfill rejection;
+- missing DB reads non-creating;
+- Epoch1/Epoch2 ledger filename rejection;
+- corrupted persisted payload fails closed;
+- multiple constitutions coexist as separate histories.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance to this branch with test_paper_vault_v3.py and vault_v3.py added to pytest/Ruff/mypy, inspect exact logs, fix only evidenced failures, then restore workflow to current-main blob after PASS.
+
+
+
+## FP2 PRE-ACCEPTANCE CONTRACT REVIEW / BOUNDED FIX — 2026-09-29
+
+status: FP2_PRE_ACCEPTANCE_CONTRACT_FIX
+activeBranch: fp2/paper-vault-v3-constitution
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Review finding:
+- frozen matrix requires maximum_market_exposure_fraction exactly 1;
+- builder emits Decimal(1), but PaperVaultV3AllocationPolicy.__post_init__ currently accepts any positive <=1 maximum when a caller constructs a policy directly;
+- this leaves a narrow configuration path outside the frozen constitution contract.
+
+Bounded fix:
+- require maximum_market_exposure_fraction == Decimal(1);
+- add one focused rejection assertion for Decimal("0.50");
+- no identity schema, persistence, lifecycle, Epoch1/2 or runtime semantics change.
+
+Exact nextAction:
+Apply the exact-one maximum exposure invariant + focused test, then run UID504 acceptance on the new exact head.
+
+
+
+## FP2 ACCEPTANCE ATTEMPT 1 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP2_ACCEPTANCE_FIX_1_STYLE_ONLY
+acceptanceRun: 36586789549
+acceptanceJob: 109469211156
+attemptedHead: 1bb3bededbc96cc39271406ef5d91349ccecc520
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-head UID504 run reached focused/regression pytest 100% PASS;
+- no Paper Vault V3 semantic/product assertion failure remains in this run;
+- Ruff blocked the gate before clean mypy completion with exactly five style findings.
+
+Exact Ruff findings:
+1. SIM102 lifecycle ARCHIVE nested-if simplification;
+2. FURB157 Decimal("0") -> Decimal(0) in focused test;
+3. SIM117 combine nested sqlite/pytest context managers;
+4. FURB157 Decimal("10000") -> Decimal(10000);
+5. FURB157 Decimal("25000") -> Decimal(25000).
+
+Bounded fix:
+- style/test syntax only;
+- no identity, persistence, lifecycle, allocation, Epoch1/2, runtime or policy semantic change.
+
+Exact nextAction:
+Apply exactly the five Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore temporary workflow to current-main blob after PASS.
+
+
+
+## FP2 PAPER VAULT V3 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_REVIEW_READY
+verifiedMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+acceptedHead: 7d98300ffbd3b0e32b9f4aac7f3eb44514c224cf
+acceptedRun: 36587124704
+acceptedJob: 109470381739
+cleanupHead: cd6a714523e032496809d33d8edf9875b77e2eda
+branchAheadMain: 19
+branchBehindMain: 0
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-head UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP2 truth:
+- V3 is physically and semantically separate from Epoch 1/2;
+- immutable constitution freezes full configuration identity;
+- allocation policy is replayable, cash-valid, no-borrowing/no-forced-deployment, min exposure 0 and max exposure exactly 1;
+- multiple constitutions coexist without reset semantics;
+- STOP/ARCHIVE only, append-only, no reactivation;
+- persisted payload digest/canonical identity boundaries fail closed;
+- no R21/R22/S11/Smart Capital Allocator rewrite.
+
+Current blocker:
+- none inside FP2 implementation; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and duplicate PR state, open one FP2 PR, inspect exact changed-file set and PR checks, then merge only if isolated and no RDP11 soaked-runtime conflict exists.
+
