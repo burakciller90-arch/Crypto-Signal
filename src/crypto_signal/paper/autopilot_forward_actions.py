@@ -163,16 +163,19 @@ class FP3PreregisteredActionIntent:
             )
         ):
             raise ValueError("FP3-C partial take profit requires positive quantity")
-        elif self.reason in {
-            FP3ActionReason.TAKE_PROFIT,
-            FP3ActionReason.STOP,
-            FP3ActionReason.CLOSE,
-            FP3ActionReason.WAIT,
-            FP3ActionReason.STOP_UPDATE,
-            FP3ActionReason.SCALE_IN,
-        }:
-            if self.quantity is not None:
-                raise ValueError("FP3-C action requires omitted quantity")
+        elif (
+            self.reason
+            in {
+                FP3ActionReason.TAKE_PROFIT,
+                FP3ActionReason.STOP,
+                FP3ActionReason.CLOSE,
+                FP3ActionReason.WAIT,
+                FP3ActionReason.STOP_UPDATE,
+                FP3ActionReason.SCALE_IN,
+            }
+            and self.quantity is not None
+        ):
+            raise ValueError("FP3-C action requires omitted quantity")
         _require_authority_boundary(
             production_authority=self.production_authority,
             real_capital=self.real_capital,
