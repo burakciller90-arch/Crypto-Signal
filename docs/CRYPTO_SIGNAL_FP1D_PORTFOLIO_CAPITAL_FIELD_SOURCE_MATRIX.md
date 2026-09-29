@@ -345,3 +345,181 @@ All slices also require:
 Record FP1-D1 implementation-start checkpoint, then implement only Portfolio Summary over `read_epoch2_state_read_only` in `final_product_read_model.py` plus focused temporary Epoch 2 ledger tests.
 
 Do not edit `web.py`, frontend files or legacy Mission Control.
+
+
+## 10. FP1-D2 exact verified Stream Capital source contract — 2026-09-29 audit
+
+This section supersedes the older generic D2 notes above for implementation detail.
+
+### 10.1 Query authority
+
+Use only:
+
+`IntelligenceStreamReadModel.read_messages(StreamMessageQuery(...))`
+
+with:
+- `category="capital"`;
+- bounded `from_ms` / `to_ms`;
+- optional exact `vault`;
+- bounded `limit`.
+
+The accepted read model already merges and verifies:
+- `stream_capital_messages`;
+- `stream_capital_decision_messages`;
+- `stream_capital_sizing_messages`;
+- `stream_capital_lifecycle_messages`.
+
+Ordering is already deterministic newest-first when `after` is absent:
+- `event_at_ms DESC`;
+- immutable narrative identity DESC as tie-breaker.
+
+FP1-D2 must not re-query those tables directly and must not create a second sort key or confidence score.
+
+### 10.2 Capital Decision verified payload
+
+Exact fields available:
+- narrative/source-event/stream-event/story identities;
+- decision / allocator assessment / allocator candidate identities;
+- vault id;
+- disposition;
+- asset/symbol/timeframe;
+- event time and source-as-of time;
+- starting budget;
+- exact reason codes;
+- event-risk state;
+- capital reference identities;
+- persisted Stream text.
+
+Customer projection:
+- eligible -> **İşleme uygun bulundu**
+- hold / blocked / ineligible style disposition -> **Nakit korunuyor / işlem yapılmadı**
+- amount fields not carried by the exact decision payload remain unavailable.
+
+Audit-only:
+- decision / allocator / source identities;
+- raw disposition;
+- reason codes.
+
+### 10.3 Capital Sizing verified payload
+
+Exact fields available:
+- sizing event / selection / eligibility proof / allocator candidate identities;
+- vault id;
+- symbol/timeframe;
+- event/source-as-of times;
+- fraction of vault;
+- canonical notional;
+- current cash;
+- current NAV;
+- exact reason codes;
+- persisted Stream text.
+
+Customer action:
+**Pozisyon boyutu belirlendi**
+
+No fill/execution claim may be inferred from sizing.
+
+### 10.4 Capital Execution / Story verified payload
+
+Exact `StreamCapitalMessage` fields:
+- action: `BUY`, `REDUCE`, `EXIT`;
+- subtype is mechanically bound:
+  - BUY -> `capital_executed`;
+  - REDUCE -> `capital_reduced`;
+  - EXIT -> `capital_exited`;
+- quantity;
+- reference price;
+- simulated fill price;
+- notional;
+- cash before/after;
+- vault NAV before/after;
+- consolidated NAV before/after;
+- fee/spread/slippage;
+- sell outcome fields only for REDUCE/EXIT;
+- exact R21/R22 intent/fill/bundle/snapshot lineage.
+
+Customer action:
+- BUY -> **Pozisyon açıldı / artırıldı**
+- REDUCE -> **Pozisyon azaltıldı**
+- EXIT -> **Pozisyon kapatıldı**
+
+All execution amounts come directly from the verified Stream Capital record. No extra execution calculation is allowed in D2.
+
+### 10.5 Capital Lifecycle verified payload
+
+Exact subtypes:
+- `capital_candidate`;
+- `capital_accounting_updated`;
+- `capital_outcome`.
+
+Candidate:
+- vault is absent;
+- allocator candidate/assessment lineage exact;
+- no trade/accounting amounts may be invented.
+
+Customer action:
+**Aday sermaye değerlendirmesi**
+
+Accounting updated:
+- vault/bundle/forecast/proof/decision-context exact;
+- action exact;
+- cash before/after;
+- vault NAV before/after;
+- consolidated NAV before/after.
+
+Customer action:
+**Portföy hesabı güncellendi**
+
+Outcome:
+- REDUCE/EXIT only;
+- financial outcome exact;
+- realized-PnL delta exact;
+- position quantity before/after exact.
+
+Customer action:
+**İşlem sonucu kaydedildi**
+
+### 10.6 D2 customer contract
+
+Each item may expose only when exact:
+- event time;
+- source-as-of time;
+- freshness label;
+- vault label;
+- symbol/timeframe;
+- action label;
+- persisted customer Stream headline/detail;
+- quantity;
+- notional;
+- fraction of vault;
+- cash before/after or current cash;
+- vault NAV before/after or current NAV;
+- consolidated NAV before/after;
+- fee/spread/slippage;
+- realized-PnL delta;
+- outcome label.
+
+No missing numeric value is rendered as zero.
+
+Audit-only:
+- narrative/story/source-event/stream-event;
+- R21/R22 bundle/intent/fill/snapshot;
+- allocator/decision/sizing/outcome identities;
+- raw subtype/action/disposition/reason codes.
+
+### 10.7 Empty / missing semantics
+
+- missing Stream DB -> **Sermaye hareketleri verisi kullanılamıyor**, and the file must not be created;
+- valid Stream DB with no capital messages in the requested interval/filter -> **Bu aralıkta sermaye hareketi yok**;
+- this empty state must not be interpreted as "cash unchanged" unless a canonical capital message says so.
+
+### 10.8 D2 implementation authorization
+
+After this audit:
+- **REUSE**: Stream capital tables, verification, query/filter/order, persisted customer text, R21/R22 lineage;
+- **EXTEND**: one customer timeline projection;
+- **BUILD**: customer dataclasses + field mapping only;
+- **EXPLICITLY_UNAVAILABLE**: any amount/outcome not present in the exact source record.
+
+Exact next action:
+Append D2 implementation-start checkpoint if not already present, then implement only the final-product Capital Movements projection and focused tests. No route/frontend/deploy.
