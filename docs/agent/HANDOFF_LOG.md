@@ -6373,3 +6373,17 @@ QuantumCapitalTouched: NO
 - REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen RDP11 R2 Product/Development and sidecar untouched; Durdurulmaz/Quantum untouched
 - blocker: exact-head PR acceptance not run
 - nextAction: open sole PR and require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 SUCCESS on one final head before merge
+
+
+
+## 2026-09-30 — FP5-B acceptance attempt 1 circular-import blocker
+
+- PR #1701; tested head `fecdeb9d4192a93624491232a948e817f5c3875d`
+- dedicated run/job `36639914277/109649497469`
+- exact source + frozen Product/Development PASS; non-mutation PASS
+- focused pytest failed during collection only: runtime import `canonical_sizing -> portfolio_risk_v2 -> autopilot_forward_sizing -> ... -> canonical_sizing_events -> canonical_sizing`
+- exact error: partially initialized `CanonicalPaperSizingSelection`
+- no behavior/regression PASS claimed on this stale head
+- repair is dependency-only: make FP5 assessment type-only in canonical_sizing; preserve all V2 formulas/identity gates and V1 semantics
+- REAL_CAPITAL=0; no deploy/backfill; RDP11 R2 untouched
+- nextAction: apply bounded import-cycle repair and rerun dedicated/WC6/RDP11/F10 on the new exact head
