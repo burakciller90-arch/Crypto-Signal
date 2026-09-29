@@ -6553,3 +6553,65 @@ This final proof supersedes the earlier pending Workbench note in this checkpoin
 
 Exact nextAction:
 Merge this docs-only handoff after its own mechanical checks, then rebase `fp4d/instrument-fee-schedule-v2` onto the resulting main before running FP4-D acceptance.
+
+
+## FP4-D INSTRUMENT-SPECIFIC FEE SCHEDULE START — 2026-09-29
+
+status: FP4D_IMPLEMENTATION_START
+taskStartMain: 356b30add6eedb8f7d041abb2f39f58b87db08f7
+activeBranch: fp4d/instrument-fee-schedule-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+classification: BUILD isolated immutable account+instrument fee schedule contract; REUSE existing venue precision/min-notional rules
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate/source audit:
+- FP4-A owns depth/VWAP; FP4-B owns passive queue/latency/partial/timeout; FP4-C owns exact settled funding;
+- existing Binance spot venue-rule snapshot already owns quantity_step, min/max quantity, min_notional and tick_size; DO NOT duplicate those rules;
+- existing v1 fee is a conservative fixed simulated rate, not an exact symbol/account commission schedule;
+- current Binance Spot Account Commission Rates contract is signed USER_DATA and returns symbol-specific standard/special/tax maker/taker/buyer/seller plus discount metadata;
+- no current main FP4-D fee-schedule owner/PR found at task start.
+
+Bounded scope:
+- immutable caller-supplied Binance Spot account commission snapshot; normalization must never persist API key/signature;
+- freeze exact symbol, observed/ingested time, raw rate families and discount metadata into deterministic identity;
+- compute maker/taker + buyer/seller effective nominal commission deterministically;
+- special + tax commission included explicitly;
+- BNB discount must NOT be applied unless an explicit discount-payment proof is supplied;
+- missing/uncertain fee evidence => FEE_NOT_PROVEN; do not silently fall back to optimistic lower fee;
+- expose deterministic fee cash-flow projection from exact fill notional without adding spread/slippage again;
+- no live credential deployment in this slice; normalization/tests only;
+- existing precision/min-notional enforcement remains authoritative and will be bridged later rather than reimplemented.
+
+PASS gate:
+- exact payload normalization/replay identity stable;
+- maker vs taker and buy vs sell select correct components;
+- special/tax rates included without double count;
+- discount absent/unproven cannot reduce fees;
+- missing/future evidence cannot create an exact fee;
+- v1/FP4-A/FP4-B/FP4-C compatibility remains PASS after rebase onto their merged main;
+- full regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation and exact-head acceptance do not yet exist.
+
+Exact nextAction:
+Implement isolated immutable Binance Spot commission snapshot + deterministic fee projection and focused tests. After FP4-B merges, rebase this branch onto the new main before any acceptance/merge decision.
+
+
+### FP4-D ACCEPTANCE ATTEMPT 1 / LINT-ONLY REPAIR — 2026-09-29
+
+- PR: #1695
+- tested head: `df8eba646f1780a88383010d7f312a2e106024ee`
+- dedicated run/job: `36625198921` / `109600265949`
+- exact source + frozen RDP11 target PASS
+- focused pytest: 11/11 PASS
+- sole blocker: Ruff UP035 — `Mapping` must import from `collections.abc`
+- mypy/compatibility/full regression skipped after lint failure
+- frozen Product/Development non-mutation PASS
+- bounded repair: import-only; no fee behavior or identities changed
+- nextAction: rerun exact-head dedicated + WC6 + RDP11 + F10 acceptance and inspect the first remaining mechanical failure, if any
