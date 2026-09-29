@@ -5668,3 +5668,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - compatibility: action policy/engine v1 remains readable; current policy/engine v2 marks SCALE_IN as BUY only with distinct accepted lineage
 - blocker: no mechanical two-entry REDUCE/EXIT/replay proof yet
 - nextAction: add two-issuance FP3-A/B multi-entry tests and run exact branch acceptance
+
+
+## 2026-09-29 — FP3-C2 implementation complete / acceptance start
+
+- base main: \`1260d6096900107eeb9839ea9a094bb5ce9f028e\`
+- branch: \`fp3c2/multi-entry-lineage\`
+- implementation/test head before acceptance docs: \`71cc33157097941ce14a9d9a973335d273fed8c0\`
+- implemented: verified multi-entry R22 BUY set, latest-entry sell anchor, full entry evidence carriage, SCALE_IN policy v2, duplicate-lineage rejection, two-entry EXIT/replay proof
+- unchanged: weighted-average cost-basis algorithm, canonical BUY/SELL mutation ownership, REAL_CAPITAL=0, RDP11 frozen runtime
+- blocker: exact PR/full UID504 acceptance not yet run
+- nextAction: open isolated FP3-C2 PR and inspect full acceptance output
