@@ -6916,3 +6916,28 @@ Important acceptance rule:
 - repair classification: typing-only variable rename/narrowing; no allocation formula, identity, evidence gate or safety semantics changed
 - all prior runs remain stale for merge acceptance
 - nextAction: require fresh exact-head dedicated FP5-A + WC6 + RDP11 + F10 PASS after this checkpoint.
+
+
+### FP5-A UID504 RUNNER-STALL RETRY CHECKPOINT — 2026-09-29
+
+status: FP5A_ACCEPTANCE_RETRY_RUNNER_STALL
+stalledExactHead: `f7bec8c8bebc0220616782cba85d7c82c3b523ea`
+stalledWC6RunJob: `36630937756/109619699806`
+
+Observed facts:
+- dedicated FP5-A `36630937872/109619685584` PASS on stalled head;
+- F10 `36630937804/109619687546` PASS on stalled head;
+- dedicated markers verified: exact source, frozen target, focused, existing-owner compatibility, full regression, Product/Development non-mutation, HISTORICAL_BACKFILL=NO, REAL_CAPITAL=0;
+- WC6 exact source/clean Development passed, then remained stuck in `Create isolated test environment`;
+- historical successful WC6 shows the same venv/pip setup normally completes in seconds;
+- no source/test failure was emitted and in-progress job logs were unavailable via GitHub blob storage;
+- connected GitHub tooling has rerun-failed but no cancel-running action.
+
+Recovery:
+- this docs-only checkpoint intentionally advances the PR head;
+- PR concurrency `cancel-in-progress: true` must retire the stuck WC6 lane and start all acceptance lanes on one new exact head;
+- no production/test source changed in this retry checkpoint.
+
+Acceptance rule:
+- previous dedicated/F10 PASS remain useful diagnostics but are stale for merge after this commit;
+- require dedicated FP5-A + WC6 + RDP11 + F10 PASS again on the new exact head before merge.
