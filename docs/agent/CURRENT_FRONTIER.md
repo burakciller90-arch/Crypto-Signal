@@ -7657,3 +7657,48 @@ Exact nextAction:
 3. map R22 bundle story + FP3 action receipts/capital lifecycle Stream + S11 outcomes + Decision Proof/RDP10 frozen readers into one trade-lifecycle key;
 4. classify each FP6 field/event as REUSE / EXTEND / EXPLICITLY_UNAVAILABLE;
 5. only then implement the smallest read-only lifecycle passport extension; no new canonical truth store, no backfill, REAL_CAPITAL=0.
+
+
+## FP6-A LIVE TASK-START CHECKPOINT — 2026-09-30
+
+status: FP6A_TRADE_PASSPORT_LIFECYCLE_OWNER_AUDIT
+canonicalMainAtTaskStart: c1263bc073f78caea12b088e95447c3cae91bf50
+activeBranch: fp6a/trade-passport-lifecycle-audit
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Duplicate audit:
+- competing FP6 / Trade Passport open PR: NONE
+- competing FP6 / Trade Passport branch: NONE
+- greenfield Trade Passport ledger/store: FORBIDDEN unless audit proves an accepted owner cannot represent a required fact
+
+Accepted owner to REUSE:
+- `FinalProductReadModel.trade_passport(bundle_identity, include_audit=False)`
+- canonical passport lookup key: immutable R22 bundle identity
+- `R22Epoch2AtomicTape.read_bundle_story_context()`
+- R21 before/after vault + consolidated snapshots
+- S11 canonical outcome lineage
+- optional immutable Decision Proof lineage
+- accepted FP1-E source matrix: `docs/CRYPTO_SIGNAL_FP1E_TRADE_PASSPORT_FIELD_SOURCE_MATRIX.md`
+
+FP6 master-roadmap delta to audit:
+- existing FP1-E is one verified R22 bundle projection;
+- FP6 requires one trade-wide append-only lifecycle timeline across OPEN, SCALE_IN, STOP_UPDATE, PARTIAL_TAKE_PROFIT, REDUCE, CLOSE and explicit CORRECTION/SUPERSEDED semantics when supported;
+- every lifecycle event must resolve the exact proof that existed at that event time;
+- frozen Market Story / five-family / Event Risk / trigger / invalidation / targets must reuse accepted RDP10/Stream proof readers, not current-data reconstruction;
+- winning and losing closed trades must be equally inspectable;
+- later model/version state must not alter historical passport content.
+
+Audit questions:
+1. What immutable key links multiple R22 bundles and non-trade FP3 action receipts into one trade lifecycle without inference?
+2. Which lifecycle states already exist canonically in FP3 action receipts, R22 bundles, S11 outcomes and Capital Stream?
+3. Can STOP_UPDATE be represented without inventing a trade/accounting bundle?
+4. Is SCALE_IN distinguishable from initial OPEN in canonical persisted truth, or only by before-position state?
+5. Do CORRECTION/SUPERSEDED records exist canonically; if not, mark explicit unavailable rather than inventing them.
+6. Which accepted frozen-proof reader resolves exact per-event five-family/Market Story evidence from persisted identities?
+7. Does existing single-bundle Trade Passport already satisfy historical-version immutability mechanically?
+
+Exact nextAction:
+Read and map the canonical owners above plus FP3 action receipt/store, Capital lifecycle Stream projector, RDP10 frozen proof store/readers and existing FP1-E tests. Produce a field/event source matrix classifying every FP6 requirement as READY_EXACT, EXTEND_EXISTING or UNAVAILABLE_EXPLICIT. Implement nothing until this owner matrix proves the minimal missing slice.
