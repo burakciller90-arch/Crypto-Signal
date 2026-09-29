@@ -19,15 +19,17 @@ def _book(
     sequence: int,
     bid: str = "100",
     ask: str = "101",
+    ingested_at_ms: int | None = None,
 ):
+    ingested = source_timestamp_ms + 2 if ingested_at_ms is None else ingested_at_ms
     return build_orderbook_snapshot(
         exchange=Exchange.BYBIT,
         market_type=MarketType.SPOT,
         symbol="BTCUSDT",
         event_at_ms=source_timestamp_ms - 1,
         source_timestamp_ms=source_timestamp_ms,
-        response_time_ms=source_timestamp_ms + 1,
-        ingested_at_ms=source_timestamp_ms + 2,
+        response_time_ms=min(source_timestamp_ms + 1, ingested),
+        ingested_at_ms=ingested,
         update_id=sequence,
         sequence=sequence,
         bids=(OrderBookLevel(Decimal(bid), Decimal(2)),),
@@ -195,6 +197,40 @@ def test_passive_limit_can_be_cancelled_before_later_touch() -> None:
     assert decision.status is TimedExecutionStatus.CANCELLED
     assert decision.observed_orderbook_identities == (passive.snapshot_identity,)
 
+
+
+def test_book_ingested_after_deadline_cannot_prove_execution() -> None:
+    late_known = _book(
+        source_timestamp_ms=1_100,
+        sequence=1,
+        ingested_at_ms=1_301,
+    )
+    decision = evaluate_timed_execution(
+        request=_request(deadline_at_ms=1_300),
+        orderbooks=(late_known,),
+        evaluation_cutoff_ms=1_500,
+    )
+
+    assert decision.status is TimedExecutionStatus.TIMED_OUT
+    assert decision.observed_orderbook_identities == ()
+    assert decision.terminal_orderbook_identity is None
+
+
+def test_book_ingested_after_cancel_cannot_prove_execution() -> None:
+    late_known = _book(
+        source_timestamp_ms=1_100,
+        sequence=1,
+        ingested_at_ms=1_160,
+    )
+    decision = evaluate_timed_execution(
+        request=_request(cancel_at_ms=1_150),
+        orderbooks=(late_known,),
+        evaluation_cutoff_ms=1_200,
+    )
+
+    assert decision.status is TimedExecutionStatus.CANCELLED
+    assert decision.observed_orderbook_identities == ()
+    assert decision.terminal_orderbook_identity is None
 
 def test_exact_replay_is_identity_stable() -> None:
     request = _request()
