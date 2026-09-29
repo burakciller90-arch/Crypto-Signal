@@ -5789,3 +5789,15 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - no epsilon/tolerance, no backfill, REAL_CAPITAL=0, soaked runtime untouched
 - RDP11 also showed one unrelated final-product read-model failure; re-evaluate after C2 repair
 - nextAction: patch S11 invariant + focused regression, rerun exact acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 8 is lint-only
+
+- PR: #1683
+- tested head: \`f69e7b793b95644250e1b1733113c51626dab8f9\`
+- WC6 run/job: \`36612394403\` / \`109556830119\`
+- exact-source, focused execution-lab and paper regression: PASS
+- whole-repo pytest: no C2 functional failure
+- blocker: Ruff only, 14 x FURB157 in new multi-entry test
+- cleanup: Development non-mutating PASS; REAL_CAPITAL=0
+- nextAction: mechanical Decimal lint cleanup and rerun exact acceptance
