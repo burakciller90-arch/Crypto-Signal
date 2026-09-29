@@ -5610,3 +5610,30 @@ Acceptance blocker:
 
 Exact nextAction:
 Open one isolated FP3-C2 PR, run full PR UID504 gates, inspect exact pytest/Ruff/mypy/non-mutation failures, fix only evidenced C2 defects, then restore/recheck main before merge.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 1 FAIL / FIXTURE TARGET REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_1_TEST_FIXTURE
+pr: 1683
+acceptanceRun: 36603817819
+acceptanceJob: 109527616375
+testedPRMergeSha: b3c6406557
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical failure:
+- exact PR virtual-merge source checkout reached full pytest;
+- one and only reported failure: \`test_fp3_c2_scale_in_then_exit_preserves_multi_entry_lineage_and_replays\`;
+- second issuance fixture requested \`target_scale_in\`, but the frozen signal geometry only contains the accepted target label \`target_1\`;
+- failure: \`ValueError: R20 target must exist in frozen signal geometry\`;
+- RDP11 repair cleanup still reported non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- keep the second issuance distinct through its later \`issued_at_ms\`;
+- reuse canonical frozen geometry target label \`target_1\`;
+- no production/runtime semantic change.
+
+Exact nextAction:
+Apply only the fixture target-label correction, rerun exact PR fulltest and inspect the next mechanical failure or complete pytest/Ruff/mypy/non-mutation PASS.
