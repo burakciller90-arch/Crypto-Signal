@@ -2431,3 +2431,53 @@ Current blocker:
 
 Exact nextAction:
 Audit existing product modules, APIs, Stream read models, GALACTECH projections, capital/performance/archive/event/alert/search surfaces and tests; produce a durable FP1 capability matrix with exact code references and REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE classification before changing production code.
+
+
+## FP1-A IMPLEMENTATION CHECKPOINT — 2026-09-29
+
+status: FP1_A_IMPLEMENTATION_START
+taskStartMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+activeBranch: fp1/human-read-model-contract
+sessionLocalWorktree: NONE
+soakEpoch: rdp11-3d9f33db-20260929
+soakRuntimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Durable duplicate audit:
+- docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+- Market Pulse = EXTEND existing Dashboard/Stream truth; not a new market/evidence engine.
+- Five-family system-view truth = REUSE.
+- Event Rail = later BUILD over existing append-only event source.
+- canonical Portfolio = later EXTEND Epoch2/R22/R24; legacy Mission Control is not the final portfolio source.
+- Trade Passport = later EXTEND existing R22 read_trade_history/read_bundle_story_context.
+- Stream search/history/SSE = REUSE.
+
+FP1-A bounded goal:
+- add a product-only read model contract for customer availability/freshness plus Market Pulse;
+- consume only accepted Intelligence Stream system-view messages;
+- return human-facing Turkish state labels and source/as-of/freshness information;
+- retain exact immutable identities only under nested audit provenance;
+- default customer projection must not expose SHA256/internal state-machine vocabulary;
+- explicit stale/unavailable state; no fabricated zero/neutral;
+- no web route;
+- no frontend change;
+- no Product/Development deployment;
+- no database writes or initialization.
+
+FP1-A PASS:
+- deterministic read-only projection;
+- missing Stream DB returns unavailable without creating it;
+- latest system view per requested asset selected point-in-time from accepted Stream ledger;
+- customer payload contains no 64-hex identity outside audit provenance;
+- audit provenance preserves exact narrative/source identities;
+- tests prove no canonical DB mutation;
+- REAL_CAPITAL=0.
+
+Current blocker:
+- exact persisted system-view payload shape must be consumed without copying its generation logic.
+
+Exact nextAction:
+Inspect verified system-view schema/payload, then implement the smallest final_product_read_model.py + focused tests using a temporary accepted Stream ledger fixture. Do not add a Product API route in FP1-A.
