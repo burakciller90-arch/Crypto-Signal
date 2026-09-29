@@ -5100,3 +5100,45 @@ Current blocker:
 Exact nextAction:
 Recheck current main and overlap state, open one FP3-B PR with docs/sizing-module/focused-tests only, verify PR checks, merge if isolated, then start FP3-C on fresh main with a new task-start checkpoint.
 
+
+
+## FP3-C PREREGISTERED ACTION BRIDGE TASK START — 2026-09-29
+
+status: FP3_C_ACTION_BRIDGE_AUDIT_START
+taskStartMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+mechanicalGate: FP0 / RDP11 remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP3-A merged via PR #1680 -> main 1347ee8550e04a8491c20227bad50d9aeb3fba4e;
+- FP3-B merged via PR #1681 -> main 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4;
+- FP3-B UID504 run 36595609945 / job 109499792310 PASS;
+- PR WC6 recovery, RDP11 pre-soak and F10 gates PASS.
+
+Bounded FP3-C goal:
+- define one versioned preregistered action policy that can select only canonical BUY / REDUCE / EXIT or explicit HOLD/WAIT;
+- consume only exact accepted FP3-A/FP3-B lineage and caller-supplied exact execution/mark/reference inputs;
+- preflight canonical R22 replay before any commit to avoid stale-state duplicate accounting;
+- reuse existing commit_canonical_paper_buy / commit_canonical_paper_sell as sole R21/R22 mutation owners;
+- reuse persisted lifecycle/Stream projectors after canonical commit;
+- support OPEN -> BUY;
+- permit SCALE_IN -> BUY only under explicit preregistered policy + exact current position/risk gates;
+- permit PARTIAL_TAKE_PROFIT -> REDUCE only with exact preregistered reason;
+- permit TAKE_PROFIT / STOP / CLOSE -> EXIT only with exact preregistered reason;
+- keep STOP_UPDATE EXPLICITLY_UNAVAILABLE because no accepted canonical stop-order update state exists;
+- no new accounting/execution engine, no new order API, no discretionary fear veto, no gate weakening.
+
+Current blocker:
+- exact source of action intent/reason, exact canonical buy/sell signatures, replay lookup key and Stream lifecycle projection sequence have not yet been re-audited on merged FP3-B main.
+
+Exact nextAction:
+Audit canonical buy/sell commit contracts, R22 trade history/bundle lookup, current-position/action prerequisites, accepted outcome/reason lineage and Stream lifecycle projectors; freeze FP3-C field/action/replay contract before production code.
+
