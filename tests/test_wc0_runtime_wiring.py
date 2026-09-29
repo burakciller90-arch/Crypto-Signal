@@ -70,6 +70,15 @@ def test_dashboard_derives_all_world_class_runtime_paths_from_live_ledger() -> N
         "stream_ledger_path": (
             runtime / "stream" / "intelligence_stream.sqlite3"
         ),
+        "options_surface_path": (
+            runtime / "market_tape" / "options_surface.sqlite3"
+        ),
+        "onchain_capital_flow_path": (
+            runtime / "onchain" / "onchain_capital_flow.sqlite3"
+        ),
+        "onchain_source_contract_path": (
+            runtime / "onchain" / "source_contract.sqlite3"
+        ),
     }
 
 
@@ -113,6 +122,15 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
         "event_source_runtime_path": explicit["event_source_runtime"],
         "wc2_cohort_path": explicit["wc2_cohort"],
         "stream_ledger_path": explicit["stream_ledger"],
+        "options_surface_path": (
+            ledger.parent.parent / "market_tape" / "options_surface.sqlite3"
+        ),
+        "onchain_capital_flow_path": (
+            ledger.parent.parent / "onchain" / "onchain_capital_flow.sqlite3"
+        ),
+        "onchain_source_contract_path": (
+            ledger.parent.parent / "onchain" / "source_contract.sqlite3"
+        ),
     }
 
 

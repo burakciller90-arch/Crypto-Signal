@@ -210,7 +210,7 @@ async def _events() -> AsyncIterator[OrderBookSnapshot | PublicTradeObservation]
         yield trade
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_market_tape_stream_persistence_is_bounded_and_append_only(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
 

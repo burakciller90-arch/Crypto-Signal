@@ -5,16 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from ops.run_market_tape_stream import (
-    _is_transient_sqlite_lock,
-    _restart_seed_events,
-    monitor_ingestion_time,
-)
 from crypto_signal.data.market_data_gap_ledger import MarketDataGapLedger
 from crypto_signal.data.market_tape_collector_runtime import (
     MarketTapeCollectorRuntimeStore,
     build_collector_heartbeat,
     build_collector_instance,
+)
+from ops.run_market_tape_stream import (
+    _is_transient_sqlite_lock,
+    _restart_seed_events,
+    monitor_ingestion_time,
 )
 
 

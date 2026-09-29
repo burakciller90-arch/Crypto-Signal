@@ -873,3 +873,262 @@ Safety:
 - `HISTORICAL_BACKFILL=NO`
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-29 — RDP11 continuous soak STARTED
+
+This checkpoint is written before any RDP11 production-code or workflow change.
+
+- canonical main at task start: `5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+- previous gate: **RDP10 PASS**
+- RDP10 top-level docs closeout PR: #1655
+- active branch: `rdp11/continuous-soak-anchor`
+- duplicate RDP11 open PRs before branch creation: NONE
+- duplicate RDP11/soak branches before branch creation: NONE
+- session-local `/Volumes` worktree: NONE
+- canonical SSD504 Workbench is authoritative
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact-main prerequisite evidence:
+- Crypto SSD504 Workbench Bootstrap run `36483321012` / job `109134044398`: SUCCESS
+  - `GITHUB_SHA=5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- Crypto Signal Agent Memory Bootstrap run `36483321062` / job `109134045566`: SUCCESS
+  - `RDP9_BOOTSTRAP_FOCUSED_TESTS=PASS`
+  - `RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS`
+  - `PRODUCTION_RUNTIME_MUTATED=NO`
+  - `REAL_CAPITAL=0`
+
+### RDP11 bounded goal
+
+Establish a mechanically attributable, read-only UID504 observation contract for a real minimum 72-hour engineering soak.
+
+The soak must observe at least:
+- service/runtime uptime and restart continuity;
+- source freshness and explicit stale/unavailable states;
+- source/data gaps and sequence/gap behavior;
+- transport reconnect / heartbeat state where available;
+- SQLite quick-check / lock-read behavior without write mutation;
+- frozen-proof integrity and no-current/no-future contract health;
+- Stream/Product continuity and customer-proof inspectability;
+- explicit source limitations;
+- `REAL_CAPITAL=0`.
+
+Hard rule:
+- RDP11 cannot PASS before the real 72-hour observation window elapses.
+- Portfolio/frontend work may proceed only in isolated branch/worktree/runtime and cannot mutate the soaked evidence runtime or frozen/historical evidence.
+
+### Current blocker
+
+The RDP11 observer/anchor contract has not yet been audited or installed. Existing continuity/recovery tooling predates the RDP11 acceptance contract and must not be assumed sufficient.
+
+### Exact nextAction
+
+Audit current UID504 supervisor/runtime health surfaces, continuity workflows, existing recovery/soak utilities, canonical runtime DBs and exact-proof read models. Record a pre-implementation audit checkpoint before changing any workflow/script. Then implement only the minimal read-only observation/anchor machinery required to accumulate real 72-hour evidence.
+
+
+
+## RDP11 pre-deploy audit checkpoint — 2026-09-29
+
+Audit completed before any RDP11 runtime deployment or soak-observer implementation.
+
+Canonical accepted main:
+- `5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+
+Observed runtime checkout state from the final RDP10 UID504 acceptance:
+- Workbench was on accepted base/main.
+- Development head: `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` (RDP8-B-era code).
+- Product head: `403cb552dd398ea5c81ab97cb5df8114b0716ad2` (RDP1-era Product code).
+- current main is 24 commits ahead of that Development head and 67 commits ahead of that Product head.
+- therefore RDP11 must not start the 72-hour clock yet: the roadmap requires **real Product proof inspectability**, not only Workbench/source acceptance.
+
+Repository/runbook audit:
+- `ENVIRONMENT_REGISTRY.md` confirms SSD `Development` is runtime data/code owner and `Product` is accepted live dashboard checkout.
+- `docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md` explicitly forbids hand-editing Product and requires:
+  1. merge to main;
+  2. hosted Stage10 full regression;
+  3. UID504 `sync`;
+  4. UID504 `producttest`;
+  5. UID504 `fulltest`;
+  6. rollback-safe exact-target `productdeploy`;
+  7. post-deploy `productstate` + health checks.
+- `.github/workflows/crypto-mac-command.yml` provides allowlisted UID504 implementations of those commands and exact-target Product rollback on failure.
+- existing `crypto-r11-runtime-recovery.yml` can sync/restart Development runtime but does not promote Product; it is not sufficient by itself for the RDP11 Product-inspectability prerequisite.
+- generic Stage10 on docs-only main currently reports failure, but its job logs are unavailable from the connector; RDP11 will not treat that generic status as proof. The exact UID504 `producttest` + `fulltest` + deployment health sequence must mechanically pass before the soak clock begins.
+
+Existing observation surfaces already available:
+- supervisor-owned dashboard health at `127.0.0.1:48700/api/health`;
+- Market Tape collector heartbeat / ingestion runtime DB;
+- liquidation heartbeat + connection coverage;
+- source-contract SQLite `quick_check`;
+- provider-divergence SQLite `quick_check`;
+- immutable FrozenProofStore read-only path;
+- existing restart/watchdog/recovery acceptance;
+- Stream and Product read-only runtime APIs.
+
+Minimal RDP11 plan:
+1. use the existing allowlisted UID504 deployment sequence to move Development and Product to exact accepted main, with rollback protection;
+2. verify restarted supervisor/dashboard and real Product exact proof surface;
+3. only then install a dedicated **read-only RDP11 observer** plus separate observation sidecar/anchor (never writing canonical evidence DBs);
+4. anchor the 72-hour clock to the deployed exact main SHA and first successful UID504 observation;
+5. run recurring UID504 observations; any anchor drift or mandatory fail-closed violation invalidates/restarts the soak clock.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- canonical evidence DB writes by observer: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Execute the accepted UID504 `sync → producttest → fulltest → productdeploy target=5f07a895... → productstate` sequence. Record every issue/run/job and do not start the 72-hour clock unless the exact-target deployment and real Product health/proof checks pass.
+
+
+
+## RDP11 pre-deploy full-suite checkpoint — 2026-09-29
+
+Deployment remains blocked; the 72-hour soak clock has **not** started.
+
+Completed prerequisite evidence:
+- UID504 sync issue #1656 / Crypto Mac Command run `36489311982` / job `109153796258`: SUCCESS.
+  - canonical Development fast-forwarded from `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` to exact main `5f07a8954f87e237258f1d3eb448a5ede6106fbd`.
+- UID504 producttest issue #1657 / Crypto Mac Command run `36489373492` / job `109153999931`: SUCCESS.
+  - focused dashboard/product tests and product lint/type checks passed.
+
+Canonical full-suite attempt:
+- issue #1658 / Crypto Mac Command run `36489428770` / job `109154187159`: **FAILURE**.
+- a later duplicate fulltest issue #1659 was created after #1658 had already started; it is not canonical acceptance and must not be used to override #1658.
+
+Failure audit from #1658:
+1. **stale test expectations after accepted RDP10 wiring**
+   - `tests/test_wc0_runtime_wiring.py` does not include the accepted Options + On-chain runtime paths now passed by `run_dashboard.py`.
+   - trust-source tests assert obsolete exact prose strings although the canonical story semantics are still fail-closed.
+   - `tests/test_stream_s15_end_to_end.py` assumes an evidence identity set that changed under accepted exact-proof lineage.
+2. **async full-suite harness gap**
+   - several async Market Tape / liquidation tests fail with “async def functions are not natively supported”; focused RDP acceptance previously executed those paths successfully, so the generic `pytest -q` environment lacks the expected async test adapter/plugin contract.
+3. **WC2 fixture drift exposed by stricter accepted Geometry proof validation**
+   - WC2 runtime tests construct selected geometry evidence identities `wc2-harmonic-geometry` / `wc2-pa-directional` without corresponding frozen methodology results; the accepted RDP3/RDP10 proof validator correctly fails closed.
+4. deploy was correctly skipped; Product remains unpromoted and RDP11 soak clock remains unstarted.
+
+This is a pre-deploy regression/harness cleanup gate, not a reopening of RDP10 scientific acceptance. Repairs must preserve accepted fail-closed proof behavior; do not weaken Geometry validation or remove accepted Options/On-chain paths merely to make stale tests pass.
+
+Exact nextAction:
+- audit the failing fixtures/tests and project test dependencies/config;
+- repair stale regression expectations/fixtures and the generic async-suite execution contract without changing accepted evidence semantics;
+- run focused repairs, then rerun canonical UID504 `fulltest`;
+- only after fulltest PASS may exact-target `productdeploy` and `productstate` proceed.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Product deploy: NOT YET
+- RDP11 soak clock: NOT STARTED
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+
+
+## RDP11 exact-main fulltest blocker checkpoint — 2026-09-29
+
+The accepted deployment sequence stopped correctly at fulltest. Product was NOT deployed.
+
+UID504 deployment evidence:
+- issue #1656 / Crypto Mac Command run `36489311982` / job `109153796258`: SUCCESS
+  - Development fast-forwarded from `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` to exact main `5f07a8954f87e237258f1d3eb448a5ede6106fbd`.
+- issue #1657 / run `36489373492` / job `109153999931`: PRODUCT TEST SUCCESS.
+- issue #1658 / run `36489428770` / job `109154187159`: FULL TEST FAILURE.
+- Product deploy was not attempted and the 72-hour soak clock has NOT started.
+
+Full-suite failure classification: 37 tests.
+- 12 async collection tests fail because the repository marks them `pytest.mark.asyncio` but the declared dev environment does not include `pytest-asyncio`; this is a test-harness dependency drift, not a live collector failure.
+- 20 WC2 tests share one stale fixture root: `tests/test_wc2_live_source_adapter.py::_bundle()` selects synthetic `wc2-pa-directional` / `wc2-harmonic-geometry` evidence in confluence but freezes the older base methodology results. The strengthened Frozen Geometry Proof invariant correctly rejects that mismatched lineage.
+- 2 trust-source tests assert obsolete internal/English-heavy narration strings while production now emits the accepted Turkish human-readable trust/event-risk wording.
+- 1 S15 end-to-end test uses text search for `BTCUSDT` even though symbol is now a first-class structured query field and the root human narrative is no longer required to repeat the ticker in free text.
+- 2 WC0 runtime-wiring tests predate accepted RDP10 Options + On-chain runtime paths and therefore omit `options_surface_path`, `onchain_capital_flow_path`, and `onchain_source_contract_path` from their expected contract.
+
+Repair policy:
+- do not weaken Frozen Geometry Proof validation;
+- do not remove RDP10 runtime paths;
+- do not revert human-readable Turkish narration;
+- do not fabricate async success;
+- repair test harness/fixtures so they exercise the current accepted contracts exactly.
+
+Exact nextAction:
+Apply only the five mechanically demonstrated integration repairs on the RDP11 branch, add a focused UID504 integration-repair acceptance workflow, require focused PASS, then merge/re-sync and rerun the exact-main fulltest before any Product deployment.
+
+
+
+## RDP11 pre-soak second-failure audit checkpoint — 2026-09-29
+
+Exact branch head audited: `3e6d90c466ee7665e4e2fa16db652cabaaa8b00c`.
+
+Focused pre-soak workflow:
+- RDP11 Pre-Soak Fulltest UID504 run `36491772727` / job `109161831615`: FAILURE.
+- canonical Development remained untouched by the branch-only acceptance workflow.
+- previously demonstrated async/WC0/trust/S15/geometry-lineage failure classes no longer appear in the failure summary.
+
+Single remaining root cause:
+- all remaining WC2/Stream failures converge on `WC2 live source requires resolved PIT regime evidence`.
+- the repaired `tests/test_wc2_live_source_adapter.py::_bundle()` currently freezes exactly 18 sequential 15m candles (indices 0..17).
+- canonical `RegimeConfig.minimum_bars` is 20.
+- therefore the accepted PIT regime engine correctly returns `UNRESOLVED` with `insufficient_history`; production behavior is correct and must not be weakened.
+
+Authorized minimal repair:
+- extend only the synthetic WC2 fixture with two additional sequential closed/PIT-observed candles so it satisfies the existing 20-bar minimum;
+- do not change RegimeConfig, WC2 runtime validation, Geometry validation, source truth, or production authority.
+
+Soak/deploy state:
+- Product deploy: NOT ATTEMPTED
+- RDP11 72h clock: NOT STARTED
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Extend the WC2 synthetic source to >=20 contiguous bars, require exact-head pre-soak fulltest PASS, then PR/merge the integration repairs, sync Development, rerun canonical fulltest, and only then proceed to exact Product deployment.
+
+
+
+## RDP11 pre-soak third-failure audit checkpoint — 2026-09-29
+
+Exact tested branch head:
+- `d0520641b94d20ba7d539ebf8a798d1e4fba5c4e`
+
+Focused workflow:
+- RDP11 Pre-Soak Fulltest UID504 run `36538027413` / job `109306720103`: FAILURE.
+
+What passed before failure:
+- exact branch checkout matched the requested head;
+- canonical Development remained clean/read-only;
+- full repository pytest reached `[100%]`;
+- previous async/WC0/trust/S15/WC2 Geometry/PIT-regime failures are no longer present.
+
+Single remaining blocker observed in this run:
+- whole-repo Ruff reports one fixable `I001` import-order violation in `tests/test_rdp1_runtime_reliability.py`.
+- this file is an older RDP1 regression test and is not a production-runtime semantic change.
+- mypy/JS stages did not run because the workflow correctly stopped at Ruff under `set -euo pipefail`.
+
+Authorized minimal repair:
+- reorder only the existing imports in `tests/test_rdp1_runtime_reliability.py` to the canonical Ruff/isort order;
+- do not alter RDP1 runtime behavior, source code, evidence contracts or production authority.
+
+Deploy/soak:
+- Product deploy: NOT ATTEMPTED
+- RDP11 72h clock: NOT STARTED
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Apply the import-only regression cleanup, require the resulting exact-head pre-soak fulltest to pass pytest + Ruff + mypy + JS acceptance, then proceed to PR/merge and canonical Development fulltest before any Product deployment.

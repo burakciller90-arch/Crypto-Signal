@@ -69,7 +69,7 @@ def test_s15_end_to_end_persists_story_proof_change_and_capital(tmp_path: Path) 
     assert capital["production_authority"] is False
 
     searched = reader.read_messages(
-        StreamMessageQuery(limit=20, text="BTCUSDT")
+        StreamMessageQuery(limit=20, symbol="BTCUSDT")
     )
     assert str(manifest["root_narrative_identity"]) in {
         item["narrative_identity"] for item in searched.items

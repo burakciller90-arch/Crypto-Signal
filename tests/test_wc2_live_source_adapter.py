@@ -6,18 +6,15 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from test_immutable_ledger import build_bundle, candles
+from test_harmonic_analysis import candle as harmonic_candle
+from test_harmonic_analysis import series as harmonic_series
 
-from crypto_signal.confluence.agreement import analyze_confluence
-from crypto_signal.confluence.models import (
-    EvidenceDirection,
-    EvidenceValidity,
-    InvalidationTrigger,
-    MethodologyEvidence,
-    MethodologyKind,
-    NamedPrice,
-    PriceZone,
+from crypto_signal.confluence.adapters import (
+    harmonic_result_evidence,
+    price_action_structure_evidence,
 )
+from crypto_signal.confluence.agreement import analyze_confluence
+from crypto_signal.confluence.models import EvidenceDirection
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.live_untouched_forward_operational import (
     WC2_MISSING_CONTEXT_POLICY_VERSION,
@@ -38,6 +35,14 @@ from crypto_signal.intelligence.regime import (
     build_regime_evidence_freeze,
 )
 from crypto_signal.ledger.bundle import build_decision_freeze_bundle
+from crypto_signal.methodologies.elliott.analysis import analyze_elliott
+from crypto_signal.methodologies.harmonic.analysis import analyze_harmonics
+from crypto_signal.methodologies.price_action.analysis import analyze_price_action
+from crypto_signal.methodologies.price_action.models import (
+    StructureBreak,
+    StructureBreakKind,
+    StructureDirection,
+)
 from crypto_signal.product.decision_proof import (
     ProofEvidenceAvailability,
     ProofEvidenceDomain,
@@ -46,103 +51,133 @@ from crypto_signal.signals.models import SignalState
 from crypto_signal.signals.semantics import build_signal_decision
 
 
-def _directional_evidence(
-    *,
-    methodology: MethodologyKind,
-    exchange,
-    market_type,
-    as_of_ms: int,
-    evidence_id: str,
-    geometry: bool,
-) -> MethodologyEvidence:
-    return MethodologyEvidence(
-        methodology=methodology,
-        exchange=exchange,
-        market_type=market_type,
-        symbol="BTCUSDT",
-        timeframe="15m",
-        as_of_ms=as_of_ms,
-        methodology_version=f"{methodology.value}/wc2-test",
-        evidence_id=evidence_id,
-        setup_type=(
-            "gartley"
-            if methodology is MethodologyKind.HARMONIC
-            else "directional_context"
-        ),
-        direction=EvidenceDirection.BULLISH,
-        validity=(
-            EvidenceValidity.VALID
-            if methodology is MethodologyKind.HARMONIC
-            else EvidenceValidity.CONTEXT
-        ),
-        market_available_at_ms=as_of_ms - 2,
-        observed_at_ms=as_of_ms - 1,
-        entry_zone=(
-            PriceZone(Decimal(1000), Decimal(1002))
-            if geometry
-            else None
-        ),
-        invalidation_price=Decimal(990) if geometry else None,
-        invalidation_trigger=(
-            InvalidationTrigger.TOUCH_OR_CROSS if geometry else None
-        ),
-        targets=(
-            (
-                NamedPrice("target_1", Decimal(1015)),
-                NamedPrice("target_2", Decimal(1025)),
-            )
-            if geometry
-            else ()
-        ),
-        key_levels=(),
-        metrics=(),
-        ambiguity_flags=(),
-        contradiction_flags=(),
-        evidence_summary=("synthetic_directional_fixture",),
-    )
-
-
 def _bundle():
-    base = build_bundle(candles())
-    as_of_ms = base.signal_decision.as_of_ms
-    evidence = (
-        _directional_evidence(
-            methodology=MethodologyKind.PRICE_ACTION,
-            exchange=base.signal_decision.exchange,
-            market_type=base.signal_decision.market_type,
-            as_of_ms=as_of_ms,
-            evidence_id="wc2-pa-directional",
-            geometry=False,
-        ),
-        _directional_evidence(
-            methodology=MethodologyKind.HARMONIC,
-            exchange=base.signal_decision.exchange,
-            market_type=base.signal_decision.market_type,
-            as_of_ms=as_of_ms,
-            evidence_id="wc2-harmonic-geometry",
-            geometry=True,
-        ),
+    offset_ms = 400 * 86_400_000
+    source = tuple(
+        replace(
+            candle,
+            open_time_ms=candle.open_time_ms + offset_ms,
+            close_time_ms=candle.close_time_ms + offset_ms,
+            source_timestamp_ms=candle.source_timestamp_ms + offset_ms,
+            ingested_at_ms=candle.ingested_at_ms + offset_ms,
+        )
+        for candle in (
+            *harmonic_series(),
+            harmonic_candle(16, 1050),
+            harmonic_candle(17, 1090),
+            harmonic_candle(18, 1080),
+            harmonic_candle(19, 1110),
+        )
     )
+    as_of_ms = max(candle.ingested_at_ms for candle in source)
+
+    harmonic = analyze_harmonics(
+        source,
+        left_bars=1,
+        right_bars=1,
+        as_of_ms=as_of_ms,
+    )
+    harmonic_items = harmonic_result_evidence(harmonic)
+    selected_pair = next(
+        (
+            (match, item)
+            for match, item in zip(
+                harmonic.valid_matches,
+                harmonic_items,
+                strict=True,
+            )
+            if item.direction is EvidenceDirection.BULLISH
+            and item.entry_zone is not None
+            and item.invalidation_price is not None
+            and item.targets
+        ),
+        None,
+    )
+    assert selected_pair is not None
+    harmonic_match, harmonic_item = selected_pair
+
+    price_action = analyze_price_action(
+        source,
+        left_bars=1,
+        right_bars=1,
+        as_of_ms=as_of_ms,
+    )
+    price_action_item = price_action_structure_evidence(price_action)
+    if (
+        price_action_item is None
+        or price_action_item.direction is not EvidenceDirection.BULLISH
+    ):
+        last = source[-1]
+        broken_pivot = harmonic_match.candidate.c
+        break_event = StructureBreak(
+            kind=StructureBreakKind.BOS,
+            direction=StructureDirection.BULLISH,
+            broken_pivot=broken_pivot,
+            break_candle_identity=(
+                last.exchange.value,
+                last.market_type.value,
+                last.symbol,
+                last.timeframe,
+                last.open_time_ms,
+            ),
+            break_close=last.close,
+            level_price=broken_pivot.price,
+            distance_bps=(
+                (last.close - broken_pivot.price)
+                / broken_pivot.price
+                * Decimal(10_000)
+            ),
+            market_confirmed_at_ms=last.close_time_ms,
+            observed_at_ms=last.ingested_at_ms,
+        )
+        structure = replace(
+            price_action.structure,
+            structure_breaks=(
+                *price_action.structure.structure_breaks,
+                break_event,
+            ),
+            current_direction=StructureDirection.BULLISH,
+        )
+        price_action = replace(
+            price_action,
+            structure=structure,
+            summary=replace(
+                price_action.summary,
+                current_structure_direction=StructureDirection.BULLISH,
+                structure_break_count=len(structure.structure_breaks),
+            ),
+        )
+        price_action_item = price_action_structure_evidence(price_action)
+
+    assert price_action_item is not None
+    assert price_action_item.direction is EvidenceDirection.BULLISH
+
+    evidence = (price_action_item, harmonic_item)
     confluence = analyze_confluence(
         evidence,
-        exchange=base.signal_decision.exchange,
-        market_type=base.signal_decision.market_type,
-        symbol=base.signal_decision.symbol,
-        timeframe=base.signal_decision.timeframe,
+        exchange=source[0].exchange,
+        market_type=source[0].market_type,
+        symbol=source[0].symbol,
+        timeframe=source[0].timeframe,
         as_of_ms=as_of_ms,
     )
     decision = build_signal_decision(confluence)
     assert decision.state is SignalState.ACTIVE
     assert decision.geometry is not None
+
     return build_decision_freeze_bundle(
         decision=decision,
         confluence=confluence,
-        price_action=base.price_action,
-        harmonic=base.harmonic,
-        elliott=base.elliott,
-        candles=base.candles,
+        price_action=price_action,
+        harmonic=harmonic,
+        elliott=analyze_elliott(
+            source,
+            left_bars=1,
+            right_bars=1,
+            as_of_ms=as_of_ms,
+        ),
+        candles=source,
     )
-
 
 def test_live_source_adapter_preserves_exact_bundle_and_missing_domains() -> None:
     bundle = _bundle()
