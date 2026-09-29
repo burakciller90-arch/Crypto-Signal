@@ -3486,3 +3486,60 @@ Cleanup verification:
 
 Exact nextAction:
 Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
+
+
+## FP1-D TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D_ACTIVE_DUPLICATE_AUDIT
+taskStartMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+activeBranch: fp1d/portfolio-capital-movements
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchBootstrapRun: 36568787266
+workbenchBootstrapJob: 109407249663
+workbenchBootstrapConclusion: SUCCESS
+workbenchHead: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+workbenchBranch: main
+workbenchDirtyCount: 0
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Completed prerequisites:
+- FP1-A Market Pulse merged via PR #1671;
+- FP1-B Attention / Workspace / Five-Family merged via PR #1672;
+- FP1-C Event Rail merged via PR #1673;
+- FP1-A/B/C accepted foundations are REUSE and must not be replayed.
+
+Duplicate/stale check:
+- no open PR matching FP1-D Portfolio + capital movements;
+- no related fp1d/portfolio-capital-movements branch existed before this task;
+- current main and Workbench exact-main state reverified;
+- legacy /api/paper/mission-control is not authorized as canonical final Portfolio truth.
+
+Bounded FP1-D goal:
+- build only read-only customer projections for canonical current-program Portfolio and capital movements;
+- source truth must come from Epoch 2 / R21 accounting, R22 transaction/decision tape, R24 performance/trust and accepted Stream Capital messages;
+- Epoch 1 and legacy Mission Control must stay separate;
+- no new capital ledger, accounting engine, performance engine, or duplicate event store;
+- no Product API route;
+- no frontend;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation;
+- REAL_CAPITAL=0.
+
+Mandatory pre-code audit:
+1. read_epoch2_state_read_only exact payload and missing-DB behavior;
+2. R22 read-only trade/intent/fill/history APIs;
+3. R24 performance/trust read model and exact metric semantics;
+4. Stream capital decision/sizing/lifecycle message shapes and filters;
+5. identify which fields are customer-safe and which remain audit-only;
+6. classify Portfolio Summary and Daily Capital Movements as REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE.
+
+Current blocker:
+- no implementation blocker yet; production code changes are forbidden until the exact current-program sources and Epoch boundaries are durably mapped.
+
+Exact nextAction:
+Audit the canonical Epoch 2 / R22 / R24 / Stream Capital sources and write a durable FP1-D field/source matrix before changing final_product_read_model.py.
