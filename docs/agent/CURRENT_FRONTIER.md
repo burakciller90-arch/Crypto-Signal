@@ -5554,3 +5554,29 @@ Current blocker:
 Exact nextAction:
 Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only, then add focused SCALE_IN -> REDUCE/EXIT weighted-average/replay tests. Do not begin FP3-D before C2 mechanical PASS.
 
+
+
+## FP3-C2 SOURCE AUDIT COMPLETE / TEST IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C2_TEST_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+lineageCommit: c49537eb7baa3893dcd069fa3072ab3c4de6e804
+actionBridgeCommit: c8c5ceaafc871381af2c897aaec3259652793e6e
+realCapital: 0
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Source-audit result:
+- canonical weighted-average cost-basis replay already supports multiple BUY fills; do not replace it;
+- the unsafe C1 assumption was isolated to canonical sell lineage requiring every active BUY to share one forecast/proof/sizing assessment;
+- C2 now represents the verified immutable active BUY entry set from R22 intent/fill truth and binds sell action to the latest active entry while carrying evidence for the full active-entry set;
+- SCALE_IN now maps to canonical BUY only under action-policy v2, positive existing holdings, accepted FP3-A/B sizing and lineage identities distinct from every active BUY;
+- C1 policy/engine v1 remains readable for immutable historical receipts; STOP_UPDATE remains explicit unavailable.
+
+Current blocker:
+- focused multi-entry tests have not yet mechanically proved second BUY, weighted-average basis, REDUCE/EXIT and replay idempotency.
+
+Exact nextAction:
+Add a genuine two-issuance FP3-A/B fixture and prove OPEN -> SCALE_IN -> REDUCE/EXIT plus exact replay/non-duplication; then run PR/full UID504 acceptance and fix only evidenced failures.
