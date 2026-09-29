@@ -6,27 +6,76 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
+    StreamMessageQuery,
+    StreamReadModelError,
+)
 from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
+DEFAULT_ATTENTION_LIMIT = 5
+MAX_ATTENTION_LIMIT = 20
+_ATTENTION_SCAN_LIMIT = 200
 REAL_CAPITAL = 0
 
 _FAMILY_ORDER = {
     "geometry": 0,
+    "geometry_pa_elliott_harmonic": 0,
     "liquidity": 1,
+    "liquidity_structure": 1,
     "order_flow": 2,
+    "order_flow_absorption": 2,
     "derivatives": 3,
+    "derivatives_leverage": 3,
     "onchain": 4,
+    "onchain_smart_money": 4,
 }
 _FAMILY_LABELS = {
     "geometry": "Geometri",
+    "geometry_pa_elliott_harmonic": "Geometri",
     "liquidity": "Likidite",
+    "liquidity_structure": "Likidite",
     "order_flow": "Emir Akışı",
+    "order_flow_absorption": "Emir Akışı",
     "derivatives": "Türevler",
+    "derivatives_leverage": "Türevler",
     "onchain": "On-chain",
+    "onchain_smart_money": "On-chain",
+}
+_CATEGORY_LABELS = {
+    "market": "Piyasa",
+    "intelligence": "İstihbarat",
+    "decision": "Karar",
+    "capital": "Sermaye",
+    "risk": "Risk",
+    "outcome": "Sonuç",
+    "system": "Sistem",
+    "routine": "Rutin",
+}
+_IMPORTANCE_LABELS = {
+    "critical": "Kritik",
+    "important": "Önemli",
+}
+_EVIDENCE_DOMAIN_LABELS = {
+    "geometry": "Geometri",
+    "frozen_chart": "Dondurulmuş grafik",
+    "order_book": "Emir defteri",
+    "public_trades": "Gerçekleşen işlemler",
+    "liquidity": "Likidite",
+    "liquidity_structure": "Likidite yapısı",
+    "liquidity_sweep": "Likidite süpürmesi",
+    "order_flow": "Emir akışı",
+    "order_flow_cvd": "Emir akışı / CVD",
+    "derivatives": "Türevler",
+    "liquidation_map": "Likidasyon haritası",
+    "onchain": "On-chain",
+    "stablecoin": "Stablecoin akışı",
+    "event_context": "Event bağlamı",
+    "methodology": "Metodoloji",
 }
 _STANCE_LABELS = {
     "bullish": "Yükseliş yönlü destek",
