@@ -2394,3 +2394,40 @@ Current blocker:
 
 Exact nextAction:
 While the installed RDP11 observer continues, start **FP1 — Final Product Contract & Human Read-Model Layer** on a new isolated branch/worktree. First perform the mandatory per-slice duplicate audit over existing Product/Stream/GALACTECH APIs/read models and record each FP1 requirement as REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE before any implementation. Do not deploy or mutate the soaked Product/Development runtime.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — FP1 Final Product Human Read-Model Contract
+
+status: FP1_ACTIVE_DUPLICATE_AUDIT
+taskStartMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+activeBranch: fp1/human-read-model-contract
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+soakEpoch: rdp11-3d9f33db-20260929
+soakRuntimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate/stale check before branch creation:
+- exact main verified at 4df55fdf85b34ded60f23a3d3e3e346dd7505160;
+- no open PR matching FP1 Final Product Human Read Model;
+- no related fp1/final-product/read-model/command-center branch was present;
+- merged Final Product authority #1669/#1670 is already canonical and must not be replayed;
+- accepted Stream/GALACTECH/R21/R22/R24 infrastructure is presumed REUSE only where code audit proves the exact contract exists.
+
+Bounded FP1 goal:
+- audit the current Product/Stream/GALACTECH API and read-model surface before implementation;
+- classify every FP1 requirement as REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE;
+- freeze one customer-facing read-model contract for Market Pulse, Attention Situations, signal/workspace summary, five-family summaries, Event Rail, portfolio summary, daily capital movements, Trade Passport, screener rows and global search index;
+- preserve exact internal identity/provenance while removing SHA/internal-enum/database vocabulary from normal customer payloads;
+- do not create a second evidence engine or divergent product truth store;
+- do not deploy or mutate Product/Development or the RDP11 observer/soak target.
+
+Current blocker:
+- no implementation blocker yet; FP1 code changes are forbidden until the duplicate audit/classification is durably recorded.
+
+Exact nextAction:
+Audit existing product modules, APIs, Stream read models, GALACTECH projections, capital/performance/archive/event/alert/search surfaces and tests; produce a durable FP1 capability matrix with exact code references and REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE classification before changing production code.
