@@ -15,6 +15,7 @@ from test_transaction_tape_atomic import _initial_state
 
 from crypto_signal.paper.canonical_capital_outcomes import (
     CanonicalCapitalFinancialOutcome,
+    reconstruct_open_cost_basis,
 )
 from crypto_signal.paper.canonical_capital_runtime import (
     commit_canonical_paper_buy,
@@ -180,6 +181,127 @@ def test_s11_buy_reduce_exit_reconstructs_cost_basis_and_closes_flat(
         assert connection.execute(
             "SELECT COUNT(*) FROM s11_capital_outcome_evidence"
         ).fetchone() == (2,)
+
+
+
+def test_s11_multi_buy_weighted_average_reduce_exit_has_no_decimal_residual(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, forecast, proof, assessment, _ = _open_core_position(tmp_path)
+    after_first = Epoch2CanonicalLedger(epoch2_path).read_state()
+    core_after_first = next(
+        item for item in after_first.vault_snapshots
+        if item.vault_id is PaperVaultId.CORE
+    )
+    second_assessment, second_eligibility = _capital_inputs(PaperVaultId.CORE)
+    assert second_assessment.assessment_identity == assessment.assessment_identity
+    second_selection = promote_fixed_fractional_sizing(
+        second_assessment,
+        current_vault=core_after_first,
+        selected_at_ms=ISSUED_AT + 60,
+    )
+    second_buy = commit_canonical_paper_buy(
+        epoch2_path=epoch2_path,
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=second_assessment,
+        sizing_selection=second_selection,
+        eligibility_proof=second_eligibility,
+        symbol=PaperSymbol.BTCUSDT,
+        reference_price=Decimal(102),
+        reference_price_evidence_identity=_sha("multi-buy-reference"),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(102)},
+        mark_evidence_identity=_sha("multi-buy-mark"),
+        execution_snapshot=_execution_snapshot(),
+        decided_at_ms=ISSUED_AT + 70,
+        filled_at_ms=ISSUED_AT + 80,
+        mutated_at_ms=ISSUED_AT + 81,
+        snapshot_at_ms=ISSUED_AT + 90,
+    )
+    assert second_buy.inserted is True
+
+    history = R22Epoch2AtomicTape(epoch2_path).read_trade_history(
+        PaperVaultId.CORE,
+        PaperSymbol.BTCUSDT,
+    )
+    basis = reconstruct_open_cost_basis(
+        history,
+        vault_id=PaperVaultId.CORE,
+        symbol=PaperSymbol.BTCUSDT,
+    )
+    assert len(basis.prior_fill_identities) == 2
+    assert (
+        basis.average_cost_per_unit_usdt
+        == basis.remaining_cost_basis_usdt / basis.open_quantity
+    )
+
+    reduce_quantity = _half_step_quantity(basis.open_quantity)
+    reduced = commit_canonical_paper_sell(
+        epoch2_path=epoch2_path,
+        action=PaperAction.REDUCE,
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=second_assessment,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=reduce_quantity,
+        reference_price=Decimal(106),
+        reference_price_evidence_identity=_sha("multi-reduce-reference"),
+        exit_evidence_identity=_sha("multi-reduce-evidence"),
+        exit_reason_codes=("multi_entry_partial_reduce",),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(106)},
+        mark_evidence_identity=_sha("multi-reduce-mark"),
+        execution_snapshot=_execution_snapshot(),
+        decided_at_ms=ISSUED_AT + 120,
+        filled_at_ms=ISSUED_AT + 130,
+        mutated_at_ms=ISSUED_AT + 131,
+        snapshot_at_ms=ISSUED_AT + 140,
+    )
+    assert reduced.action is PaperAction.REDUCE
+
+    history_after_reduce = R22Epoch2AtomicTape(epoch2_path).read_trade_history(
+        PaperVaultId.CORE,
+        PaperSymbol.BTCUSDT,
+    )
+    remaining = reconstruct_open_cost_basis(
+        history_after_reduce,
+        vault_id=PaperVaultId.CORE,
+        symbol=PaperSymbol.BTCUSDT,
+    )
+    assert remaining.open_quantity == basis.open_quantity - reduce_quantity
+    assert (
+        remaining.average_cost_per_unit_usdt
+        == remaining.remaining_cost_basis_usdt / remaining.open_quantity
+    )
+
+    exited = commit_canonical_paper_sell(
+        epoch2_path=epoch2_path,
+        action=PaperAction.EXIT,
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=second_assessment,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=None,
+        reference_price=Decimal(108),
+        reference_price_evidence_identity=_sha("multi-exit-reference"),
+        exit_evidence_identity=_sha("multi-exit-evidence"),
+        exit_reason_codes=("multi_entry_close",),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(108)},
+        mark_evidence_identity=_sha("multi-exit-mark"),
+        execution_snapshot=_execution_snapshot(),
+        decided_at_ms=ISSUED_AT + 220,
+        filled_at_ms=ISSUED_AT + 230,
+        mutated_at_ms=ISSUED_AT + 231,
+        snapshot_at_ms=ISSUED_AT + 240,
+    )
+    assert exited.action is PaperAction.EXIT
+
+    final = Epoch2CanonicalLedger(epoch2_path).read_state()
+    core_final = next(
+        item for item in final.vault_snapshots
+        if item.vault_id is PaperVaultId.CORE
+    )
+    assert core_final.positions == ()
+    assert R22Epoch2AtomicTape(epoch2_path).audit_all_read_only() == (4, 4, 4)
 
 
 def test_s11_reduce_cannot_flatten_and_exit_cannot_be_partial(tmp_path: Path) -> None:
