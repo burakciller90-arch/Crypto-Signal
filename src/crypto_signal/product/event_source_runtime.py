@@ -453,6 +453,213 @@ def read_event_source_runtime_truth(
     )
 
 
+def read_event_source_calendar_rail(
+    path: Path,
+    *,
+    observed_at_ms: int,
+    window_start_ms: int,
+    window_end_ms: int,
+    asset: str | None = None,
+    categories: tuple[str, ...] = (),
+    limit: int = 50,
+) -> EventSourceCalendarRailTruth:
+    if min(observed_at_ms, window_start_ms, window_end_ms) < 0:
+        raise ValueError("event rail times cannot be negative")
+    if window_end_ms < window_start_ms:
+        raise ValueError("event rail window end precedes start")
+    if limit < 1 or limit > _MAX_EVENT_RAIL_LIMIT:
+        raise ValueError(
+            f"event rail limit must be inside 1..{_MAX_EVENT_RAIL_LIMIT}"
+        )
+    normalized_asset = None if asset is None else asset.strip().upper()
+    if normalized_asset == "":
+        raise ValueError("event rail asset cannot be blank")
+    normalized_categories = tuple(
+        sorted({value.strip().lower() for value in categories})
+    )
+    if any(not value for value in normalized_categories):
+        raise ValueError("event rail category cannot be blank")
+    if not set(normalized_categories).issubset(_EVENT_CATEGORIES):
+        raise ValueError("event rail category invalid")
+    if not path.is_file():
+        raise ValueError("event source runtime database missing")
+
+    wal_path = Path(f"{path}-wal")
+    if wal_path.exists() and wal_path.stat().st_size > 0:
+        raise ValueError(
+            "event source runtime has uncheckpointed WAL evidence"
+        )
+    database_bytes = _detached_sqlite_bytes(path)
+
+    with closing(sqlite3.connect(":memory:")) as connection:
+        connection.deserialize(database_bytes)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
+            raise ValueError("event source SQLite quick_check failed")
+        _verify_schema(connection)
+
+        successful_rows = connection.execute(
+            """
+            SELECT
+                sequence_id,
+                fetch_identity,
+                source_provider,
+                source_kind,
+                fetched_at_ms,
+                outcome,
+                payload_json
+            FROM event_source_fetches
+            WHERE source_kind='calendar'
+              AND outcome='success'
+              AND fetched_at_ms <= ?
+            ORDER BY fetched_at_ms, sequence_id
+            """,
+            (observed_at_ms,),
+        ).fetchall()
+        trusted_event_ids: set[str] = set()
+        for row in successful_rows:
+            _provider_truth_from_row(
+                connection,
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            payload = json.loads(str(row["payload_json"]))
+            if not isinstance(payload, dict):
+                raise TypeError("event source fetch payload must be object")
+            trusted_event_ids.update(
+                _identity_list(payload.get("item_identities"))
+            )
+
+        latest_rows = connection.execute(
+            """
+            SELECT
+                f.sequence_id,
+                f.fetch_identity,
+                f.source_provider,
+                f.source_kind,
+                f.fetched_at_ms,
+                f.outcome,
+                f.payload_json
+            FROM event_source_fetches AS f
+            WHERE f.source_kind='calendar'
+              AND f.fetched_at_ms <= ?
+              AND f.sequence_id = (
+                SELECT candidate.sequence_id
+                FROM event_source_fetches AS candidate
+                WHERE candidate.source_provider = f.source_provider
+                  AND candidate.source_kind='calendar'
+                  AND candidate.fetched_at_ms <= ?
+                ORDER BY
+                    candidate.fetched_at_ms DESC,
+                    candidate.sequence_id DESC
+                LIMIT 1
+              )
+            ORDER BY f.source_provider
+            """,
+            (observed_at_ms, observed_at_ms),
+        ).fetchall()
+        latest_fetches = tuple(
+            _provider_truth_from_row(
+                connection,
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            for row in latest_rows
+        )
+
+        coverage_truths: list[EventSourceCalendarCoverageTruth] = []
+        for row, fetch_truth in zip(latest_rows, latest_fetches, strict=True):
+            if fetch_truth.outcome != "success":
+                continue
+            payload = json.loads(str(row["payload_json"]))
+            if not isinstance(payload, dict):
+                raise TypeError("event source fetch payload must be object")
+            coverage_identity = _optional_text(payload.get("coverage_identity"))
+            if coverage_identity is None:
+                raise ValueError("calendar fetch coverage identity missing")
+            coverage_truths.append(
+                _calendar_coverage_truth(
+                    connection,
+                    coverage_identity=coverage_identity,
+                    source_provider=fetch_truth.source_provider,
+                    observed_at_ms=observed_at_ms,
+                )
+            )
+
+        event_rows = connection.execute(
+            """
+            SELECT
+                event_identity,
+                provider_event_id,
+                source_provider,
+                scheduled_at_ms,
+                ingested_at_ms,
+                payload_json
+            FROM structured_event_observations
+            WHERE scheduled_at_ms >= ?
+              AND scheduled_at_ms <= ?
+              AND ingested_at_ms <= ?
+            ORDER BY scheduled_at_ms, event_identity
+            """,
+            (window_start_ms, window_end_ms, observed_at_ms),
+        ).fetchall()
+        matched: list[EventSourceCalendarEventTruth] = []
+        for row in event_rows:
+            identity = str(row["event_identity"])
+            if identity not in trusted_event_ids:
+                continue
+            event = _calendar_event_truth(
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            if normalized_categories and event.category not in normalized_categories:
+                continue
+            if (
+                normalized_asset is not None
+                and event.affected_assets
+                and normalized_asset not in event.affected_assets
+            ):
+                continue
+            matched.append(event)
+
+    ordered = tuple(
+        sorted(
+            matched,
+            key=lambda item: (item.scheduled_at_ms, item.event_identity),
+        )
+    )
+    coverage_tuple = tuple(
+        sorted(
+            coverage_truths,
+            key=lambda item: (
+                item.source_provider,
+                item.coverage_start_ms,
+                item.coverage_end_ms,
+                item.coverage_identity,
+            ),
+        )
+    )
+    return EventSourceCalendarRailTruth(
+        observed_at_ms=observed_at_ms,
+        window_start_ms=window_start_ms,
+        window_end_ms=window_end_ms,
+        asset=normalized_asset,
+        categories=normalized_categories,
+        events=ordered[:limit],
+        total_matching_events=len(ordered),
+        coverages=coverage_tuple,
+        coverage_status=_calendar_coverage_status(
+            coverage_tuple,
+            window_start_ms=window_start_ms,
+            window_end_ms=window_end_ms,
+            categories=normalized_categories,
+        ),
+        latest_calendar_fetches=latest_fetches,
+    )
+
+
 def _detached_sqlite_bytes(path: Path) -> bytes:
     database_bytes = path.read_bytes()
     if not database_bytes:
