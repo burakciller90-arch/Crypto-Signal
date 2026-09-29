@@ -2772,3 +2772,526 @@ Guard result:
 
 Exact nextAction:
 Read PR #1671 mergeability/check state and current main. If the PR remains based on the verified main with no mechanical blocker, merge FP1-A without deploying Product/Development, then bootstrap from the new main and checkpoint FP1-B before changing any further production code.
+
+
+## FP1-B TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_B_ACTIVE_DUPLICATE_AUDIT
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+activeBranch: fp1b/attention-workspace-family-summary
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Completed prerequisite:
+- FP1-A merged via PR #1671 at main commit a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- customer-safe Market Pulse read model accepted on UID504;
+- no Product/Development deployment or soak runtime mutation.
+
+Duplicate/stale check before branch creation:
+- current main verified at a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- no open PR matching FP1-B attention/workspace/five-family summary;
+- no related fp1b/attention/workspace/family-summary branch exists;
+- existing Stream system-view, signal detail, exact evidence and Decision Proof remain canonical REUSE targets;
+- FP1-B must not create a second evidence engine, second Stream ledger or duplicate signal truth store.
+
+Bounded FP1-B goal:
+- Attention Situations: deterministic top material situations composed from accepted persisted Stream/system-view/signal truth;
+- Workspace Summary: one customer-safe summary binding current view, trigger/invalidation/targets, uncertainty/contradiction and exact source context where available;
+- Five-Family Summary: human-facing projection of accepted Geometry / Liquidity / Order Flow / Derivatives / On-chain states without leaking internal enum/SHA vocabulary by default;
+- preserve exact identities only in optional audit provenance;
+- explicit unavailable/stale/unsupported states; no fabricated zeros or neutral evidence;
+- read-only only;
+- no Product route;
+- no frontend;
+- no deploy;
+- no RDP11 observer/soak mutation.
+
+Mandatory pre-code audit:
+- inspect final_product_read_model.py from FP1-A;
+- inspect IntelligenceStreamReadModel query/detail payloads;
+- inspect IntelligenceStreamSystemView persisted family rows;
+- inspect IntelligenceStreamExactEvidenceReadModel capabilities;
+- inspect DashboardReader signal_detail rich projection;
+- inspect Decision Proof customer-relevant fields;
+- decide exact ranking/materiality source for Attention Situations without inventing a new score.
+
+Current blocker:
+- no implementation blocker yet; production code changes are forbidden until exact existing payloads and deterministic ranking inputs are classified REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE for FP1-B.
+
+Exact nextAction:
+Audit the accepted Stream/system-view/signal-detail/exact-evidence/Decision-Proof payloads specifically for FP1-B, record a bounded FP1-B field/source matrix, then implement the smallest read-only slice only after that audit is durable.
+
+
+## FP1-B1 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_B1_IMPLEMENTATION_START
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+activeBranch: fp1b/attention-workspace-family-summary
+auditDocument: docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md
+auditCommit: 81198cd62fa83a4ebf6a8b930ffda0289acdb76c
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Bounded implementation:
+- add Attention Situations read model only from persisted Stream/System View truth;
+- canonical narrative admission requires persisted materiality=PUBLISH/MATERIAL;
+- important System View admission uses its own persisted importance field and is not mislabeled as core materiality-policy output;
+- no new materiality/confidence/predictive score;
+- deterministic ordering only: critical > important, then event time desc, then immutable identity;
+- add enriched Five-Family Summary by joining System View rows to verified source family narrative detail;
+- preserve source_as_of, evidence domains, uncertainty and unavailable state;
+- default customer layer hides SHA/raw enum/database vocabulary;
+- audit mode preserves exact provenance;
+- no Workspace/Decision-Proof implementation in B1;
+- no Product route/frontend/deploy/runtime mutation.
+
+B1 PASS:
+- explicit unavailable on missing Stream DB/table;
+- read-only only;
+- routine/silent message cannot enter Attention;
+- exact material candidates remain eligible;
+- important System View candidates remain eligible but source semantics remain distinct;
+- deterministic bounded top-N;
+- family source time/freshness/evidence domains/uncertainty derive from verified family fact detail;
+- no source narrative -> explicit unavailable enrichment;
+- no SHA/raw internal state in default customer payload;
+- audit provenance exact;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- RDP11 untouched;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect current final_product_read_model.py and its focused test fixture one last time, then implement the smallest FP1-B1 extension plus deterministic temp-ledger tests without changing web.py or frontend files.
+
+
+## FP1-B1 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_START
+activeBranch: fp1b/attention-workspace-family-summary
+implementationHead: aee71dfbcf4ea960c620738ab87c35984ec19b79
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented production scope:
+- extended src/crypto_signal/product/final_product_read_model.py only;
+- AttentionSituations customer/audit contracts;
+- deterministic attention_situations read model;
+- FiveFamilySummary customer/audit contracts;
+- exact five_family_summary enrichment from verified family source narratives;
+- no Product route;
+- no frontend;
+- no new DB/schema/writer;
+- no deploy/runtime config.
+
+Implemented test scope:
+- extended tests/test_final_product_read_model.py;
+- missing Stream DB explicit/non-creating for B1;
+- real accepted FamilyRuntime/SystemViewRuntime fixture;
+- material canonical family message admitted to Attention;
+- important System View admitted as separate presentation source;
+- routine/watch System View excluded;
+- deterministic newest/importance ordering;
+- exact family source_as_of/evidence domains/uncertainty enrichment;
+- unavailable On-chain remains explicit;
+- default customer payload hides SHA/raw materiality/state/uncertainty codes;
+- read-side byte non-mutation.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- focused tests/test_final_product_read_model.py plus relevant Stream family/system-view/read-model regressions;
+- Ruff on changed module/test;
+- strict mypy on final_product_read_model.py;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak runtime mutation.
+
+Acceptance harness rule:
+- any temporary workflow trigger/test wiring is branch-only acceptance infrastructure;
+- it must be restored to exact current-main content before any FP1-B1 PR;
+- it is not product scope.
+
+Exact nextAction:
+Temporarily wire the already-registered MI1 UID504 acceptance harness to fp1b/attention-workspace-family-summary and include the B1 module/test in pytest/Ruff/mypy; run against the exact resulting head, record exact failures before repair, and do not claim PASS until all mechanical markers are green.
+
+
+## FP1-B1 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_TEST_REPAIR_REQUIRED
+activeBranch: fp1b/attention-workspace-family-summary
+acceptanceHead: 368c41581944f64a1cfc9d0af49746296cffa048
+uid504Run: 36558165417
+uid504Job: 109372266580
+artifactId: 11028466029
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- focused suite reached 100%;
+- all production semantics/assertions passed;
+- exactly two assertions failed, both test-only WAL-presence assumptions:
+  - test_attention_reuses_materiality_and_prioritizes_newer_system_view
+  - test_five_family_summary_enriches_exact_family_sources_and_keeps_missing_explicit
+- both failures asserted that path-wal must not exist after read;
+- the accepted FamilyRuntime/SystemViewRuntime seed already leaves a WAL sidecar before FinalProductReadModel reads;
+- main SQLite DB bytes were proven unchanged by the B1 reads;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- Ruff/mypy did not execute because pytest fail-fast stopped the command chain.
+
+Repair classification:
+- TEST FIX ONLY;
+- do not change production read-model semantics;
+- replace the incorrect no-WAL-exists assertion with a before/after WAL byte snapshot equality assertion so pre-existing canonical WAL evidence must remain unchanged by the read.
+
+Exact nextAction:
+Update only tests/test_final_product_read_model.py to snapshot any pre-existing WAL bytes immediately after seeding and assert the same bytes after Attention/Family reads. Then rerun the same UID504 pytest/Ruff/mypy/non-mutation harness.
+
+
+## FP1-B1 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_PASS
+activeBranch: fp1b/attention-workspace-family-summary
+acceptedHead: 0ae99b1538c8adf9485938a1774f457238c689d3
+uid504Run: 36558367315
+uid504Job: 109372952680
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source isolated UID504 checkout PASS;
+- focused Stream family/read-model/system-view/UI + final product B1 pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no RDP11 soak runtime mutation.
+
+Accepted B1 semantics:
+- Attention uses persisted canonical MATERIAL/PUBLISH for normal Stream narratives;
+- important System View is admitted only as a distinct presentation source;
+- routine/watch System View remains excluded;
+- no new materiality/confidence/predictive score exists;
+- priority is deterministic importance + recency + immutable identity only;
+- Five-Family enrichment uses verified source family narrative detail;
+- source_as_of/evidence domains/uncertainty remain source-backed;
+- missing On-chain/source evidence remains explicit unavailable;
+- default customer payload hides SHA/raw materiality/state/uncertainty codes;
+- audit mode preserves exact provenance;
+- canonical seeded DB and pre-existing WAL evidence remain byte-stable under B1 reads.
+
+Temporary acceptance harness:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml currently contains branch-only FP1-B1 trigger/test wiring;
+- this is acceptance infrastructure only and is NOT product scope.
+
+Exact nextAction:
+Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml on the FP1-B branch to exact current-main content. Then verify the branch diff excludes workflow files, checkpoint cleanup, and proceed to FP1-B2 Workspace Summary on the same isolated branch only after a new B2 task-start checkpoint.
+
+
+## FP1-B1 ACCEPTANCE-HARNESS CLEANUP COMPLETE — 2026-09-29
+
+status: FP1_B1_CLEAN_REVIEW_TREE
+activeBranch: fp1b/attention-workspace-family-summary
+currentHeadBeforeCheckpoint: 41805913a9659a7ffaffc0628c206e7d001c37f1
+acceptedB1Head: 0ae99b1538c8adf9485938a1774f457238c689d3
+acceptedUid504Run: 36558367315
+realCapital: 0
+historicalBackfill: NO
+
+Cleanup verification:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch blob equals exact current-main blob 394051a78c665d84cf78830cedc8799a13474baa;
+- temporary FP1-B1 trigger/test wiring is no longer present in the branch tree;
+- B1 production/test/docs work remains;
+- no deploy/runtime mutation occurred.
+
+## FP1-B2 TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_WORKSPACE_AUDIT_START
+activeBranch: fp1b/attention-workspace-family-summary
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+prerequisiteB1: PASS
+fieldSourceAuthority: docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Bounded B2 goal:
+- add one customer-safe Workspace Summary for an existing persisted Stream narrative;
+- reuse IntelligenceStreamReadModel.read_message_detail for immutable narrative/analytical/fact/message lineage;
+- when exact forecast/signal identities exist, optionally join ImmutableDecisionEvidenceLedger read-only;
+- optionally summarize IntelligenceStreamExactEvidenceReadModel resolution states without duplicating its evidence logic;
+- optionally join DashboardReader.signal_detail only when an exact signal_freeze_identity is available and signal ledger path is configured;
+- expose trigger, invalidation, targets, state/direction, main contradiction, event context, uncertainty, freshness and probability semantics only when exact;
+- calibrated probability may appear only when canonical proof/fact actually authorizes it;
+- normal customer payload must not expose SHA/internal enum/database vocabulary;
+- exact identities/codes remain audit-only;
+- missing optional Decision Evidence / signal ledger must degrade explicitly, not fail the whole workspace;
+- no route/frontend/deploy/new DB/writer.
+
+Mandatory pre-code audit for B2:
+1. exact Stream detail shapes for generic decision narrative, family narrative and System View;
+2. exact decision ledger read-only failure/missing behavior;
+3. exact-evidence read model constructor dependencies and safe optional use;
+4. signal-detail read path and customer-safe fields;
+5. define which Workspace fields are available for each message kind and which must remain explicitly unavailable.
+
+Current blocker:
+- B2 must not assume every Stream message is a decision/forecast message. Workspace must branch by verified detail kind and fail closed per field.
+
+Exact nextAction:
+Audit the three verified Stream detail kinds and exact read-only join APIs, then record a B2 message-kind/source matrix before changing B2 production code.
+
+
+## FP1-B2 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_IMPLEMENTATION_START
+activeBranch: fp1b/attention-workspace-family-summary
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+auditDocument: docs/CRYPTO_SIGNAL_FP1B2_WORKSPACE_MESSAGE_KIND_MATRIX.md
+auditCommit: 6560678167087bcd862cfeb532ec8fd0b934e112
+prerequisiteB1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audited B2 message kinds:
+- System View = SUPPORTED from verified system-view truth;
+- Family narrative = SUPPORTED from verified family fact/analytical truth;
+- Decision/Outcome narrative = SUPPORTED from verified generic Stream fact/analytical truth;
+- Capital story/decision/sizing/lifecycle = EXPLICITLY DEFERRED TO FP1-D and must not be reinterpreted in B2.
+
+Bounded implementation:
+- add WorkspaceSummary customer/audit contracts;
+- add workspace_summary(narrative_identity, observed_at_ms, ...);
+- classify message kind from verified read_message_detail structure;
+- System View: reuse exact system-view text/state/conditions/event/provider context;
+- Family: reuse exact family state/source_as_of/evidence domains/uncertainty; no fabricated trigger/target/invalidation;
+- Decision/Outcome: reuse exact Stream decision fact trigger/target/invalidation/event/probability/uncertainty;
+- optional Decision Evidence join only when configured file exists;
+- optional exact-evidence availability summary via existing IntelligenceStreamExactEvidenceReadModel for Family and Decision/Outcome;
+- no confluence-to-probability inference;
+- no Signal Detail dependency required for B2 core;
+- missing optional sources degrade explicitly;
+- conflict in configured immutable proof lineage fails closed;
+- no route/frontend/deploy/new DB/schema/writer.
+
+Implementation files:
+- src/crypto_signal/product/final_product_read_model.py
+- tests/test_final_product_read_model.py
+
+B2 PASS:
+- missing/unknown source explicit;
+- supported kind behavior exact;
+- capital kind explicit deferred;
+- no SHA/raw enum/database vocabulary in default customer payload;
+- audit exact provenance;
+- read-only/non-creating optional paths;
+- deterministic output;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Implement Workspace Summary contracts and message-kind branching in final_product_read_model.py first. Then add deterministic tests using existing accepted Stream fixtures before any acceptance harness change.
+
+
+## FP1-B2 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_START
+activeBranch: fp1b/attention-workspace-family-summary
+implementationHead: 451254963f37dd965a9c923e7731fa6d349223c4
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+prerequisiteB1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented B2 production scope:
+- WorkspaceSummary customer/audit contracts;
+- optional read-only decision_evidence_path and signal_ledger_path constructor inputs;
+- workspace_summary(narrative_identity, observed_at_ms, ...);
+- verified message-kind branching:
+  - System View supported;
+  - Family narrative supported;
+  - Decision/Outcome supported;
+  - capital story/decision/sizing/lifecycle explicitly deferred to Portföy/Sermaye view;
+- family/decision Exact Evidence availability summarized from existing resolver only;
+- optional Decision Evidence proof join only when configured path exists;
+- configured proof forecast/proof lineage mismatch fails closed;
+- no confluence-to-probability conversion;
+- no signal-detail dependency required for B2 core;
+- no route/frontend/new DB/schema/writer/deploy.
+
+Implemented B2 tests:
+- missing Stream DB explicit/non-creating;
+- unknown narrative explicit;
+- System View reuses exact trigger/target/invalidation and not-calibrated probability wording;
+- Family Workspace keeps decision conditions unavailable and summarizes existing exact-evidence state;
+- Decision Workspace reuses exact Stream fact and does not create a missing optional Decision Evidence DB;
+- conflicting configured Decision Proof fails closed;
+- default Workspace customer projections hide SHA/raw evidence-resolution/materiality/probability/capital enum vocabulary;
+- read-side source byte/WAL stability where applicable.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- focused tests/test_final_product_read_model.py plus relevant Stream family/read-model/system-view/UI regressions;
+- Ruff changed module/test;
+- strict mypy final_product_read_model.py;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak runtime mutation.
+
+Acceptance harness rule:
+- temporary MI1 trigger/test wiring is branch-only acceptance infrastructure;
+- restore it to exact current-main content before PR;
+- do not treat harness edits as product scope.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 harness to the FP1-B branch, run exact head acceptance, record the exact first mechanical failure before any repair, and do not claim B2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
+
+
+## FP1-B2 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_TEST_FIX_REQUIRED
+activeBranch: fp1b/attention-workspace-family-summary
+acceptanceHead: d23ffb7b0f5141cf5c9e4e5d8cb8f4bdd889de9d
+uid504Run: 36560940382
+uid504Job: 109381375352
+artifactId: 11030080876
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- focused suite reached 100%;
+- exactly one B2 test failed:
+  test_workspace_configured_conflicting_decision_proof_fails_closed;
+- System View Workspace PASS;
+- Family Workspace PASS;
+- Decision Workspace with missing optional Decision Evidence PASS;
+- customer no-SHA/raw-state vocabulary test PASS;
+- source byte/WAL non-mutation assertions PASS;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- Ruff/mypy did not run because pytest fail-fast stopped the command chain.
+
+Exact failure interpretation:
+- conflict fixture proof payload omitted immutable Decision Ledger authority boundary fields;
+- ImmutableDecisionEvidenceLedger._verified_payload therefore fails earlier on its own persisted REAL_CAPITAL boundary before B2 reaches the intended Stream-vs-proof identity mismatch assertion;
+- public B2 behavior still fails closed as designed, but the test is exercising the wrong fail-closed layer.
+
+Repair classification:
+- TEST FIX ONLY;
+- do not change production Workspace semantics;
+- add real_capital=0 and production_authority=false to the synthetic conflicting proof payload;
+- retain a deliberately different proof_identity so B2 itself must raise Decision Evidence proof lineage mismatch.
+
+Exact nextAction:
+Patch only tests/test_final_product_read_model.py conflict fixture with the mandatory Decision Ledger authority fields, then rerun the same exact UID504 pytest/Ruff/mypy/non-mutation/project-isolation acceptance harness.
+
+
+## FP1-B2 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_PASS
+activeBranch: fp1b/attention-workspace-family-summary
+acceptedHead: 8e8caa9862e4e78d2762dcaf9d8760cebe5cc444
+uid504Run: 36561360292
+uid504Job: 109382904345
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source isolated UID504 checkout PASS;
+- focused Stream family/read-model/system-view/UI + final-product Workspace pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no RDP11 soak runtime mutation.
+
+Accepted B2 semantics:
+- Workspace classifies verified detail kind before field projection;
+- System View uses only persisted system-view state/text/conditions/trust context;
+- Family Workspace keeps decision-only trigger/target/invalidation unavailable;
+- Family/Decision evidence availability is summarized from existing Exact Evidence resolution counts only;
+- Decision Workspace uses exact Stream trigger/target/invalidation/event/probability/uncertainty truth;
+- missing optional Decision Evidence path is non-creating and does not break core Workspace;
+- configured Decision Evidence lineage conflict fails closed;
+- confluence score is never converted into probability;
+- capital message kinds are explicitly deferred to Portföy/Sermaye work rather than reinterpreted;
+- default customer payload hides SHA/raw materiality/evidence-resolution/probability/capital enum vocabulary;
+- audit mode preserves exact provenance;
+- REAL_CAPITAL=0.
+
+Temporary acceptance harness:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml currently contains branch-only FP1-B2 trigger/test wiring;
+- this must be restored to exact current-main content before PR.
+
+Exact nextAction:
+Restore MI1 workflow to exact current-main content, verify workflow blob equality, verify FP1-B branch diff contains only B1/B2 production/tests/docs/agent checkpoints, then open the FP1-B implementation PR against current main.
+
+
+## FP1-B PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_B_REVIEW_READY
+activeBranch: fp1b/attention-workspace-family-summary
+currentBranchHead: 73ebfbbc29de8f779fc7148822c7063893ca900e
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+acceptedB1Head: 0ae99b1538c8adf9485938a1774f457238c689d3
+acceptedB1Uid504Run: 36558367315
+acceptedB2Head: 8e8caa9862e4e78d2762dcaf9d8760cebe5cc444
+acceptedB2Uid504Run: 36561360292
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup verification:
+- current main remains a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- no duplicate open FP1-B PR found;
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch blob equals exact current-main blob 394051a78c665d84cf78830cedc8799a13474baa;
+- temporary B1/B2 acceptance trigger/test wiring is absent from final branch tree;
+- no Product API route/frontend/deploy/runtime config change was authorized.
+
+FP1-B accepted product scope:
+- docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md;
+- docs/CRYPTO_SIGNAL_FP1B2_WORKSPACE_MESSAGE_KIND_MATRIX.md;
+- src/crypto_signal/product/final_product_read_model.py:
+  Attention Situations + enriched Five-Family Summary + Workspace Summary;
+- tests/test_final_product_read_model.py;
+- durable agent frontier/handoff checkpoints.
+
+Exact nextAction:
+Open FP1-B implementation PR against current main, inspect its actual changed-file set, fail closed if any workflow/runtime/deploy/unrelated project file appears, then run PR-triggered repository gates before merge.

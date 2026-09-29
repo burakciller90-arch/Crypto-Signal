@@ -6,27 +6,84 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from crypto_signal.decision_ledger import (
+    DecisionLedgerConflictError,
+    ImmutableDecisionEvidenceLedger,
+)
+from crypto_signal.product.intelligence_stream_exact_evidence import (
+    IntelligenceStreamExactEvidenceReadModel,
+    StreamExactEvidenceError,
+)
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
+    StreamMessageQuery,
+    StreamReadModelError,
+)
 from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
+DEFAULT_ATTENTION_LIMIT = 5
+MAX_ATTENTION_LIMIT = 20
+_ATTENTION_SCAN_LIMIT = 200
 REAL_CAPITAL = 0
 
 _FAMILY_ORDER = {
     "geometry": 0,
+    "geometry_pa_elliott_harmonic": 0,
     "liquidity": 1,
+    "liquidity_structure": 1,
     "order_flow": 2,
+    "order_flow_absorption": 2,
     "derivatives": 3,
+    "derivatives_leverage": 3,
     "onchain": 4,
+    "onchain_smart_money": 4,
 }
 _FAMILY_LABELS = {
     "geometry": "Geometri",
+    "geometry_pa_elliott_harmonic": "Geometri",
     "liquidity": "Likidite",
+    "liquidity_structure": "Likidite",
     "order_flow": "Emir Akışı",
+    "order_flow_absorption": "Emir Akışı",
     "derivatives": "Türevler",
+    "derivatives_leverage": "Türevler",
     "onchain": "On-chain",
+    "onchain_smart_money": "On-chain",
+}
+_CATEGORY_LABELS = {
+    "market": "Piyasa",
+    "intelligence": "İstihbarat",
+    "decision": "Karar",
+    "capital": "Sermaye",
+    "risk": "Risk",
+    "outcome": "Sonuç",
+    "system": "Sistem",
+    "routine": "Rutin",
+}
+_IMPORTANCE_LABELS = {
+    "critical": "Kritik",
+    "important": "Önemli",
+}
+_EVIDENCE_DOMAIN_LABELS = {
+    "geometry": "Geometri",
+    "frozen_chart": "Dondurulmuş grafik",
+    "order_book": "Emir defteri",
+    "public_trades": "Gerçekleşen işlemler",
+    "liquidity": "Likidite",
+    "liquidity_structure": "Likidite yapısı",
+    "liquidity_sweep": "Likidite süpürmesi",
+    "order_flow": "Emir akışı",
+    "order_flow_cvd": "Emir akışı / CVD",
+    "derivatives": "Türevler",
+    "liquidation_map": "Likidasyon haritası",
+    "onchain": "On-chain",
+    "stablecoin": "Stablecoin akışı",
+    "event_context": "Event bağlamı",
+    "methodology": "Metodoloji",
 }
 _STANCE_LABELS = {
     "bullish": "Yükseliş yönlü destek",
@@ -118,11 +175,148 @@ class MarketPulseView:
     schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
 
 
+@dataclass(frozen=True, slots=True)
+class AttentionAudit:
+    narrative_identity: str
+    story_identity: str | None
+    source_event_identity: str | None
+    message_identity: str | None
+    materiality_decision_identity: str | None
+    materiality_policy_identity: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionSituationView:
+    symbol: str
+    timeframe: str
+    updated_at_ms: int
+    freshness_label: str
+    category_label: str
+    importance_label: str
+    state_label: str | None
+    headline: str
+    detail: str
+    materiality_label: str
+    risk_label: str | None
+    source_label: str
+    audit: AttentionAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionSituationsView:
+    availability_label: str
+    observed_at_ms: int
+    items: tuple[AttentionSituationView, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class FamilySummaryAudit:
+    source_narrative_identity: str
+    fact_bundle_identity: str
+    analytical_view_identity: str
+    source_evidence_identities: tuple[str, ...]
+    raw_state_label: str
+    uncertainty_flags: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FamilySummaryItem:
+    family_label: str
+    state_label: str
+    direction_label: str | None
+    relationship_label: str
+    source_quality_label: str
+    source_as_of_ms: int | None
+    freshness_label: str
+    evidence_domain_labels: tuple[str, ...]
+    uncertainty_label: str
+    changed_label: str
+    timeframe: str | None
+    audit: FamilySummaryAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FiveFamilySummaryView:
+    availability_label: str
+    symbol: str
+    timeframe: str | None
+    updated_at_ms: int | None
+    stance_label: str | None
+    families: tuple[FamilySummaryItem, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceAudit:
+    narrative_identity: str
+    detail_kind: str
+    story_identity: str | None
+    fact_bundle_identity: str | None
+    analytical_view_identity: str | None
+    forecast_identity: str | None
+    proof_identity: str | None
+    signal_freeze_identity: str | None
+    evidence_resolution_counts: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceSummaryView:
+    availability_label: str
+    message_kind_label: str
+    symbol: str | None
+    timeframe: str | None
+    updated_at_ms: int | None
+    source_as_of_ms: int | None
+    freshness_label: str
+    headline: str | None
+    detail: str | None
+    state_label: str | None
+    direction_label: str | None
+    support_balance_label: str | None
+    trigger_zone: dict[str, Any] | None
+    target_zone: dict[str, Any] | None
+    invalidation_price: str | None
+    main_contradiction_label: str | None
+    event_risk_label: str | None
+    uncertainty_label: str
+    probability_label: str
+    evidence_label: str
+    decision_evidence_label: str
+    capital_consequence_label: str | None
+    resolution_label: str | None
+    audit: WorkspaceAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class _AttentionCandidate:
+    dedupe_key: tuple[str, ...]
+    importance_rank: int
+    event_at_ms: int
+    narrative_identity: str
+    view: AttentionSituationView
+
+
 class FinalProductReadModel:
     """Customer-safe, read-only projections over already accepted Product truth."""
 
-    def __init__(self, *, stream_ledger_path: Path) -> None:
+    def __init__(
+        self,
+        *,
+        stream_ledger_path: Path,
+        decision_evidence_path: Path | None = None,
+        signal_ledger_path: Path | None = None,
+    ) -> None:
         self.stream_ledger_path = stream_ledger_path
+        self.decision_evidence_path = decision_evidence_path
+        self.signal_ledger_path = signal_ledger_path
 
     def market_pulse(
         self,
@@ -212,6 +406,1136 @@ class FinalProductReadModel:
             items=tuple(items),
             missing_symbols=tuple(missing),
         )
+
+    def attention_situations(
+        self,
+        *,
+        observed_at_ms: int,
+        limit: int = DEFAULT_ATTENTION_LIMIT,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> AttentionSituationsView:
+        if observed_at_ms < 0:
+            raise ValueError("attention observation time must be non-negative")
+        if limit < 1 or limit > MAX_ATTENTION_LIMIT:
+            raise ValueError(
+                f"attention limit must be inside 1..{MAX_ATTENTION_LIMIT}"
+            )
+        if stale_after_ms <= 0:
+            raise ValueError("attention stale_after_ms must be positive")
+        if not self.stream_ledger_path.is_file():
+            return AttentionSituationsView(
+                availability_label="Veri eksik",
+                observed_at_ms=observed_at_ms,
+                items=(),
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            page = reader.read_messages(
+                StreamMessageQuery(
+                    limit=_ATTENTION_SCAN_LIMIT,
+                    to_ms=observed_at_ms,
+                )
+            )
+            candidates: dict[tuple[str, ...], _AttentionCandidate] = {}
+            for record in page.items:
+                narrative_identity = _required_sha(record, "narrative_identity")
+                detail = reader.read_message_detail(narrative_identity)
+                if detail is None:
+                    raise FinalProductReadError(
+                        "attention source disappeared during verified read"
+                    )
+                candidate = _attention_candidate(
+                    detail,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                if candidate is None:
+                    continue
+                previous = candidates.get(candidate.dedupe_key)
+                if previous is None or (
+                    candidate.event_at_ms,
+                    candidate.narrative_identity,
+                ) > (
+                    previous.event_at_ms,
+                    previous.narrative_identity,
+                ):
+                    candidates[candidate.dedupe_key] = candidate
+        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "attention source cannot be projected safely"
+            ) from exc
+
+        ordered = sorted(
+            candidates.values(),
+            key=lambda item: (
+                item.importance_rank,
+                item.event_at_ms,
+                item.narrative_identity,
+            ),
+            reverse=True,
+        )
+        items = tuple(item.view for item in ordered[:limit])
+        return AttentionSituationsView(
+            availability_label=(
+                "Dikkat gerektiren durum yok"
+                if not items
+                else "Doğrulanmış veri"
+            ),
+            observed_at_ms=observed_at_ms,
+            items=items,
+        )
+
+    def five_family_summary(
+        self,
+        *,
+        symbol: str,
+        observed_at_ms: int,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> FiveFamilySummaryView:
+        if observed_at_ms < 0:
+            raise ValueError("family summary observation time must be non-negative")
+        if stale_after_ms <= 0:
+            raise ValueError("family summary stale_after_ms must be positive")
+        normalized = _normalize_symbols((symbol,))[0]
+        if not self.stream_ledger_path.is_file():
+            return FiveFamilySummaryView(
+                availability_label="Veri eksik",
+                symbol=normalized,
+                timeframe=None,
+                updated_at_ms=None,
+                stance_label=None,
+                families=(),
+            )
+
+        try:
+            payload = _latest_verified_system_view(
+                self.stream_ledger_path,
+                symbol=normalized,
+                observed_at_ms=observed_at_ms,
+            )
+            if payload is None:
+                return FiveFamilySummaryView(
+                    availability_label="Veri eksik",
+                    symbol=normalized,
+                    timeframe=None,
+                    updated_at_ms=None,
+                    stance_label=None,
+                    families=(),
+                )
+            fact = _required_mapping(payload, "fact_bundle")
+            analytical = _required_mapping(payload, "analytical_view")
+            stance = _required_mapping(analytical, "stance")
+            raw_stance = _required_text(stance, "effective_stance")
+            reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+            rows = sorted(
+                (
+                    _mapping_value(value, "family contribution")
+                    for value in _required_sequence(fact, "family_contributions")
+                ),
+                key=lambda value: (
+                    _FAMILY_ORDER.get(str(value.get("family")), 99),
+                    str(value.get("family")),
+                ),
+            )
+            families = tuple(
+                _enriched_family_summary(
+                    row,
+                    raw_stance=raw_stance,
+                    reader=reader,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                for row in rows
+            )
+            return FiveFamilySummaryView(
+                availability_label="Doğrulanmış veri",
+                symbol=normalized,
+                timeframe=_required_text(payload, "timeframe"),
+                updated_at_ms=_required_int(payload, "event_at_ms"),
+                stance_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+                families=families,
+            )
+        except (
+            sqlite3.DatabaseError,
+            StreamReadModelError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "five-family source cannot be projected safely"
+            ) from exc
+
+    def workspace_summary(
+        self,
+        *,
+        narrative_identity: str,
+        observed_at_ms: int,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> WorkspaceSummaryView:
+        _sha_text(narrative_identity, "workspace narrative identity")
+        if observed_at_ms < 0:
+            raise ValueError("workspace observation time must be non-negative")
+        if stale_after_ms <= 0:
+            raise ValueError("workspace stale_after_ms must be positive")
+        if not self.stream_ledger_path.is_file():
+            return _workspace_unavailable(
+                availability_label="Veri eksik",
+                message_kind_label="Çalışma alanı",
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            detail = reader.read_message_detail(narrative_identity)
+        except StreamReadModelError as exc:
+            raise FinalProductReadError(
+                "workspace Stream source cannot be read safely"
+            ) from exc
+        if detail is None:
+            return _workspace_unavailable(
+                availability_label="Mesaj bulunamadı",
+                message_kind_label="Çalışma alanı",
+            )
+
+        capital_kind = _capital_detail_kind(detail)
+        if capital_kind is not None:
+            return _workspace_capital_deferred(
+                detail,
+                capital_kind=capital_kind,
+                observed_at_ms=observed_at_ms,
+                stale_after_ms=stale_after_ms,
+                include_audit=include_audit,
+            )
+
+        if "system_view" in detail:
+            try:
+                return _workspace_system_view(
+                    detail,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                if isinstance(exc, FinalProductReadError):
+                    raise
+                raise FinalProductReadError(
+                    "system-view workspace source is invalid"
+                ) from exc
+
+        try:
+            fact = _required_mapping(detail, "fact_bundle")
+            if isinstance(fact.get("projector_id"), str):
+                evidence = self._workspace_exact_evidence(
+                    narrative_identity=narrative_identity,
+                )
+                return _workspace_family(
+                    detail,
+                    evidence=evidence,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+
+            evidence = self._workspace_exact_evidence(
+                narrative_identity=narrative_identity,
+            )
+            proof, proof_label = self._workspace_decision_proof(fact)
+            return _workspace_decision(
+                detail,
+                evidence=evidence,
+                decision_proof=proof,
+                decision_evidence_label=proof_label,
+                observed_at_ms=observed_at_ms,
+                stale_after_ms=stale_after_ms,
+                include_audit=include_audit,
+            )
+        except (
+            DecisionLedgerConflictError,
+            StreamExactEvidenceError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "workspace source cannot be projected safely"
+            ) from exc
+
+    def _workspace_exact_evidence(
+        self,
+        *,
+        narrative_identity: str,
+    ) -> dict[str, Any] | None:
+        signal_path = (
+            self.signal_ledger_path
+            if self.signal_ledger_path is not None
+            and self.signal_ledger_path.is_file()
+            else None
+        )
+        decision_path = (
+            self.decision_evidence_path
+            if self.decision_evidence_path is not None
+            and self.decision_evidence_path.is_file()
+            else None
+        )
+        return IntelligenceStreamExactEvidenceReadModel(
+            stream_ledger_path=self.stream_ledger_path,
+            signal_ledger_path=signal_path,
+            decision_evidence_path=decision_path,
+        ).read_for_narrative(narrative_identity)
+
+    def _workspace_decision_proof(
+        self,
+        fact: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str]:
+        forecast_identity = _required_sha(fact, "forecast_identity")
+        expected_proof_identity = _required_sha(fact, "proof_identity")
+        if (
+            self.decision_evidence_path is None
+            or not self.decision_evidence_path.is_file()
+        ):
+            return None, "Ek karar kanıtı kaynağı bağlı değil"
+
+        proof = ImmutableDecisionEvidenceLedger(
+            self.decision_evidence_path
+        ).read_proof_for_forecast(forecast_identity)
+        if proof is None:
+            return None, "Ek karar kanıtı bulunamadı"
+        if proof.get("forecast_identity") != forecast_identity:
+            raise FinalProductReadError(
+                "Decision Evidence forecast lineage mismatch"
+            )
+        if proof.get("proof_identity") != expected_proof_identity:
+            raise FinalProductReadError(
+                "Decision Evidence proof lineage mismatch"
+            )
+        return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _workspace_unavailable(
+    *,
+    availability_label: str,
+    message_kind_label: str,
+) -> WorkspaceSummaryView:
+    return WorkspaceSummaryView(
+        availability_label=availability_label,
+        message_kind_label=message_kind_label,
+        symbol=None,
+        timeframe=None,
+        updated_at_ms=None,
+        source_as_of_ms=None,
+        freshness_label="Veri yok",
+        headline=None,
+        detail=None,
+        state_label=None,
+        direction_label=None,
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label="Belirsizlik değerlendirilemedi",
+        probability_label="Olasılık verisi yok",
+        evidence_label="Kanıt ayrıntısı kullanılamıyor",
+        decision_evidence_label="Ek karar kanıtı yok",
+        capital_consequence_label=None,
+        resolution_label=None,
+    )
+
+
+def _capital_detail_kind(detail: dict[str, Any]) -> str | None:
+    for key in (
+        "capital_story",
+        "capital_decision",
+        "capital_sizing",
+        "capital_lifecycle",
+    ):
+        if key in detail:
+            return key
+    return None
+
+
+def _workspace_capital_deferred(
+    detail: dict[str, Any],
+    *,
+    capital_kind: str,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    narrative_identity = _required_sha(narrative, "narrative_identity")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _optional_non_negative_int_value(
+        narrative.get("source_as_of_ms")
+    )
+    if source_as_of_ms is None:
+        source_as_of_ms = event_at_ms
+    headline, simple = _workspace_text(narrative)
+    kind_labels = {
+        "capital_story": "Sermaye hikâyesi",
+        "capital_decision": "Sermaye kararı",
+        "capital_sizing": "Pozisyon boyutlandırma",
+        "capital_lifecycle": "Sermaye yaşam döngüsü",
+    }
+    audit = (
+        WorkspaceAudit(
+            narrative_identity=narrative_identity,
+            detail_kind=capital_kind,
+            story_identity=_optional_sha(narrative.get("story_identity")),
+            fact_bundle_identity=None,
+            analytical_view_identity=None,
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts={},
+        )
+        if include_audit
+        else None
+    )
+    return WorkspaceSummaryView(
+        availability_label="Bu mesaj türü bu çalışma alanında desteklenmiyor",
+        message_kind_label=kind_labels[capital_kind],
+        symbol=_optional_text_value(narrative.get("symbol")),
+        timeframe=_optional_text_value(narrative.get("timeframe")),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=None,
+        direction_label=None,
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label="Bu çalışma alanında değerlendirilmedi",
+        probability_label="Bu mesaj türü için uygulanmaz",
+        evidence_label="Sermaye ayrıntıları Portföy görünümüne ayrıldı",
+        decision_evidence_label="Bu mesaj türü için uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_system_view(
+    detail: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    stance = _required_mapping(analytical, "stance")
+    uncertainty = _required_mapping(analytical, "uncertainty")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise FinalProductReadError("workspace System View is from the future")
+    raw_stance = _required_text(stance, "effective_stance")
+    headline, simple = _workspace_text(narrative)
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="system_view",
+            story_identity=None,
+            fact_bundle_identity=None,
+            analytical_view_identity=None,
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts={},
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label="Sistem görünümü",
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=event_at_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=event_at_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+        direction_label=_direction_label(raw_stance),
+        support_balance_label=_support_balance_label(
+            stance.get("support_score_0_100"),
+            stance.get("opposition_score_0_100"),
+        ),
+        trigger_zone=_optional_mapping(fact.get("trigger_zone")),
+        target_zone=_optional_mapping(fact.get("target_zone")),
+        invalidation_price=_optional_decimal_text(fact.get("invalidation_price")),
+        main_contradiction_label=_contradiction_label(
+            analytical.get("main_contradiction")
+        ),
+        event_risk_label=_event_risk_label(
+            uncertainty.get("event_risk_state")
+        ),
+        uncertainty_label=_system_uncertainty_label(uncertainty),
+        probability_label=_probability_label(
+            uncertainty.get("probability_status"),
+            uncertainty.get("calibrated_probability_0_1"),
+        ),
+        evidence_label="Beş kanıt ailesinin doğrulanmış özeti mevcut",
+        decision_evidence_label="Bu görünüm için ayrı karar kanıtı uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_family(
+    detail: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if max(event_at_ms, source_as_of_ms) > observed_at_ms:
+        raise FinalProductReadError("family workspace source is from the future")
+    headline, simple = _workspace_text(narrative)
+    family = _required_text(fact, "family")
+    direction = _optional_text_value(fact.get("direction"))
+    source_quality = _required_text(fact, "source_quality")
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "workspace family uncertainty flags",
+    )
+    counts = _evidence_resolution_counts(evidence)
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="family",
+            story_identity=_required_sha(narrative, "story_identity"),
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts=counts,
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label=f"{_FAMILY_LABELS.get(family, 'Kanıt ailesi')} görünümü",
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=(
+            "Veri eksik"
+            if source_quality.lower() in {"unavailable", "missing"}
+            else "Aile durumu doğrulandı"
+        ),
+        direction_label=_direction_label(direction),
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label=_uncertainty_count_label(uncertainty_flags),
+        probability_label="Bu kanıt ailesi için uygulanmaz",
+        evidence_label=_evidence_resolution_label(counts),
+        decision_evidence_label="Bu kanıt ailesi için uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_decision(
+    detail: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None,
+    decision_proof: dict[str, Any] | None,
+    decision_evidence_label: str,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    stance = _required_mapping(analytical, "stance")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if max(event_at_ms, source_as_of_ms) > observed_at_ms:
+        raise FinalProductReadError("decision workspace source is from the future")
+    headline, simple = _workspace_text(narrative)
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "workspace decision uncertainty flags",
+    )
+    counts = _evidence_resolution_counts(evidence)
+    raw_stance = _required_text(stance, "effective_stance")
+    signal_identity = (
+        None
+        if decision_proof is None
+        else _optional_sha(decision_proof.get("signal_freeze_identity"))
+    )
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="decision",
+            story_identity=_required_sha(narrative, "story_identity"),
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            forecast_identity=_required_sha(fact, "forecast_identity"),
+            proof_identity=_required_sha(fact, "proof_identity"),
+            signal_freeze_identity=signal_identity,
+            evidence_resolution_counts=counts,
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label=(
+            "Sonuç görünümü"
+            if fact.get("resolution_identity") is not None
+            else "Karar görünümü"
+        ),
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+        direction_label=_direction_label(fact.get("direction")),
+        support_balance_label=_support_balance_label(
+            fact.get("confluence_support_score_0_100"),
+            fact.get("confluence_opposition_score_0_100"),
+        ),
+        trigger_zone=_optional_mapping(fact.get("trigger_zone")),
+        target_zone=_optional_mapping(fact.get("target_zone")),
+        invalidation_price=_optional_decimal_text(fact.get("invalidation_price")),
+        main_contradiction_label=_contradiction_label(
+            analytical.get("main_contradiction")
+        ),
+        event_risk_label=_event_risk_label(fact.get("event_context_state")),
+        uncertainty_label=_uncertainty_count_label(uncertainty_flags),
+        probability_label=_probability_label(
+            fact.get("probability_status"),
+            fact.get("calibrated_probability_0_1"),
+        ),
+        evidence_label=_evidence_resolution_label(counts),
+        decision_evidence_label=decision_evidence_label,
+        capital_consequence_label=_capital_consequence_label(
+            analytical.get("capital_consequence")
+        ),
+        resolution_label=(
+            "Sonuç kaydı mevcut"
+            if fact.get("resolution_identity") is not None
+            else "Karar henüz sonuç kaydına dönüşmedi"
+        ),
+        audit=audit,
+    )
+
+
+def _workspace_text(
+    narrative: dict[str, Any],
+) -> tuple[str | None, str | None]:
+    text = narrative.get("text")
+    if isinstance(text, dict):
+        return (
+            _optional_text_value(text.get("collapsed_text")),
+            _optional_text_value(text.get("simple_text")),
+        )
+    return (
+        _optional_text_value(narrative.get("collapsed_text")),
+        _optional_text_value(narrative.get("simple_text")),
+    )
+
+
+def _support_balance_label(
+    support: object,
+    opposition: object,
+) -> str | None:
+    if support is None or opposition is None:
+        return None
+    support_value = _decimal(support, "workspace support")
+    opposition_value = _decimal(opposition, "workspace opposition")
+    if support_value > opposition_value:
+        return "Destek tarafı daha güçlü"
+    if opposition_value > support_value:
+        return "Çelişki tarafı daha güçlü"
+    return "Destek ve çelişki dengeli"
+
+
+def _direction_label(value: object) -> str | None:
+    if value is None:
+        return None
+    raw = str(value).strip().lower()
+    if raw in {"bullish", "long", "up", "buy", "buy_pressure"}:
+        return "Yükseliş"
+    if raw in {"bearish", "short", "down", "sell", "sell_pressure"}:
+        return "Düşüş"
+    return "Yön karışık"
+
+
+def _system_uncertainty_label(uncertainty: dict[str, Any]) -> str:
+    conflict = uncertainty.get("material_conflict_count")
+    if isinstance(conflict, int) and not isinstance(conflict, bool) and conflict > 0:
+        return f"{conflict} maddi çelişki mevcut"
+    return "Belirsizlik bilgisi kaynakta mevcut"
+
+
+def _uncertainty_count_label(values: tuple[str, ...]) -> str:
+    if not values:
+        return "Belirgin belirsizlik işareti yok"
+    return f"{len(values)} belirsizlik işareti"
+
+
+def _probability_label(
+    status: object,
+    calibrated_probability: object,
+) -> str:
+    if calibrated_probability is not None:
+        value = _decimal(calibrated_probability, "workspace calibrated probability")
+        if value < Decimal(0) or value > Decimal(1):
+            raise ValueError("workspace calibrated probability outside [0,1]")
+        percent = (value * Decimal(100)).quantize(Decimal("0.01"))
+        return f"Kalibre edilmiş olasılık: {percent:.2f}%"
+    if str(status).strip().lower() == "not_calibrated":
+        return "Kalibre edilmiş olasılık değil"
+    return "Olasılık verisi doğrulanmadı"
+
+
+def _evidence_resolution_counts(
+    evidence: dict[str, Any] | None,
+) -> dict[str, int]:
+    if evidence is None:
+        return {}
+    raw = evidence.get("resolution_counts")
+    if not isinstance(raw, dict):
+        raise TypeError("workspace evidence resolution counts must be an object")
+    result: dict[str, int] = {}
+    for key in (
+        "READY_EXACT",
+        "IDENTITY_ONLY_EXACT",
+        "UNAVAILABLE_EXPLICIT",
+    ):
+        value = raw.get(key, 0)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise TypeError("workspace evidence resolution count must be non-negative")
+        result[key] = value
+    return result
+
+
+def _evidence_resolution_label(counts: dict[str, int]) -> str:
+    if counts.get("READY_EXACT", 0) > 0:
+        return "Doğrulanmış kanıt mevcut"
+    if counts.get("IDENTITY_ONLY_EXACT", 0) > 0:
+        return "Kanıt kimliği doğrulandı; ayrıntı sınırlı"
+    return "Kanıt ayrıntısı kullanılamıyor"
+
+
+def _capital_consequence_label(value: object) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    raw = str(value.get("state", "")).strip().lower()
+    labels = {
+        "not_bound": "Sanal sermayeye bağlı yeni referans yok",
+        "bound_unchanged": "Sanal sermaye bağlantısı değişmedi",
+        "references_added": "Yeni sanal sermaye referansı eklendi",
+        "references_removed": "Sanal sermaye referansı kaldırıldı",
+        "references_changed": "Sanal sermaye referansları değişti",
+    }
+    return labels.get(raw, "Sanal sermaye bağlantısı mevcut")
+
+
+def _optional_text_value(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("optional workspace text must be non-empty text")
+    return value
+
+
+def _optional_non_negative_int_value(value: object) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise TypeError("optional workspace time must be non-negative integer")
+    return value
+
+
+def _optional_sha(value: object) -> str | None:
+    if value is None:
+        return None
+    return _sha_text(value, "optional workspace identity")
+
+
+def _attention_candidate(
+    detail: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> _AttentionCandidate | None:
+    narrative = _required_mapping(detail, "narrative")
+    narrative_identity = _required_sha(narrative, "narrative_identity")
+    text = _required_mapping(narrative, "text")
+    headline = _required_text(text, "collapsed_text")
+    simple_text = _required_text(text, "simple_text")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise FinalProductReadError("attention source is from the future")
+
+    if "system_view" in detail:
+        importance = _required_text(narrative, "importance")
+        if importance not in _IMPORTANCE_LABELS:
+            return None
+        symbol = _required_text(narrative, "symbol")
+        timeframe = _required_text(narrative, "timeframe")
+        subtype = _required_text(narrative, "subtype")
+        analytical = _required_mapping(detail, "analytical_view")
+        uncertainty = _required_mapping(analytical, "uncertainty")
+        raw_stance = _required_text(narrative, "state")
+        audit = (
+            AttentionAudit(
+                narrative_identity=narrative_identity,
+                story_identity=None,
+                source_event_identity=None,
+                message_identity=None,
+                materiality_decision_identity=None,
+                materiality_policy_identity=None,
+            )
+            if include_audit
+            else None
+        )
+        return _AttentionCandidate(
+            dedupe_key=("system_view", symbol, timeframe, subtype),
+            importance_rank=_attention_importance_rank(importance),
+            event_at_ms=event_at_ms,
+            narrative_identity=narrative_identity,
+            view=AttentionSituationView(
+                symbol=symbol,
+                timeframe=timeframe,
+                updated_at_ms=event_at_ms,
+                freshness_label=_freshness_label(
+                    observed_at_ms=observed_at_ms,
+                    source_as_of_ms=event_at_ms,
+                    stale_after_ms=stale_after_ms,
+                ),
+                category_label=_CATEGORY_LABELS["intelligence"],
+                importance_label=_IMPORTANCE_LABELS[importance],
+                state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+                headline=headline,
+                detail=simple_text,
+                materiality_label="Güncel sistem görünümü",
+                risk_label=_event_risk_label(
+                    uncertainty.get("event_risk_state")
+                ),
+                source_label="System View",
+                audit=audit,
+            ),
+        )
+
+    message_input_raw = detail.get("message_input")
+    if not isinstance(message_input_raw, dict):
+        return None
+    message_input = message_input_raw
+    if (
+        message_input.get("materiality") != "material"
+        or message_input.get("publication_disposition") != "publish"
+    ):
+        return None
+
+    importance = _required_text(message_input, "importance")
+    if importance not in _IMPORTANCE_LABELS:
+        return None
+    category = _required_text(message_input, "category")
+    symbol = _required_text(narrative, "symbol")
+    timeframe = _required_text(narrative, "timeframe")
+    story_identity = _required_sha(narrative, "story_identity")
+    source_as_of_ms = _required_int(message_input, "source_as_of_ms")
+    analytical = _required_mapping(detail, "analytical_view")
+    fact = _required_mapping(detail, "fact_bundle")
+    risk_label = (
+        _event_risk_label(fact.get("event_context_state"))
+        if fact.get("event_context_state") is not None
+        else None
+    )
+    audit = None
+    if include_audit:
+        audit = AttentionAudit(
+            narrative_identity=narrative_identity,
+            story_identity=story_identity,
+            source_event_identity=_required_sha(
+                message_input,
+                "source_event_identity",
+            ),
+            message_identity=_required_sha(message_input, "message_identity"),
+            materiality_decision_identity=_required_sha(
+                message_input,
+                "materiality_decision_identity",
+            ),
+            materiality_policy_identity=_required_sha(
+                message_input,
+                "materiality_policy_identity",
+            ),
+        )
+    return _AttentionCandidate(
+        dedupe_key=("story", story_identity),
+        importance_rank=_attention_importance_rank(importance),
+        event_at_ms=event_at_ms,
+        narrative_identity=narrative_identity,
+        view=AttentionSituationView(
+            symbol=symbol,
+            timeframe=timeframe,
+            updated_at_ms=event_at_ms,
+            freshness_label=_freshness_label(
+                observed_at_ms=observed_at_ms,
+                source_as_of_ms=source_as_of_ms,
+                stale_after_ms=stale_after_ms,
+            ),
+            category_label=_CATEGORY_LABELS.get(category, "İstihbarat"),
+            importance_label=_IMPORTANCE_LABELS[importance],
+            state_label=_attention_state_label(analytical, fact),
+            headline=headline,
+            detail=simple_text,
+            materiality_label="Önemli değişim",
+            risk_label=risk_label,
+            source_label="Intelligence Stream",
+            audit=audit,
+        ),
+    )
+
+
+def _attention_importance_rank(value: str) -> int:
+    return 2 if value == "critical" else 1
+
+
+def _attention_state_label(
+    analytical: dict[str, Any],
+    fact: dict[str, Any],
+) -> str | None:
+    stance = analytical.get("stance")
+    if isinstance(stance, dict):
+        raw = stance.get("effective_stance")
+        if isinstance(raw, str):
+            return _STANCE_LABELS.get(raw, "Karışık / izle")
+    family_state = analytical.get("family_state_label")
+    if isinstance(family_state, str):
+        if str(fact.get("source_quality", "")).lower() in {
+            "unavailable",
+            "missing",
+        }:
+            return "Veri eksik"
+        direction = fact.get("direction")
+        if isinstance(direction, str) and direction in _DIRECTION_LABELS:
+            return f"{_DIRECTION_LABELS[direction]} yönlü aile değişimi"
+        return "Aile durumu güncellendi"
+    return None
+
+
+def _latest_verified_system_view(
+    path: Path,
+    *,
+    symbol: str,
+    observed_at_ms: int,
+) -> dict[str, Any] | None:
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    with sqlite3.connect(uri, uri=True) as connection:
+        connection.execute("PRAGMA query_only=ON")
+        if not _table_exists(connection, "stream_system_view_messages"):
+            return None
+        row = _latest_system_view_row(
+            connection,
+            symbol=symbol,
+            observed_at_ms=observed_at_ms,
+        )
+    if row is None:
+        return None
+    return verified_system_view_record(
+        narrative_identity=str(row[0]),
+        event_at_ms=_row_non_negative_int(row[1], "system-view event time"),
+        payload_json=str(row[2]),
+        expected_digest=str(row[3]),
+    )
+
+
+def _enriched_family_summary(
+    row: dict[str, Any],
+    *,
+    raw_stance: str,
+    reader: IntelligenceStreamReadModel,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> FamilySummaryItem:
+    base = _family_view(
+        row,
+        raw_stance=raw_stance,
+        include_audit=False,
+    )
+    source_narrative = row.get("source_narrative_identity")
+    if source_narrative is None:
+        return FamilySummaryItem(
+            family_label=base.family_label,
+            state_label=base.state_label,
+            direction_label=base.direction_label,
+            relationship_label=base.relationship_label,
+            source_quality_label=base.source_quality_label,
+            source_as_of_ms=None,
+            freshness_label="Veri eksik",
+            evidence_domain_labels=(),
+            uncertainty_label="Kaynak kanıtı yok",
+            changed_label="Değişim bilgisi yok",
+            timeframe=base.timeframe,
+            audit=None,
+        )
+
+    narrative_identity = _sha_text(
+        source_narrative,
+        "family source narrative",
+    )
+    detail = reader.read_message_detail(narrative_identity)
+    if detail is None:
+        raise FinalProductReadError("family source narrative is missing")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if source_as_of_ms > observed_at_ms:
+        raise FinalProductReadError("family source is from the future")
+    domains = _text_sequence(
+        fact.get("available_evidence_domains"),
+        "family evidence domains",
+    )
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "family uncertainty flags",
+    )
+    changed_components = _text_sequence(
+        analytical.get("changed_components"),
+        "family changed components",
+    )
+    previous_state = analytical.get("previous_family_state_label")
+    changed_label = (
+        "İlk kayıt"
+        if previous_state is None
+        else f"{len(changed_components)} bileşen değişti"
+    )
+    uncertainty_label = (
+        "Belirgin belirsizlik işareti yok"
+        if not uncertainty_flags
+        else f"{len(uncertainty_flags)} belirsizlik işareti"
+    )
+
+    audit = None
+    if include_audit:
+        audit = FamilySummaryAudit(
+            source_narrative_identity=narrative_identity,
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            source_evidence_identities=tuple(
+                _sha_text(value, "family evidence identity")
+                for value in _required_sequence(fact, "evidence_identities")
+            ),
+            raw_state_label=_required_text(fact, "state_label"),
+            uncertainty_flags=uncertainty_flags,
+        )
+    return FamilySummaryItem(
+        family_label=base.family_label,
+        state_label=base.state_label,
+        direction_label=base.direction_label,
+        relationship_label=base.relationship_label,
+        source_quality_label=base.source_quality_label,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        evidence_domain_labels=tuple(
+            _EVIDENCE_DOMAIN_LABELS.get(
+                value,
+                "Diğer doğrulanmış kanıt",
+            )
+            for value in domains
+        ),
+        uncertainty_label=uncertainty_label,
+        changed_label=changed_label,
+        timeframe=base.timeframe,
+        audit=audit,
+    )
+
+
+def _freshness_label(
+    *,
+    observed_at_ms: int,
+    source_as_of_ms: int,
+    stale_after_ms: int,
+) -> str:
+    if source_as_of_ms > observed_at_ms:
+        raise ValueError("source as-of cannot be in the future")
+    return (
+        "Güncel"
+        if observed_at_ms - source_as_of_ms <= stale_after_ms
+        else "Güncel değil"
+    )
+
+
+def _text_sequence(value: object, label: str) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        raise TypeError(f"{label} must be a sequence")
+    result = tuple(str(item) for item in value)
+    if any(not item.strip() for item in result):
+        raise ValueError(f"{label} cannot contain blank text")
+    return result
 
 
 def _normalize_symbols(symbols: tuple[str, ...]) -> tuple[str, ...]:
