@@ -62,6 +62,28 @@ jobs:
           "$PY" -m ruff check "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py"
           echo "RDP11_OBSERVER_STATIC_PASS=YES"
 
+      - name: Measure read-only Product endpoint latency
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            name="$1"
+            url="$2"
+            max_time="$3"
+            out="/tmp/rdp11-${name}.out"
+            meta="$(curl -sS --max-time "$max_time" -o "$out" -w '%{http_code} %{time_total}' "$url")"
+            code="${meta%% *}"
+            total="${meta#* }"
+            echo "RDP11_ENDPOINT_${name}_HTTP=$code"
+            echo "RDP11_ENDPOINT_${name}_SECONDS=$total"
+            test "$code" = "200"
+          }
+          probe HEALTH http://127.0.0.1:48700/api/health 15
+          probe MESSAGES 'http://127.0.0.1:48700/api/stream/messages?limit=5' 60
+          probe SSE 'http://127.0.0.1:48700/api/stream/live?batch_limit=5&follow=false' 60
+          probe INTELLIGENCE http://127.0.0.1:48700/api/intelligence-center 60
+          grep -F 'retry:' /tmp/rdp11-SSE.out >/dev/null
+          echo "RDP11_PRODUCT_ENDPOINT_TIMING_PROBE=PASS"
       - name: Branch and PR live dry-run acceptance
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
         shell: bash
