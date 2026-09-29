@@ -5242,3 +5242,40 @@ Acceptance blocker:
 Exact nextAction:
 Wire temporary UID504 acceptance for autopilot_forward_actions.py, canonical_capital_runtime.py, transaction_tape_atomic.py and focused action/canonical regression tests; inspect exact failures, apply only bounded fixes, restore workflow after PASS.
 
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 1 FAIL / STREAM CONTEXT FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_1_STREAM_CONTEXT
+acceptanceRun: 36598950147
+acceptanceJob: 109511028146
+attemptedHead: 9cd68680427e6a1a6aac12c3088cd7a47c579804
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- Product/Development non-mutation PASS;
+- three FP3-C trade-path tests failed at the same accepted Stream prerequisite:
+  S11 Capital Story requires existing forward Stream decision context;
+- WAIT / STOP_UPDATE / SCALE_IN-unavailable paths were not identified as the root failure;
+- failure occurs after canonical bundle commit when lifecycle projection tries to resolve the existing forecast decision context.
+
+Root cause:
+- FP3-A Capital forward projection does not own the base forecast Stream decision context;
+- that context belongs to accepted IntelligenceStreamForwardRuntime;
+- FP3-C must not create or infer this context itself.
+
+Bounded production fix:
+- before any BUY/REDUCE/EXIT commit, require exact Stream decision context for the forecast;
+- verify its forecast/proof lineage matches the preregistered action;
+- if missing/mismatched, fail closed before R21/R22 mutation.
+
+Bounded test fix:
+- seed base forecast issuance using accepted IntelligenceStreamForwardRuntime before FP3-A/FP3-B processing in trade-path fixtures;
+- no manual Stream context insertion.
+
+Exact nextAction:
+Apply the Stream-context preflight + accepted fixture projection, rerun exact-head UID504 acceptance, then inspect later Ruff/mypy failures separately.
+
