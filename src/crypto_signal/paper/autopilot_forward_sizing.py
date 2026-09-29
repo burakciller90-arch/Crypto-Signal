@@ -199,15 +199,15 @@ class FP3SizingStageReceipt:
             (self.fixed_fractional_result_identity, "FP3 sizing fixed result"),
         ):
             _require_sha256(value, label)
-        for value, label in (
+        for optional_identity, label in (
             (self.selection_identity, "FP3 sizing selection"),
             (self.sizing_event_identity, "FP3 sizing event"),
             (self.stream_source_event_identity, "FP3 sizing source event"),
             (self.stream_event_identity, "FP3 sizing Stream event"),
             (self.narrative_identity, "FP3 sizing narrative"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         if not isinstance(self.vault_id, PaperVaultId):
             raise TypeError("FP3 sizing receipt requires canonical vault")
         if not self.sizing_policy_version.strip():
@@ -819,7 +819,31 @@ def _build_hold_receipt(
     )
     return FP3SizingStageReceipt(
         receipt_identity=canonical_sha256(values),
-        **values,
+        front_receipt_identity=front_receipt.receipt_identity,
+        activation_identity=front_receipt.activation_identity,
+        forecast_identity=issuance.forecast.forecast_identity,
+        proof_identity=issuance.proof.proof_identity,
+        vault_id=vault_id,
+        allocator_candidate_identity=front_receipt.allocator_candidate_identity,
+        allocator_assessment_identity=front_receipt.allocator_assessment_identity,
+        eligibility_proof_identity=eligibility.proof_identity,
+        current_vault_snapshot_identity=current_vault.snapshot_identity,
+        risk_input_identity=risk_inputs.risk_input_identity,
+        sizing_context_identity=context_identity,
+        sizing_policy_identity=policy.policy_identity,
+        sizing_policy_version=policy.policy_version,
+        sizing_assessment_identity=assessment.assessment_identity,
+        fixed_fractional_result_identity=fixed.result_identity,
+        fixed_fractional_status=fixed.status.value,
+        reason_codes=reasons,
+        stage_status=FP3SizingStageStatus.HELD_RISK_GATE,
+        selection_identity=None,
+        sizing_event_identity=None,
+        stream_source_event_identity=None,
+        stream_event_identity=None,
+        narrative_identity=None,
+        selected_at_ms=selected_at_ms,
+        processed_at_ms=processed_at_ms,
     )
 
 
@@ -866,7 +890,31 @@ def _build_sized_receipt(
     )
     return FP3SizingStageReceipt(
         receipt_identity=canonical_sha256(values),
-        **values,
+        front_receipt_identity=front_receipt.receipt_identity,
+        activation_identity=front_receipt.activation_identity,
+        forecast_identity=issuance.forecast.forecast_identity,
+        proof_identity=issuance.proof.proof_identity,
+        vault_id=vault_id,
+        allocator_candidate_identity=front_receipt.allocator_candidate_identity,
+        allocator_assessment_identity=front_receipt.allocator_assessment_identity,
+        eligibility_proof_identity=eligibility.proof_identity,
+        current_vault_snapshot_identity=current_vault.snapshot_identity,
+        risk_input_identity=risk_inputs.risk_input_identity,
+        sizing_context_identity=context_identity,
+        sizing_policy_identity=policy.policy_identity,
+        sizing_policy_version=policy.policy_version,
+        sizing_assessment_identity=assessment.assessment_identity,
+        fixed_fractional_result_identity=fixed.result_identity,
+        fixed_fractional_status=fixed.status.value,
+        reason_codes=selection.reason_codes,
+        stage_status=FP3SizingStageStatus.SIZED,
+        selection_identity=selection.selection_identity,
+        sizing_event_identity=sizing_event_identity,
+        stream_source_event_identity=stream_source_event_identity,
+        stream_event_identity=stream_event_identity,
+        narrative_identity=narrative_identity,
+        selected_at_ms=selected_at_ms,
+        processed_at_ms=processed_at_ms,
     )
 
 
