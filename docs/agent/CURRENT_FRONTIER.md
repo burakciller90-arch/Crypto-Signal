@@ -3003,3 +3003,59 @@ FP1-B accepted product scope:
 
 Exact nextAction:
 Open FP1-B implementation PR against current main, inspect its actual changed-file set, fail closed if any workflow/runtime/deploy/unrelated project file appears, then run PR-triggered repository gates before merge.
+
+
+## FP1-C TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_C_EVENT_RAIL_AUDIT_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+prerequisiteFP1A: PASS
+prerequisiteFP1B: PASS
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Completed prerequisite:
+- FP1-B merged via PR #1672 at main commit bb083c062154dd804e087777310c43d4710d29c0;
+- customer-safe Market Pulse, Attention, Five-Family and Workspace read models are now canonical main;
+- no Product/Development deploy or soak runtime mutation.
+
+Duplicate/stale check before branch creation:
+- current main verified at bb083c062154dd804e087777310c43d4710d29c0;
+- no open PR matching FP1-C Event Rail;
+- no related fp1c/event-rail/event-center branch found;
+- EventSourceRuntimeStore is the canonical persistence source and must be REUSE, never duplicated;
+- existing Product endpoint exposes event-source runtime health only, not customer Event Rail.
+
+Bounded FP1-C goal:
+- audit exact immutable event-source runtime schema/read APIs;
+- build a read-only Event Rail query/projection over existing structured event observations and accepted coverage/source metadata;
+- upcoming/recent customer events only;
+- deterministic point-in-time ordering and symbol/category filtering;
+- source/provider/source-quality/source-time/scheduled-time/freshness semantics;
+- explicit unavailable/missing coverage;
+- no new event persistence;
+- no historical backfill;
+- no event prediction/scoring;
+- no Product route/frontend/deploy in this slice;
+- no RDP11 observer/soak mutation.
+
+Mandatory pre-code audit:
+1. EventSourceRuntimeStore schema, immutable tables and read-only methods;
+2. StructuredEventObservation exact fields and identity contract;
+3. Event calendar coverage semantics and category/asset scoping;
+4. news event observations vs structured scheduled events and whether both belong in Event Rail;
+5. existing RDP8 Event Risk derivation boundaries;
+6. existing tests/fixtures and safe read-only opening behavior;
+7. exact customer fields and stale/missing/coverage labels.
+
+Current blocker:
+- FP1-C production changes are forbidden until the event-source capability/source matrix is recorded and scheduled-event vs news-event scope is frozen.
+
+Exact nextAction:
+Audit event_source_runtime.py, data/event_risk.py, RDP8 Event Risk consumers, Product runtime status reader and event-source tests; record a durable FP1-C field/source matrix before changing final_product_read_model.py.
