@@ -5763,3 +5763,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - cleanup: non-mutation PASS; REAL_CAPITAL=0
 - repair: use reference/mark 102 for the genuine SCALE_IN fixture
 - nextAction: patch price and rerun exact acceptance
+
+
+## 2026-09-29 — FP3-C2 PASS audit found missing multi-entry REDUCE proof
+
+- PR: #1683
+- audited head: \`d40c1d919890583271e2373db3aafee0db6f39a3\`
+- roadmap contract: two-entry REDUCE must prove weighted-average basis + exact replay-idempotency before remaining-position EXIT
+- existing focused proof: OPEN + SCALE_IN + duplicate rejection + EXIT replay only
+- classification: test/proof gap, not production-runtime defect
+- safety: REAL_CAPITAL=0; RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: extend focused C2 test with REDUCE/replay/reconcile, then rerun exact-head acceptance
