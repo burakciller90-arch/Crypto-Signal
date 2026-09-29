@@ -214,7 +214,7 @@ def _public_trade(*, size: str = "0.15"):
     )
 
 
-def _fee_snapshot():
+def _fee_snapshot(*, ingested_at_ms: int = 20_050):
     payload = {
         "symbol": "BTCUSDT",
         "standardCommission": {
@@ -245,7 +245,7 @@ def _fee_snapshot():
     return normalize_binance_spot_commission_snapshot(
         payload=payload,
         observed_at_ms=20_000,
-        ingested_at_ms=20_050,
+        ingested_at_ms=ingested_at_ms,
     )
 
 
@@ -276,6 +276,7 @@ def test_depth_full_receipt_binds_taker_fee_and_real_price_impact(tmp_path) -> N
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        fee_snapshot=_fee_snapshot(),
         orderbook=book,
     )
 
@@ -308,6 +309,7 @@ def test_depth_partial_receipt_reconciles_partial_notional_exactly(tmp_path) -> 
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        fee_snapshot=_fee_snapshot(),
         orderbook=book,
     )
 
@@ -349,6 +351,7 @@ def test_passive_full_receipt_requires_maker_fee_and_no_optimistic_cost_credit(
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        fee_snapshot=_fee_snapshot(),
         orderbook=book,
         public_trades=trades,
     )
@@ -391,6 +394,7 @@ def test_not_filled_receipt_has_zero_cost_and_no_fee_evidence(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=None,
+        fee_snapshot=None,
         orderbook=book,
     )
 
@@ -430,6 +434,7 @@ def test_fill_not_proven_receipt_cannot_invent_fee_or_cost(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=None,
+        fee_snapshot=None,
         orderbook=book,
         public_trades=trades,
     )
@@ -460,6 +465,7 @@ def test_filled_receipt_rejects_wrong_fee_role(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=wrong_fee,
+            fee_snapshot=_fee_snapshot(),
             orderbook=book,
         )
 
@@ -484,6 +490,7 @@ def test_filled_receipt_rejects_fee_notional_mismatch(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=wrong_fee,
+            fee_snapshot=_fee_snapshot(),
             orderbook=book,
         )
 
@@ -519,6 +526,7 @@ def test_nonfilled_receipt_rejects_fee_projection(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=unrelated_fee,
+            fee_snapshot=_fee_snapshot(),
             orderbook=book,
         )
 
@@ -539,12 +547,14 @@ def test_exact_receipt_replay_is_identity_stable(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        fee_snapshot=_fee_snapshot(),
         orderbook=book,
     )
     replay = build_execution_receipt_v2(
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        fee_snapshot=_fee_snapshot(),
         orderbook=book,
     )
 
@@ -583,5 +593,38 @@ def test_cross_venue_market_evidence_is_rejected(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=fee,
+            fee_snapshot=_fee_snapshot(),
             orderbook=bybit_book,
+        )
+
+
+def test_receipt_rejects_fee_schedule_learned_after_execution_cutoff(
+    tmp_path,
+) -> None:
+    bound = _bound_pretrade(tmp_path)
+    book = _orderbook()
+    outcome = simulate_depth_execution(
+        action=PaperAction.BUY,
+        requested_quantity=Decimal("0.10"),
+        orderbook=book,
+        execution_cutoff_ms=20_200,
+        partial_fills_enabled=True,
+    )
+    future_snapshot = _fee_snapshot(ingested_at_ms=20_300)
+    fee = project_instrument_fee(
+        snapshot=future_snapshot,
+        symbol=PaperSymbol.BTCUSDT,
+        action=PaperAction.BUY,
+        role=InstrumentFeeRole.TAKER,
+        fill_notional_usdt=outcome.fill_notional,
+        evaluation_cutoff_ms=20_400,
+    )
+
+    with pytest.raises(ExecutionReceiptRejectedError, match="future fee schedule"):
+        build_execution_receipt_v2(
+            bound_pretrade=bound,
+            outcome=outcome,
+            fee_projection=fee,
+            fee_snapshot=future_snapshot,
+            orderbook=book,
         )
