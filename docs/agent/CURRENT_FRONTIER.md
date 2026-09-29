@@ -4408,3 +4408,34 @@ Current blocker:
 Exact nextAction:
 Audit existing paper vault IDs/models, Epoch 1/2 accounting, Smart Capital Allocator/allocation policy, execution/risk policy versioning and persistence helpers; freeze an FP2 Paper Vault V3 field/source/persistence matrix before production code.
 
+
+
+## FP2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_IMPLEMENTATION_START
+baseMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+auditDocument: docs/CRYPTO_SIGNAL_FP2_PAPER_VAULT_V3_CONSTITUTION_MATRIX.md
+classification: REUSE immutable Epoch1/2 + BUILD separate V3 constitution/store
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audit result:
+- PaperVaultId, EPOCH_2_SPEC and SmartCapitalAllocator are intentionally hard-bound to accepted Epoch 2 600/300/100 semantics and must remain unchanged;
+- R21/R22/S11 remain Epoch2 truth and are not generalized in FP2;
+- PaperSymbol plus current execution/risk policy version strings are safe reusable references;
+- V3 needs a separate immutable constitution and separate persistence namespace;
+- V3 books are policy concepts CORE/TACTICAL/OPPORTUNITY/CASH and must not alias Epoch2 accounting identities;
+- allocation constitution freezes zero minimum market exposure, cash-valid, borrowing=false and forced-deployment=false;
+- lifecycle is append-only ACTIVE -> STOPPED/ARCHIVED only; no reset/reactivation;
+- V3 DB is separate and no legacy migration/backfill is allowed.
+
+Current blocker:
+- none for isolated implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement vault_v3.py with deterministic constitution/allocation identities, explicit STOP/ARCHIVE lifecycle and immutable separate SQLite store; add focused tests proving identity, no-reset, idempotence, read-only/missing behavior and legacy byte non-mutation.
+
