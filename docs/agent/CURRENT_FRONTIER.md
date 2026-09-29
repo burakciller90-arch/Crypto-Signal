@@ -5142,3 +5142,38 @@ Current blocker:
 Exact nextAction:
 Audit canonical buy/sell commit contracts, R22 trade history/bundle lookup, current-position/action prerequisites, accepted outcome/reason lineage and Stream lifecycle projectors; freeze FP3-C field/action/replay contract before production code.
 
+
+
+## FP3-C SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C_IMPLEMENTATION_START
+baseMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md
+classification: REUSE canonical S11/R21/R22 commits + BUILD isolated policy/receipt/replay adapter only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Frozen implementation boundary:
+- OPEN -> BUY;
+- SCALE_IN -> BUY only with existing positive position and fresh accepted FP3-B sizing;
+- PARTIAL_TAKE_PROFIT -> REDUCE;
+- TAKE_PROFIT / STOP / CLOSE -> EXIT;
+- WAIT -> explicit no-trade receipt;
+- STOP_UPDATE -> explicit unavailable, never invented;
+- BUY mutation owner is commit_canonical_paper_buy only;
+- REDUCE/EXIT mutation owner is commit_canonical_paper_sell only;
+- sell uses original open BUY forecast/proof/sizing lineage, not a newly invented exit forecast;
+- preflight exact R22 history before mutation;
+- crash recovery resolves bundle from canonical fill via read-only bundle index + audit_bundle_read_only;
+- Stream execution/accounting/outcome is projected only by project_capital_bundle_lifecycle_to_stream;
+- FP3-C receipt stores canonical references only.
+
+Current blocker:
+- none for implementation; mechanical acceptance pending.
+
+Exact nextAction:
+Implement FP3-C policy/action-stage receipt/replay adapter and focused tests on isolated temp ledgers; do not begin genuine-forward FP3-D.
+
