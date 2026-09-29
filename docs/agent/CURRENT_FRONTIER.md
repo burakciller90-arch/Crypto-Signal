@@ -5663,3 +5663,34 @@ Bounded repair:
 
 Exact nextAction:
 Patch only the second-issuance fixture to carry a distinct frozen signal identity, then rerun full acceptance and inspect exact failure/PASS output.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 3 FAIL / NEXT-MARKET-CYCLE FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_3_NEXT_MARKET_CYCLE
+pr: 1683
+testedHead: 57176f484bfca78ab19f01b8f8966b15680e1936
+evidenceRun: 36604895788
+evidenceJob: 109531303801
+f10Run: 36604895638
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- exact-source check PASS;
+- WC6 focused execution-lab PASS;
+- WC6 paper regression PASS;
+- F10 closeout PASS;
+- full regression fails only in the new FP3-C2 two-entry test while projecting the second Smart Capital candidate;
+- error remains \`StreamLedgerConflictError: immutable Stream source-event identity conflict\`;
+- exact root cause: SmartCapitalCandidate identity is derived from asset + as_of + confluence + event-risk (+ optional auxiliary evidence), not from forecast/signal identity. The second fixture changed signal/forecast identity but reused the same market as_of, confluence and event-risk, so it still represented the same immutable capital candidate with a different assessment time;
+- Development cleanup non-mutating PASS; REAL_CAPITAL=0.
+
+Bounded repair:
+- construct the second issuance as a genuinely later market cycle with shifted source as_of;
+- rebuild bullish family evidence and Event Risk at that later as_of, preserving the same accepted geometry/target and policy semantics;
+- keep Stream immutability and canonical Smart Capital identity rules unchanged.
+
+Exact nextAction:
+Patch only the second-cycle test fixture (later as_of + rebuilt bullish family/event evidence), rerun exact PR full acceptance, and fix only the next evidenced failure if any.
