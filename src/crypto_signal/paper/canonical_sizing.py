@@ -17,6 +17,7 @@ from crypto_signal.paper.epoch2_accounting import (
     Epoch2VaultAccountingSnapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
+
 if TYPE_CHECKING:
     from crypto_signal.paper.portfolio_risk_v2 import PortfolioAllocationAssessmentV2
 from crypto_signal.paper.position_sizing_intelligence import (
@@ -276,7 +277,7 @@ def promote_portfolio_risk_bounded_sizing(
     *,
     current_vault: Epoch2VaultAccountingSnapshot,
     current_portfolio: Epoch2ConsolidatedAccountingSnapshot,
-    portfolio_assessment: "PortfolioAllocationAssessmentV2",
+    portfolio_assessment: PortfolioAllocationAssessmentV2,
     candidate_asset: str,
     risk_input_identity: str,
     selected_at_ms: int,
