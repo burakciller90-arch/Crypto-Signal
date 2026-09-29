@@ -802,6 +802,8 @@ def _create_conflicting_decision_evidence_db(
         "forecast_identity": forecast_identity,
         "proof_identity": _sha("conflicting-proof"),
         "signal_freeze_identity": _sha("conflicting-signal"),
+        "production_authority": False,
+        "real_capital": 0,
     }
     encoded = canonical_json(proof_payload)
     with sqlite3.connect(path) as connection:
