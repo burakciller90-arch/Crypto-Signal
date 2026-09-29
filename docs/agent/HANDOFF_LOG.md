@@ -4338,3 +4338,28 @@ Acceptance blocker:
 Exact nextAction:
 Temporarily wire existing MI1 UID504 acceptance to this branch including final_product_read_model.py and test_final_product_read_model.py; inspect exact mechanical logs, fix only evidenced failures, restore workflow to current-main blob after PASS.
 
+
+
+## FP1-F ACCEPTANCE ATTEMPT 1 FAIL / BOUNDED FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_1
+acceptanceRun: 36582112768
+acceptanceJob: 109452679451
+acceptedHeadAttempted: 826cad58af96f80cd56bbe260748666f3e3f178d
+realCapital: 0
+historicalBackfill: NO
+
+Exact failures:
+1. test_screener_reuses_market_pulse_current_truth_and_is_read_only expected timeframe "system", but accepted system-view truth returns "15m". This is a focused-test expectation bug; production truth is correct.
+2. global_search(...) unconditionally called screener(...) even when configured_symbols=(), triggering the accepted market-pulse guard "market pulse requires at least one symbol". This is a bounded FP1-F implementation bug.
+
+No other semantic failure is authorized to infer from this run because pytest stopped acceptance before a clean Ruff/mypy gate.
+
+Bounded fix:
+- production: skip the Screener asset federation branch when configured symbol set is empty;
+- test: expect the accepted system-view timeframe "15m";
+- no source contract/ranking/query/persistence changes.
+
+Exact nextAction:
+Apply only these two changes, rerun exact-head UID504 acceptance, and inspect pytest/Ruff/mypy/non-mutation/isolation markers.
+
