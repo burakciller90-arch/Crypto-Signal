@@ -20,6 +20,7 @@ from crypto_signal.paper.instrument_fees_v2 import (
     InstrumentFeeProjection,
     InstrumentFeeProjectionStatus,
     InstrumentFeeRole,
+    InstrumentFeeScheduleSnapshot,
 )
 from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
 from crypto_signal.paper.pretrade import PaperPretradeStatus
@@ -205,6 +206,7 @@ def build_execution_receipt_v2(
     bound_pretrade: PaperVenueBoundPretrade,
     outcome: ExecutionOutcomeV2,
     fee_projection: InstrumentFeeProjection | None,
+    fee_snapshot: InstrumentFeeScheduleSnapshot | None,
     orderbook: OrderBookSnapshot,
     public_trades: tuple[PublicTradeObservation, ...] = (),
 ) -> ExecutionReceiptV2:
@@ -243,9 +245,9 @@ def build_execution_receipt_v2(
     fee_usdt = Decimal(0)
 
     if filled:
-        if fee_projection is None:
+        if fee_projection is None or fee_snapshot is None:
             raise ExecutionReceiptRejectedError(
-                "filled execution requires exact fee projection"
+                "filled execution requires exact fee projection and snapshot"
             )
         if fee_projection.status is not InstrumentFeeProjectionStatus.PROVEN:
             raise ExecutionReceiptRejectedError(
@@ -253,6 +255,16 @@ def build_execution_receipt_v2(
             )
         if fee_projection.symbol is not pretrade.symbol:
             raise ExecutionReceiptRejectedError("fee projection symbol mismatch")
+        if fee_snapshot.symbol is not pretrade.symbol:
+            raise ExecutionReceiptRejectedError("fee snapshot symbol mismatch")
+        if fee_projection.snapshot_identity != fee_snapshot.snapshot_identity:
+            raise ExecutionReceiptRejectedError(
+                "fee projection snapshot identity mismatch"
+            )
+        if fee_snapshot.ingested_at_ms > _execution_evidence_cutoff_ms(outcome):
+            raise ExecutionReceiptRejectedError(
+                "future fee schedule cannot enter historical execution receipt"
+            )
         if fee_projection.action is not pretrade.action:
             raise ExecutionReceiptRejectedError("fee projection action mismatch")
         if fee_projection.role is not expected_fee_role:
@@ -268,9 +280,9 @@ def build_execution_receipt_v2(
         fee_schedule_snapshot_identity = fee_projection.snapshot_identity
         fee_role = fee_projection.role
         fee_usdt = fee_projection.fee_usdt
-    elif fee_projection is not None:
+    elif fee_projection is not None or fee_snapshot is not None:
         raise ExecutionReceiptRejectedError(
-            "non-filled execution must not carry fee projection"
+            "non-filled execution must not carry fee projection or snapshot"
         )
 
     adverse_impact = _adverse_price_impact(
@@ -457,6 +469,14 @@ def _outcome_contract(
             InstrumentFeeRole.MAKER,
             market_evidence,
         )
+    raise TypeError("unsupported FP4 execution outcome type")
+
+
+def _execution_evidence_cutoff_ms(outcome: ExecutionOutcomeV2) -> int:
+    if isinstance(outcome, DepthExecutionOutcome):
+        return outcome.execution_cutoff_ms
+    if isinstance(outcome, PassiveLimitExecutionOutcome):
+        return outcome.completed_at_ms
     raise TypeError("unsupported FP4 execution outcome type")
 
 
