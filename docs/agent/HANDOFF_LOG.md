@@ -3662,3 +3662,48 @@ Acceptance harness rule:
 
 Exact nextAction:
 Wire the existing UID504 harness to C1+C2 changed files, run exact-head acceptance, record the first mechanical failure before repair, and do not claim C2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
+
+
+## FP1-C2 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_C2_ACCEPTANCE_PASS
+activeBranch: fp1c/event-rail-read-model
+acceptedHead: dee12bad640915401f49938217b0d3375900135c
+uid504Run: 36565945747
+uid504Job: 109397747476
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- C1 event-source adapter tests PASS;
+- C2 final-product Event Rail tests PASS;
+- existing final-product/Stream regressions in the harness PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 6 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation.
+
+Accepted C2 semantics:
+- Event Rail is scheduled structured calendar truth only;
+- news remains excluded;
+- customer temporal/source/scope/freshness/coverage labels are presentation-only;
+- no Event Risk scoring/window logic is copied;
+- no directional/safe/block/severity claim is introduced;
+- covered empty interval is distinct from uncovered empty interval;
+- customer payload hides SHA/raw source/category/coverage/database vocabulary;
+- audit mode preserves event/coverage/fetch identities;
+- source event DB remains read-only.
+
+Temporary acceptance harness:
+- branch currently contains temporary MI1 C2 trigger/test wiring;
+- this is acceptance infrastructure only and must be restored to exact current-main content before PR.
+
+Exact nextAction:
+Restore MI1 workflow to exact current-main content, update the FP1 capability matrix current-state/nextAction so agents do not re-run A/B/C, verify current main and branch diff, then open the FP1-C PR only if no duplicate or unrelated change exists.
