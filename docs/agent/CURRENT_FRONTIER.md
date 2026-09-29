@@ -6090,3 +6090,63 @@ Bounded repair:
 
 Exact nextAction:
 Apply only the two Ruff cleanups and rerun the dedicated exact-head FP3-D UID504 gate to reach the live genuine-forward probe.
+
+
+## FP3-D HARNESS MERGED / GENUINE FORWARD WAITING — 2026-09-29
+
+status: FP3_D_WAITING_NO_POST_ACTIVATION_ISSUANCE
+verifiedMainAfterHarnessMerge: b7a709fb1a2150f63ec1b90f002e4007be0d5e4f
+sourceBranch: fp3d/genuine-forward-liveness-v2
+sourcePr: 1685
+acceptedSourceHead: ab3b2fd4292f01b7c014d6004d574f3a998eee38
+mergeSha: b7a709fb1a2150f63ec1b90f002e4007be0d5e4f
+handoffBranch: handoff/fp3d-waiting-20260929
+sessionLocalWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchRun: 36616789997
+workbenchJob: 109571740293
+workbenchVerifiedHead: b7a709fb1a2150f63ec1b90f002e4007be0d5e4f
+workbenchVerifiedBranch: main
+workbenchDirtyCount: 0
+fp3dAcceptanceRun: 36615941131
+fp3dAcceptanceJob: 109568832673
+rdp11PreSoakRun: 36615940986
+rdp11PreSoakJob: 109568918271
+f10Run: 36615940946
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical harness acceptance:
+- exact PR head and frozen RDP11 Product/Development target verification PASS;
+- focused FP3-D pytest PASS;
+- Ruff PASS;
+- focused strict mypy PASS;
+- whole-repository pytest/Ruff/mypy/JS regression PASS with `FP3D_FULL_REGRESSION_PASS=YES`;
+- Product and Development non-mutation PASS;
+- frozen RDP11 target unchanged PASS;
+- RDP11 pre-soak fulltest PASS with `RDP11_PRE_SOAK_FULLTEST_PASS=YES` and non-mutation PASS;
+- post-merge SSD504 Workbench bootstrap PASS and synchronized canonical Workbench repo to exact merge SHA with dirty count 0.
+
+Genuine-forward acceptance truth:
+- `FP3D_GENUINE_FORWARD_STATUS=WAITING_NO_POST_ACTIVATION_ISSUANCE`;
+- `FP3D_GENUINE_POST_ACTIVATION_CANDIDATE=NO`;
+- `FP3D_GENUINE_FORWARD_GATE_PASS=NO`;
+- `FP3D_GENUINE_FORWARD_WAITING=YES`;
+- live source access remained query-only;
+- no historical backfill or fixture was used;
+- therefore workflow SUCCESS is NOT FP3-D gate PASS and FP3-D remains mechanically unclosed.
+
+RDP11 / repository guard:
+- Product and Development remained exactly at frozen target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- RDP11 remains ACTIVE / NOT PASS and its 72h/final evidence contract is unchanged;
+- post-merge Crypto Stage10 Hosted Gate run `36616790044` reported FAILURE; its job-log blob was unavailable at checkpoint time, so cause is unclassified and no cause is invented. This run is not used as FP3-D acceptance evidence.
+
+Current blocker:
+- no genuine persisted WC2/Decision issuance exists at or after the frozen Stream Capital Forward activation watermark, so replay/activation liveness cannot be truthfully demonstrated yet.
+
+Exact nextAction:
+When the first genuine post-activation WC2 prepared + Decision issuance is persisted, rerun the merged FP3-D UID504 genuine-forward workflow and require genuine candidate YES, replay idempotence PASS, activation immutability PASS, full regression PASS and Product/Development non-mutation PASS before marking FP3-D complete. Do not backfill, fabricate a fixture, weaken gates or mutate the frozen RDP11 runtime.

@@ -5862,3 +5862,25 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - live probe skipped; no FP3-D liveness claim
 - Development/Product non-mutation + target unchanged PASS; REAL_CAPITAL=0
 - nextAction: two lint-only harness cleanups, then rerun dedicated live gate
+
+
+## 2026-09-29 — FP3-D harness merged; genuine-forward gate WAITING
+
+- exact main after source merge: `b7a709fb1a2150f63ec1b90f002e4007be0d5e4f`
+- source branch / PR: `fp3d/genuine-forward-liveness-v2` / #1685
+- accepted source head: `ab3b2fd4292f01b7c014d6004d574f3a998eee38`
+- source merge SHA: `b7a709fb1a2150f63ec1b90f002e4007be0d5e4f`
+- handoff branch: `handoff/fp3d-waiting-20260929`
+- session-local worktree: not created in connector session
+- Workbench: run/job `36616789997` / `109571740293` -> `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`, HEAD `b7a709fb1a2150f63ec1b90f002e4007be0d5e4f`, branch `main`, dirty `0`, `SSD504_WORKBENCH_PASS=YES`
+- FP3-D acceptance: run/job `36615941131` / `109568832673`
+- exact FP3-D markers: `WAITING_NO_POST_ACTIVATION_ISSUANCE`, candidate=NO, gate PASS=NO, waiting=YES
+- harness/full regression: PASS; focused pytest/Ruff/mypy PASS; whole-repo regression PASS
+- live-source boundary: query-only; HISTORICAL_BACKFILL=NO; REAL_CAPITAL=0
+- runtime boundary: Product/Development non-mutation PASS and exact frozen target `3d9f33db3f1189571d40566125fbeabd00c04930`
+- RDP11 pre-soak: run/job `36615940986` / `109568918271` PASS; F10 run `36615940946` PASS
+- RDP11 remains ACTIVE / NOT PASS; no Product/Development deployment was performed
+- post-merge Stage10 run `36616790044` failed, but the GitHub job-log blob was unavailable at this checkpoint; cause remains unclassified and is not invented
+- Durdurulmaz untouched; Quantum Capital untouched
+- blocker: no genuine persisted post-activation issuance exists yet; fixture/backfill cannot satisfy FP3-D
+- nextAction: on the first genuine post-activation WC2 prepared + Decision issuance, rerun the merged FP3-D UID504 workflow and close only on genuine candidate + replay-idempotence + activation-immutability + regression + non-mutation PASS
