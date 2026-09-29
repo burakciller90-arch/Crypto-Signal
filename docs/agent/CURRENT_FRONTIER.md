@@ -7538,3 +7538,21 @@ Introduce a separate `portfolio_selection` local, branch on `None`, then assign 
 
 Acceptance rule:
 All merge-gate results from `8d551faf...` are stale after repair. Require FP5-C + WC6 + RDP11 Pre-Soak + F10 again on the new exact head.
+
+
+### FP5-C MYPY-NARROWING REPAIR APPLIED — 2026-09-30
+
+repairCommit: `f6257a86aee129ae728c8597b233ab5036a85253`
+repairType: TYPE_NARROWING_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+receiptSchemaChange: NO
+
+Repair:
+- V2 promotion result is first assigned to `portfolio_selection: CanonicalPaperSizingSelection | None`;
+- the existing HOLD/NOT_PROVEN branch handles `None`;
+- only after that branch returns is the narrowed value assigned to non-optional `selection`;
+- no cap, status, lineage, replay, event or authority logic changed.
+
+Acceptance rule:
+Prior head `8d551faf...` is stale. Require fresh exact-head FP5-C + WC6 + RDP11 Pre-Soak + F10 after the durable repair checkpoint.
