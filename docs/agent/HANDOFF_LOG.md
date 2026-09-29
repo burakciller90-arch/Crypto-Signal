@@ -5803,6 +5803,26 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - nextAction: mechanical Decimal lint cleanup and rerun exact acceptance
 
 
+## 2026-09-29 — FP3-C2 merged mechanical PASS
+
+- exact current main: \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
+- source branch / PR: \`fp3c2/multi-entry-lineage\` / #1683
+- accepted PR head: \`7ab66c7e1d27899bd48414a087f29db3f1426e48\`
+- merge SHA: \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
+- handoff branch: \`handoff/fp3c2-pass\`
+- session-local worktree: not created in this connector session
+- Workbench proof: run \`36613594563\` / job \`109560885562\` -> \`/Volumes/Crypto-504/Crypto-Signal-Workbench/repo\`, HEAD \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`, branch \`main\`, dirty \`0\`
+- PR acceptance: WC6 \`36612810152\` / job \`109558250167\` PASS; RDP11 fulltest \`36612810246\` / job \`109558250148\` PASS; F10 \`36612810257\` PASS
+- post-merge main acceptance: WC6 \`36613594700\` / job \`109560887152\` PASS
+- C2 closes OPEN -> SCALE_IN -> two immutable BUY entries -> replay-idempotent REDUCE -> deterministic EXIT, with complete active-entry evidence and exact weighted-average basis accounting
+- Decimal policy repair: REDUCE removes weighted-average partial basis; EXIT removes exact remaining basis; no epsilon and no historical rewrite
+- soak safety: frozen Product/Development target still \`3d9f33db3f1189571d40566125fbeabd00c04930\`; RDP11 ACTIVE / NOT PASS; no deployment/backfill; REAL_CAPITAL=0
+- observer evidence: run \`36611618152\` / job \`109554184576\` proved target exact then hit endpoint curl 56 reset; preserve as continuity-gap evidence
+- unrelated repository signal: Stage10 Hosted Gate \`36613594658\` failed but GitHub log blob was unavailable; cause remains unclassified
+- Durdurulmaz untouched; Quantum Capital untouched
+- blocker: FP3-D genuine-forward liveness requires real post-activation evidence; fixture proof cannot close it
+- nextAction: start isolated FP3-D checkpoint from current main and audit activation/liveness/observer truth before implementation
+
 ## 2026-09-29 — FP3-C2 PASS / FP3-D genuine-forward liveness audit start
 
 - exact current main: \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
@@ -5816,3 +5836,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; no Product/Development deploy; Durdurulmaz/Quantum untouched
 - blocker: genuine candidate source + isolated persistent FP3 observation store not yet identified
 - nextAction: audit live Stream/Capital Forward persistence and WC2 liveness patterns; freeze exact non-mutating FP3-D observation contract before implementation
+
+## 2026-09-29 — FP3-D branch reconciled to latest main
+
+- original FP3-D task-start main: \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
+- latest reconciled main: \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`
+- intervening change: PR #1684 docs-only FP3-C2 PASS handoff; no source/runtime delta
+- Workbench latest-main proof: run \`36614413042\` / job \`109563645155\` SUCCESS
+- active branch remains \`fp3d/genuine-forward-liveness\`; no duplicate branch created
+- safety unchanged: REAL_CAPITAL=0; no frozen runtime deploy/backfill; Durdurulmaz/Quantum untouched
+- blocker: genuine forward candidate source and isolated persistent FP3 observation path not yet identified
+- nextAction: audit FP3 activation/store + live Stream/Capital Forward + WC2 liveness patterns and freeze the real-forward observation contract before implementation
