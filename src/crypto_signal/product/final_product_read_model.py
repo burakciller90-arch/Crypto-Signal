@@ -1052,6 +1052,82 @@ class FinalProductReadModel:
             audit=audit,
         )
 
+    def capital_movements(
+        self,
+        *,
+        observed_at_ms: int,
+        from_ms: int,
+        to_ms: int,
+        vault: str | None = None,
+        limit: int = 50,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> CapitalMovementsView:
+        if observed_at_ms < 0:
+            raise ValueError("capital movements observation time must be non-negative")
+        if from_ms < 0 or to_ms < 0 or from_ms > to_ms:
+            raise ValueError("capital movements time window is invalid")
+        if to_ms > observed_at_ms:
+            raise ValueError("capital movements cannot read future event time")
+        if stale_after_ms <= 0:
+            raise ValueError("capital movements stale_after_ms must be positive")
+        normalized_vault = None
+        if vault is not None:
+            try:
+                normalized_vault = PaperVaultId(vault.strip().upper()).value
+            except (ValueError, AttributeError) as exc:
+                raise ValueError("capital movements vault is invalid") from exc
+
+        if not self.stream_ledger_path.is_file():
+            return CapitalMovementsView(
+                availability_label="Sermaye hareketleri verisi kullanılamıyor",
+                observed_at_ms=observed_at_ms,
+                from_ms=from_ms,
+                to_ms=to_ms,
+                vault_label=_capital_vault_label(normalized_vault),
+                items=(),
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            page = reader.read_messages(
+                StreamMessageQuery(
+                    limit=limit,
+                    category="capital",
+                    vault=normalized_vault,
+                    from_ms=from_ms,
+                    to_ms=to_ms,
+                )
+            )
+            items = tuple(
+                _capital_movement_item(
+                    record,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                for record in page.items
+            )
+        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "capital movements source cannot be projected safely"
+            ) from exc
+
+        return CapitalMovementsView(
+            availability_label=(
+                "Doğrulanmış veri"
+                if items
+                else "Bu aralıkta sermaye hareketi yok"
+            ),
+            observed_at_ms=observed_at_ms,
+            from_ms=from_ms,
+            to_ms=to_ms,
+            vault_label=_capital_vault_label(normalized_vault),
+            items=items,
+        )
+
     def _workspace_exact_evidence(
         self,
         *,
