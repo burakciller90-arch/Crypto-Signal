@@ -5974,3 +5974,59 @@ Current blocker:
 
 Exact nextAction:
 Start a fresh isolated FP3-D task checkpoint from current main; audit duplicate branches/PRs plus the accepted FP3 activation/liveness watermark and genuine-forward observation surfaces, then define the minimal real forward acceptance path before any implementation.
+
+
+## FP3-D SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_D_GENUINE_FORWARD_HARNESS_IMPLEMENTATION_START
+taskStartMain: 4490e3a32eabbd21e84fe32ba70aa2324151a168
+activeBranch: fp3d/genuine-forward-liveness-v2
+supersededSessionBranch: fp3d/genuine-forward-liveness
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+classification: REUSE live WC2/Decision/Stream/Epoch2 truth + BUILD isolated read-only/snapshot acceptance harness
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Branch reconciliation:
+- main advanced after the first FP3-D checkpoint via docs-only PR #1684;
+- current main is \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`;
+- the earlier connector-session branch \`fp3d/genuine-forward-liveness\` is stale-base and MUST NOT be merged;
+- this v2 branch is the sole active FP3-D implementation branch.
+
+Verified live source contract:
+- signal ledger: \`/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_signal_ledger.sqlite3\`;
+- WC2 policy: \`.../runtime/wc2/wc2_forward_policy.sqlite3\`;
+- Epoch2: \`.../runtime/paper/paper_fund_epoch2.sqlite3\`;
+- collection protocol: \`.../runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3\`;
+- prepared receipt journal: \`.../runtime/wc2/wc2.wc2-prepared.sqlite3\`;
+- decision evidence: \`.../runtime/decision/decision_evidence.sqlite3\`;
+- canonical Stream: \`.../runtime/stream/intelligence_stream.sqlite3\`;
+- cohort/shadow journals are the accepted WC2 runtime paths from \`ops/ssd_runtime_supervisor.sh\`.
+
+Accepted recovery facts:
+- \`WC2PreparedCycleJournal.read_for_signal\` reconstructs an exact immutable prepared receipt query-only;
+- \`complete_wc2_prepared_cycle\` reconstructs the exact \`UnifiedDecisionIssuance\` from that prepared receipt without a new historical market read and exposes an \`issuance_hook\`;
+- \`ImmutableDecisionEvidenceLedger.read_issuance_for_signal\` independently verifies persisted R20/R20.5 lineage query-only;
+- FP3-A \`process_issuance\` writes canonical capital decisions/Stream state, therefore it MUST NOT run against live Development stores during FP0/RDP11 soak.
+
+Frozen FP3-D observation design:
+1. open all live source DBs query-only and capture SHA256/quick-check + current Git heads;
+2. select only a real persisted WC2 prepared receipt whose exact R20 forecast exists and whose issuance is at/after the existing Stream Capital Forward activation;
+3. take SQLite-consistent snapshots of required DBs into \`$RUNNER_TEMP\` using SQLite backup from read-only sources;
+4. reconstruct the genuine issuance only from copied immutable prepared/decision truth; no fixture, no new market read;
+5. run FP3-A owner only on copied Epoch2/Stream + isolated temp \`.fp3-paper-autopilot.sqlite3\`;
+6. policy-correct HOLD/BLOCK is accepted liveness; do not weaken gates to manufacture BUY;
+7. restart runtime on the same temp stores and replay the same issuance, proving no duplicate decision/HOLD/Stream/FP3 receipt mutation;
+8. compare live DB SHA256 + Product/Development heads/status after the probe to prove non-mutation.
+9. if no genuine post-activation issuance exists, report WAITING/CORRECT_SILENCE explicitly; never synthesize one.
+
+Current blocker:
+- the harness and UID504 workflow do not yet exist, so no genuine FP3-D observation has been executed.
+
+Exact nextAction:
+Implement the isolated FP3-D genuine-forward audit helper, focused harness tests, and an exact-head UID504 workflow that executes the live read-only/snapshot probe and emits mechanical PASS/WAITING markers without mutating live stores.
