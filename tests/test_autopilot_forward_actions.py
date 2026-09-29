@@ -17,9 +17,6 @@ from test_autopilot_forward_sizing import (
 from test_canonical_capital_runtime import _execution_snapshot
 from test_immutable_forecast_stream import _event_context
 
-from crypto_signal.paper.autopilot_forward_runtime import (
-    CanonicalPaperAutopilotForwardRuntime,
-)
 from crypto_signal.paper.autopilot_forward_actions import (
     FP3ActionProcessDisposition,
     FP3ActionReason,
@@ -27,6 +24,9 @@ from crypto_signal.paper.autopilot_forward_actions import (
     FP3ActionStageStore,
     FP3PreregisteredActionBridge,
     build_fp3_action_intent,
+)
+from crypto_signal.paper.autopilot_forward_runtime import (
+    CanonicalPaperAutopilotForwardRuntime,
 )
 from crypto_signal.paper.autopilot_forward_sizing import (
     FP3EligibleFixedFractionalSizingBridge,
