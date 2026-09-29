@@ -534,3 +534,42 @@ Accepted C1 behavior:
 
 Exact next action:
 Open and merge FP3-C1 as an isolated PR after current-main/overlap checks. Then start FP3-C2 on fresh main with a new task-start checkpoint; do not claim SCALE_IN support until C2 acceptance PASS.
+
+
+## 15. FP3-C2 frozen multi-entry lineage contract
+
+Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+
+Canonical facts:
+- R21 positions already accumulate multiple BUY quantities.
+- `reconstruct_open_cost_basis` already replays multiple immutable R22 BUY fills into exact weighted-average basis.
+- every accepted R22 BUY intent already carries its own forecast/proof/sizing-assessment/sizing-result lineage.
+- the only C2 blocker is the old sell validator's single-lineage assumption.
+
+C2 rules:
+- `OPEN -> BUY` requires zero current position.
+- `SCALE_IN -> BUY` requires positive current position.
+- SCALE_IN requires a distinct forecast identity and distinct accepted FP3-B sizing selection/receipt versus every currently active BUY entry.
+- exact replay preflight remains mandatory.
+- canonical BUY commit remains the only mutation owner.
+- sell keeps one original/open anchor forecast+proof+sizing assessment for scalar R22 sell-intent fields.
+- sell validation requires exactly one active BUY matching that anchor.
+- all active BUY intents/fills are verified immutable R22 truth; their intent/fill identities form the complete active-entry evidence set.
+- that full active-entry evidence set is added to sell R22 source evidence and outcome evidence.
+- weighted-average basis remains owned solely by `reconstruct_open_cost_basis`.
+- REDUCE/EXIT quantity/accounting behavior is unchanged.
+- no new entry ledger, cost-basis engine or R22 schema version.
+- `STOP_UPDATE` remains explicit unavailable.
+
+PASS:
+- OPEN then distinct SCALE_IN produces two canonical BUY entries and one R21 accumulated position;
+- duplicate/replayed SCALE_IN does not create another fill/accounting mutation;
+- REDUCE after two entries uses exact weighted-average basis and remains replay-idempotent;
+- EXIT after remaining multi-entry position flattens deterministically;
+- sell source evidence contains the complete active BUY intent/fill identity set;
+- wrong anchor lineage fails closed;
+- SCALE_IN with zero position or duplicate active forecast/sizing lineage fails closed;
+- REAL_CAPITAL=0 and RDP11 soaked target remains untouched.
+
+Exact next action:
+Implement the minimal C2 validator/action changes and focused tests; no FP3-D work before C2 PASS.
