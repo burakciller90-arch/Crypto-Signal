@@ -3005,3 +3005,58 @@ Temporary acceptance harness:
 
 Exact nextAction:
 Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml on the FP1-B branch to exact current-main content. Then verify the branch diff excludes workflow files, checkpoint cleanup, and proceed to FP1-B2 Workspace Summary on the same isolated branch only after a new B2 task-start checkpoint.
+
+
+## FP1-B1 ACCEPTANCE-HARNESS CLEANUP COMPLETE — 2026-09-29
+
+status: FP1_B1_CLEAN_REVIEW_TREE
+activeBranch: fp1b/attention-workspace-family-summary
+currentHeadBeforeCheckpoint: 41805913a9659a7ffaffc0628c206e7d001c37f1
+acceptedB1Head: 0ae99b1538c8adf9485938a1774f457238c689d3
+acceptedUid504Run: 36558367315
+realCapital: 0
+historicalBackfill: NO
+
+Cleanup verification:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch blob equals exact current-main blob 394051a78c665d84cf78830cedc8799a13474baa;
+- temporary FP1-B1 trigger/test wiring is no longer present in the branch tree;
+- B1 production/test/docs work remains;
+- no deploy/runtime mutation occurred.
+
+## FP1-B2 TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_WORKSPACE_AUDIT_START
+activeBranch: fp1b/attention-workspace-family-summary
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+prerequisiteB1: PASS
+fieldSourceAuthority: docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Bounded B2 goal:
+- add one customer-safe Workspace Summary for an existing persisted Stream narrative;
+- reuse IntelligenceStreamReadModel.read_message_detail for immutable narrative/analytical/fact/message lineage;
+- when exact forecast/signal identities exist, optionally join ImmutableDecisionEvidenceLedger read-only;
+- optionally summarize IntelligenceStreamExactEvidenceReadModel resolution states without duplicating its evidence logic;
+- optionally join DashboardReader.signal_detail only when an exact signal_freeze_identity is available and signal ledger path is configured;
+- expose trigger, invalidation, targets, state/direction, main contradiction, event context, uncertainty, freshness and probability semantics only when exact;
+- calibrated probability may appear only when canonical proof/fact actually authorizes it;
+- normal customer payload must not expose SHA/internal enum/database vocabulary;
+- exact identities/codes remain audit-only;
+- missing optional Decision Evidence / signal ledger must degrade explicitly, not fail the whole workspace;
+- no route/frontend/deploy/new DB/writer.
+
+Mandatory pre-code audit for B2:
+1. exact Stream detail shapes for generic decision narrative, family narrative and System View;
+2. exact decision ledger read-only failure/missing behavior;
+3. exact-evidence read model constructor dependencies and safe optional use;
+4. signal-detail read path and customer-safe fields;
+5. define which Workspace fields are available for each message kind and which must remain explicitly unavailable.
+
+Current blocker:
+- B2 must not assume every Stream message is a decision/forecast message. Workspace must branch by verified detail kind and fail closed per field.
+
+Exact nextAction:
+Audit the three verified Stream detail kinds and exact read-only join APIs, then record a B2 message-kind/source matrix before changing B2 production code.
