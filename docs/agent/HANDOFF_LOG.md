@@ -3351,3 +3351,56 @@ Current blocker:
 
 Exact nextAction:
 Audit event_source_runtime.py, data/event_risk.py, RDP8 Event Risk consumers, Product runtime status reader and event-source tests; record a durable FP1-C field/source matrix before changing final_product_read_model.py.
+
+
+## FP1-C1 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_C1_PRODUCT_SAFE_EVENT_QUERY_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+auditDocument: docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+auditCommit: e680826d9af160a456131dc394a5ae5e7820212d
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen scope decision:
+- scheduled Event Rail = structured calendar events only;
+- news_event_observations are NOT mixed into scheduled Event Rail;
+- Event Risk scoring/window logic is NOT copied into Product;
+- empty "no event" claim requires exact point-in-time calendar coverage.
+
+C1 bounded goal:
+- extend src/crypto_signal/product/event_source_runtime.py only;
+- reuse the existing detached SQLite read boundary and full schema/quick-check/WAL rules;
+- add verified Product truth dataclasses for calendar events, coverages and bounded rail query;
+- query only structured events referenced by successful calendar fetch lineage at/before observed_at_ms;
+- exclude late/future ingestion;
+- determine usable coverage only from point-in-time latest calendar fetch per provider when that fetch is successful and references exact coverage;
+- deterministic scheduled_at_ms + event_identity ordering;
+- optional exact asset and category filtering;
+- no news rows;
+- no Product route;
+- no final customer Turkish labels yet;
+- no writer/schema/deploy/runtime mutation.
+
+C1 PASS:
+- missing DB non-creating;
+- nonempty WAL fail closed;
+- orphan structured event not surfaced without successful fetch lineage;
+- future/late-ingested event excluded;
+- future coverage excluded;
+- latest failed provider fetch prevents stale previous coverage from being claimed current;
+- coverage exact for requested window/categories;
+- global events (empty affected_assets) included for asset query;
+- wrong-asset event excluded;
+- category filter exact;
+- news excluded;
+- deterministic limit;
+- source DB/sidecars unchanged;
+- focused tests/Ruff/mypy;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Implement the read_event_source_calendar_rail Product adapter and focused event-source Product tests. Do not modify final_product_read_model.py until C1 acceptance passes.
