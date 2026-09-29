@@ -6342,3 +6342,98 @@ nextAction:
 
 DurdurulmazTouched: NO
 QuantumCapitalTouched: NO
+
+
+
+## 2026-09-30 — FP5-B portfolio-risk bounded sizing task start
+
+- exact main: `b7cadf0b49fb6b57ec804040cab73702eb5d0a56`
+- branch: `fp5b/portfolio-risk-sizing-promotion-v2`
+- session-local /Volumes worktree: none; connector session only
+- Workbench post-RDP11 closeout run `36638966631` SUCCESS: exact main, branch main, dirty0, SSD504_WORKBENCH_PASS=YES
+- duplicate audit: FP5-A already merged; no competing FP5 integration PR/branch
+- REUSE FP5-A + FP3 risk/sizing + S11 canonical sizing/event/action owners
+- EXTEND only the missing binding from FP5 max deployable/status into canonical paper sizing lineage
+- preserve V1 identities/behavior; HOLD_CASH/NOT_PROVEN fail closed; no Kelly/leverage/borrowing/forced deployment
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 R2 runtime/sidecar untouched; Durdurulmaz/Quantum untouched
+- nextAction: implement backward-compatible V2 promotion + focused acceptance, then exact-head UID504 gates
+
+
+
+## 2026-09-30 — FP5-B implementation ready for exact-head acceptance
+
+- base main `b7cadf0b49fb6b57ec804040cab73702eb5d0a56`
+- branch `fp5b/portfolio-risk-sizing-promotion-v2`; pre-checkpoint implementation head `94da812a98c957b4994e74306b2cf42fbd010a23`
+- no competing open FP5 integration PR; branch was 8 ahead / 0 behind at pre-PR audit
+- extended accepted S11 sizing only: V1 payload/identity preserved; V2 binds FP5 assessment + canonical R21 consolidated portfolio + risk cap
+- V2 deployable notional = min(existing fixed-fractional notional, current vault cash, FP5 capacity)
+- HOLD_CASH / NOT_PROVEN => no sizing selection; stale/mismatched lineage fails closed
+- focused tests cover V1 exact identity, real cap binding, S11 event lineage, hold/not-proven and stale/risk mismatch
+- dedicated workflow `.github/workflows/fp5b-portfolio-sizing-uid504.yml`
+- REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen RDP11 R2 Product/Development and sidecar untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head PR acceptance not run
+- nextAction: open sole PR and require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 SUCCESS on one final head before merge
+
+
+
+## 2026-09-30 — FP5-B acceptance attempt 1 circular-import blocker
+
+- PR #1701; tested head `fecdeb9d4192a93624491232a948e817f5c3875d`
+- dedicated run/job `36639914277/109649497469`
+- exact source + frozen Product/Development PASS; non-mutation PASS
+- focused pytest failed during collection only: runtime import `canonical_sizing -> portfolio_risk_v2 -> autopilot_forward_sizing -> ... -> canonical_sizing_events -> canonical_sizing`
+- exact error: partially initialized `CanonicalPaperSizingSelection`
+- no behavior/regression PASS claimed on this stale head
+- repair is dependency-only: make FP5 assessment type-only in canonical_sizing; preserve all V2 formulas/identity gates and V1 semantics
+- REAL_CAPITAL=0; no deploy/backfill; RDP11 R2 untouched
+- nextAction: apply bounded import-cycle repair and rerun dedicated/WC6/RDP11/F10 on the new exact head
+
+
+
+## 2026-09-30 — FP5-B bounded import-cycle repair applied
+
+- repair commit `7afbee135c89a897888636699d2799f0bdc6c6f1`
+- removed only the new runtime FP5 import from canonical sizing; FP5 assessment remains type-only
+- runtime dispatch uses immutable FP5 status enum value; notional/identity/lineage formulas unchanged
+- V1 canonical sizing semantics unchanged
+- all acceptance from `fecdeb9d...` stale; new exact-head dedicated/WC6/RDP11/F10 required
+- REAL_CAPITAL=0; no runtime deployment/backfill; RDP11 R2 untouched
+
+
+
+## 2026-09-30 — FP5-B exact-head WC6 Ruff-only blocker
+
+- tested head `1628e318234c37904371e96aca9b49bf379a2233`; PR #1701
+- WC6 `36640078864/109650020897`
+- exact source PASS; focused recovery PASS; full paper pytest PASS; Development non-mutation PASS
+- only failure: Ruff I001 import separator + UP037 quoted deferred annotation in `canonical_sizing.py`
+- no functional failure and no whole-repo PASS claimed because the static step stopped
+- repair is formatting/type-syntax only; all prior head results stale after repair
+- REAL_CAPITAL=0; RDP11 R2 untouched
+
+
+
+## 2026-09-30 — FP5-B Ruff-only repair applied
+
+- repair commit `02bf03930ca43b41fa4d8496bfcaa2746f0633e3`
+- only import separation + deferred annotation syntax changed
+- V1/V2 behavior, identities, cap formula and safety semantics unchanged
+- require fresh exact-head dedicated/WC6/RDP11/F10; prior runs stale
+
+
+
+## 2026-09-30 — FP5-B focused behavioral PASS / test-Ruff-only blocker
+
+- head `f47cec13fa98bd18526f10273b1159d1559a750f`; dedicated `36640264065/109650629848`
+- exact source/frozen runtime PASS; 16 focused behavioral tests PASS; non-mutation PASS
+- sole blocker FURB157 in test assertion: `Decimal("12")` -> `Decimal(12)`
+- source behavior/identity/lineage untouched; no merge PASS claimed
+- nextAction: one-line test-style repair, then all four exact-head lanes again
+
+
+
+## 2026-09-30 — FP5-B test-Ruff repair applied
+
+- repair `87e07ecae0512fdbf62b0cc3bf425c49cdbc0d4e`
+- test literal only; source code/behavior/identity unchanged
+- prior results stale; require fresh dedicated/WC6/RDP11/F10 on final head

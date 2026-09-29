@@ -7074,3 +7074,212 @@ Safety:
 - frozen/historical mutation: NO
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-30 — FP5-B portfolio-risk bounded canonical sizing
+
+status: FP5B_IMPLEMENTATION_START
+canonicalMainAtTaskStart: b7cadf0b49fb6b57ec804040cab73702eb5d0a56
+activeBranch: fp5b/portfolio-risk-sizing-promotion-v2
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalWorkbenchProof: 36638966631 / 109646424658 (run SUCCESS; exact main/branch/dirty markers verified in job log)
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate / ownership audit:
+- FP5-A portfolio risk envelope is already accepted and merged as d98db8d7cbc020eb8c90471ae089aa810f5810bb; REUSE, do not rebuild.
+- accepted FP3 sizing risk inputs + PositionSizingPolicy own drawdown/correlation/volatility/liquidity/transaction-cost gates; REUSE.
+- accepted S11 canonical fixed-fractional sizing selection/event and FP3 action bridge own paper sizing/event/action lineage; EXTEND, do not fork a second capital runtime.
+- current gap: FP5-A max_deployable_notional/status is not yet bound into the canonical sizing selection consumed by S11/FP3 action lineage.
+- no open FP5/portfolio-risk integration PR or competing FP5 branch existed at task start.
+
+Bounded scope:
+- add a backward-compatible V2 canonical sizing promotion that preserves V1 identities/behavior;
+- V2 must bind exact FP5 portfolio-risk assessment identity and cap into selection identity/source lineage;
+- only DEPLOYABLE FP5 assessment may promote positive notional;
+- promoted notional = min(existing accepted fixed-fractional notional, current vault cash, FP5 max deployable notional);
+- HOLD_CASH / NOT_PROVEN must fail closed and cannot create a canonical BUY sizing selection;
+- Kelly/leverage/borrowing/forced deployment remain disabled;
+- no R21/R22 schema rewrite, no historical mutation, no runtime deployment.
+
+Acceptance target:
+- V1 exact behavior/regressions unchanged;
+- V2 cap deterministic and replay-stable;
+- FP5 assessment/vault/sizing policy/asset lineage mismatch rejected;
+- FP5 assessment identity survives into canonical sizing event/source evidence and later paper BUY lineage;
+- full paper + whole-repo regression and frozen Product/Development non-mutation PASS.
+
+Exact nextAction:
+Inspect exact PositionSizingAssessment/current-vault semantics, implement the smallest backward-compatible V2 promotion and focused tests, then add an isolated UID504 acceptance workflow. Do not merge until exact-head acceptance and main/duplicate recheck.
+
+
+
+### FP5-B IMPLEMENTATION READY / PRE-PR CHECKPOINT — 2026-09-30
+
+status: FP5B_ACCEPTANCE_READY
+baseMain: b7cadf0b49fb6b57ec804040cab73702eb5d0a56
+branch: fp5b/portfolio-risk-sizing-promotion-v2
+preCheckpointImplementationHead: 94da812a98c957b4994e74306b2cf42fbd010a23
+worktree: no session-local /Volumes worktree
+duplicateAudit: no open competing FP5/portfolio-risk integration PR; branch is 8 commits ahead / 0 behind exact main
+classification: EXTEND accepted S11 canonical sizing with FP5-A risk envelope; preserve V1 identity/behavior
+
+Implemented:
+- backward-compatible V2 paper-sizing policy `stream-s11-fixed-fractional-portfolio-risk-promotion-v2/1`;
+- V1 canonical selection payload remains byte/identity compatible because FP5 fields are absent from the V1 payload;
+- V2 binds FP5 assessment identity, exact canonical R21 consolidated portfolio identity and FP5 max-deployable cap into selection identity/source lineage;
+- V2 notional is bounded by accepted fixed-fractional hypothetical notional, exact current vault cash and FP5 max deployable notional;
+- HOLD_CASH / NOT_PROVEN produce no positive canonical sizing selection;
+- candidate/vault/sizing-policy/risk-input/portfolio-source lineage mismatches fail closed;
+- FP5 gross exposure must reconcile to canonical R21 consolidated marked exposure;
+- Kelly/probability promotion, leverage, borrowing, forced deployment and real-capital authority remain unavailable;
+- no R21/R22 schema mutation or historical backfill.
+
+Focused proof added:
+- exact V1 identity payload regression;
+- deterministic FP5 cap binding with an actually limiting cap;
+- FP5 identities propagate into canonical S11 sizing event source evidence;
+- HOLD_CASH and NOT_PROVEN do not promote;
+- stale portfolio and mismatched risk-input identity rejected.
+
+Acceptance workflow:
+- `.github/workflows/fp5b-portfolio-sizing-uid504.yml`
+- requires exact-head source + frozen runtime, focused tests/Ruff/mypy, FP3/S11 V1 compatibility, whole-repo regression and Product/Development non-mutation.
+
+Current blocker:
+- no exact-head PR acceptance has run yet.
+
+Exact nextAction:
+Open the sole FP5-B PR from this branch to current main. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact PR head; inspect mechanical outputs rather than treating workflow existence as PASS.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 1 — CIRCULAR IMPORT BLOCKER — 2026-09-30
+
+testedHead: fecdeb9d4192a93624491232a948e817f5c3875d
+pr: #1701
+dedicatedRunJob: 36639914277 / 109649497469
+exactSourceAndFrozenRuntime: PASS
+focusedAcceptance: FAIL_DURING_PYTEST_COLLECTION
+developmentProductNonMutation: PASS
+historicalBackfill: NO
+realCapital: 0
+
+Mechanical blocker:
+- `canonical_sizing.py` imported `portfolio_risk_v2` at runtime for type/status references;
+- `portfolio_risk_v2 -> autopilot_forward_sizing -> ... -> canonical_sizing_events -> canonical_sizing` closes an existing dependency cycle;
+- pytest collection therefore failed with partially initialized `CanonicalPaperSizingSelection`;
+- no behavioral assertion, Ruff, mypy or regression result exists on this head after the collection failure.
+
+Repair boundary:
+- remove the new runtime dependency from canonical sizing;
+- keep FP5 assessment as a type-only dependency and compare its status through the accepted enum value carried by the object;
+- do not change V2 notional formula, lineage contract, V1 payload semantics or safety boundary.
+
+Exact nextAction:
+Apply only the circular-import repair, append the repair handoff, and require all exact-head acceptance lanes again. No result from `fecdeb9d...` can close the gate.
+
+
+
+### FP5-B CIRCULAR-IMPORT REPAIR APPLIED — 2026-09-30
+
+repairCommit: 7afbee135c89a897888636699d2799f0bdc6c6f1
+repairType: DEPENDENCY_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+v1SemanticChange: NO
+
+Repair:
+- removed runtime `portfolio_risk_v2` import from `canonical_sizing.py`;
+- `PortfolioAllocationAssessmentV2` is now TYPE_CHECKING-only;
+- runtime status dispatch reads the accepted FP5 status enum value (`deployable`, `hold_cash`, `not_proven`) from the supplied immutable assessment;
+- V2 cap formula, exact R21/FP5 lineage checks, V1 payload compatibility and authority boundaries are unchanged.
+
+Acceptance rule:
+All results from prior head `fecdeb9d...` are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 again on the final exact head after this checkpoint.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 2 — WC6 RUFF-ONLY BLOCKER — 2026-09-30
+
+testedHead: 1628e318234c37904371e96aca9b49bf379a2233
+pr: #1701
+wc6RunJob: 36640078864 / 109650020897
+wc6ExactSource: PASS
+wc6FocusedRecovery: PASS
+wc6PaperPytest: PASS
+wc6PaperStatic: FAIL_RUFF_ONLY
+developmentNonMutation: PASS
+
+Exact Ruff findings in `canonical_sizing.py`:
+- I001 import block formatting: missing separator before TYPE_CHECKING block;
+- UP037 unnecessary quoted annotation under `from __future__ import annotations`.
+
+No functional paper test failed. Whole-repo WC6 was skipped only because Ruff stopped the step.
+
+Repair boundary:
+Formatting/type-annotation syntax only. No runtime dependency, cap formula, lineage, identity payload, V1 semantics or authority behavior may change.
+
+Exact nextAction:
+Apply the two Ruff-only fixes, record repair commit, and rerun all final-head lanes. Treat `1628e318...` as stale for merge.
+
+
+
+### FP5-B RUFF-ONLY REPAIR APPLIED — 2026-09-30
+
+repairCommit: 02bf03930ca43b41fa4d8496bfcaa2746f0633e3
+repairType: STATIC_FORMATTING_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+v1SemanticChange: NO
+
+Changes:
+- inserted the Ruff-required blank line before the TYPE_CHECKING block;
+- removed the unnecessary quoted type annotation under deferred annotations.
+
+Acceptance rule:
+All earlier lane results are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact head after this durable checkpoint.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 3 — TEST RUFF-ONLY BLOCKER — 2026-09-30
+
+testedHead: f47cec13fa98bd18526f10273b1159d1559a750f
+pr: #1701
+dedicatedRunJob: 36640264065 / 109650629848
+exactSourceAndFrozenRuntime: PASS
+focusedPytest: PASS
+focusedRuff: FAIL_TEST_STYLE_ONLY
+developmentProductNonMutation: PASS
+
+Exact blocker:
+- `tests/test_canonical_paper_sizing.py:282` FURB157: `Decimal("12")` should be `Decimal(12)`.
+- All 16 focused behavioral tests passed before Ruff.
+- No source behavior, identity or lineage failure observed on this head.
+
+Repair boundary:
+Change the test literal only; no source code or acceptance semantics.
+
+Exact nextAction:
+Apply one-line test style repair and rerun every required lane on the new exact head. `f47cec13...` remains stale for merge.
+
+
+
+### FP5-B TEST-RUFF REPAIR APPLIED — 2026-09-30
+
+repairCommit: 87e07ecae0512fdbf62b0cc3bf425c49cdbc0d4e
+repairType: TEST_STYLE_ONLY
+sourceCodeChanged: NO
+behaviorChange: NO
+
+Change:
+- replaced `Decimal("12")` with Ruff-preferred `Decimal(12)` in the cap assertion only.
+
+Acceptance rule:
+Fresh exact-head dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 are required again after this checkpoint; all earlier results are stale.
