@@ -1671,47 +1671,47 @@ class FinalProductReadModel:
             and self.signal_ledger_path.is_file()
         ):
             try:
-                    detail = DashboardReader(
-                        self.signal_ledger_path
-                    ).signal_detail(normalized_query)
-                    if (
-                        detail.status is ProductDataStatus.READY
-                        and detail.signal is not None
-                    ):
-                        signal = detail.signal
-                        item = GlobalSearchItem(
-                            kind_label="Kanıt",
-                            title=(
-                                f"{signal.symbol} · "
-                                f"{signal.direction.value}"
-                            ),
-                            summary=(
-                                f"{signal.setup_type} · "
-                                f"{signal.state.value} · {signal.timeframe}"
-                            ),
-                            symbol=signal.symbol,
-                            timestamp_ms=signal.frozen_at_ms,
-                            source_label="Frozen Signal Archive",
-                            audit=(
-                                GlobalSearchAudit(
-                                    source_identity=signal.signal_freeze_identity,
-                                    signal_freeze_identity=(
-                                        signal.signal_freeze_identity
-                                    ),
-                                )
-                                if include_audit
-                                else None
-                            ),
-                        )
-                        _append_search_candidate(
-                            candidates,
-                            priority=0,
-                            item=item,
-                            source_key=(
-                                "signal",
-                                signal.signal_freeze_identity,
-                            ),
-                        )
+                detail = DashboardReader(
+                    self.signal_ledger_path
+                ).signal_detail(normalized_query)
+                if (
+                    detail.status is ProductDataStatus.READY
+                    and detail.signal is not None
+                ):
+                    signal = detail.signal
+                    item = GlobalSearchItem(
+                        kind_label="Kanıt",
+                        title=(
+                            f"{signal.symbol} · "
+                            f"{signal.direction.value}"
+                        ),
+                        summary=(
+                            f"{signal.setup_type} · "
+                            f"{signal.state.value} · {signal.timeframe}"
+                        ),
+                        symbol=signal.symbol,
+                        timestamp_ms=signal.frozen_at_ms,
+                        source_label="Frozen Signal Archive",
+                        audit=(
+                            GlobalSearchAudit(
+                                source_identity=signal.signal_freeze_identity,
+                                signal_freeze_identity=(
+                                    signal.signal_freeze_identity
+                                ),
+                            )
+                            if include_audit
+                            else None
+                        ),
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=0,
+                        item=item,
+                        source_key=(
+                            "signal",
+                            signal.signal_freeze_identity,
+                        ),
+                    )
             except (DashboardReadError, ValueError):
                 stream_coverage = "Signal araması doğrulanamadı"
 
