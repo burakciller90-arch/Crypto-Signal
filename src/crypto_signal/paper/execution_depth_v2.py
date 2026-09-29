@@ -113,12 +113,15 @@ class DepthExecutionOutcome:
                 raise ValueError("PARTIAL outcome requires partial-fill policy")
             if not (Decimal(0) < self.filled_quantity < self.requested_quantity):
                 raise ValueError("PARTIAL outcome requires a strict partial fill")
-        elif self.status in {
-            DepthExecutionStatus.NOT_FILLED,
-            DepthExecutionStatus.FILL_NOT_PROVEN,
-        }:
-            if self.filled_quantity != Decimal(0):
-                raise ValueError("unfilled/not-proven outcome cannot contain a fill")
+        elif (
+            self.status
+            in {
+                DepthExecutionStatus.NOT_FILLED,
+                DepthExecutionStatus.FILL_NOT_PROVEN,
+            }
+            and self.filled_quantity != Decimal(0)
+        ):
+            raise ValueError("unfilled/not-proven outcome cannot contain a fill")
         if self.status is DepthExecutionStatus.FILL_NOT_PROVEN and self.execution_provable:
             raise ValueError("FILL_NOT_PROVEN requires execution_provable=False")
         if self.status is not DepthExecutionStatus.FILL_NOT_PROVEN and not self.execution_provable:
