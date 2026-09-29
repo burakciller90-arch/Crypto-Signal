@@ -1454,7 +1454,7 @@ class FinalProductReadModel:
                 f"global search limit must be inside 1..{MAX_GLOBAL_SEARCH_LIMIT}"
             )
 
-        symbols = _normalize_symbols(configured_symbols)
+        symbols = _normalize_symbols(configured_symbols) if configured_symbols else ()
         lowered = normalized_query.casefold()
         exact_identity = _looks_like_sha256(normalized_query)
         candidates: list[
