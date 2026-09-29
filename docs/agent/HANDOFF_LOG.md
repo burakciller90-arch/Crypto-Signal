@@ -3215,3 +3215,49 @@ Repair classification:
 
 Exact nextAction:
 Patch only tests/test_final_product_read_model.py conflict fixture with the mandatory Decision Ledger authority fields, then rerun the same exact UID504 pytest/Ruff/mypy/non-mutation/project-isolation acceptance harness.
+
+
+## FP1-B2 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_PASS
+activeBranch: fp1b/attention-workspace-family-summary
+acceptedHead: 8e8caa9862e4e78d2762dcaf9d8760cebe5cc444
+uid504Run: 36561360292
+uid504Job: 109382904345
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source isolated UID504 checkout PASS;
+- focused Stream family/read-model/system-view/UI + final-product Workspace pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no RDP11 soak runtime mutation.
+
+Accepted B2 semantics:
+- Workspace classifies verified detail kind before field projection;
+- System View uses only persisted system-view state/text/conditions/trust context;
+- Family Workspace keeps decision-only trigger/target/invalidation unavailable;
+- Family/Decision evidence availability is summarized from existing Exact Evidence resolution counts only;
+- Decision Workspace uses exact Stream trigger/target/invalidation/event/probability/uncertainty truth;
+- missing optional Decision Evidence path is non-creating and does not break core Workspace;
+- configured Decision Evidence lineage conflict fails closed;
+- confluence score is never converted into probability;
+- capital message kinds are explicitly deferred to Portföy/Sermaye work rather than reinterpreted;
+- default customer payload hides SHA/raw materiality/evidence-resolution/probability/capital enum vocabulary;
+- audit mode preserves exact provenance;
+- REAL_CAPITAL=0.
+
+Temporary acceptance harness:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml currently contains branch-only FP1-B2 trigger/test wiring;
+- this must be restored to exact current-main content before PR.
+
+Exact nextAction:
+Restore MI1 workflow to exact current-main content, verify workflow blob equality, verify FP1-B branch diff contains only B1/B2 production/tests/docs/agent checkpoints, then open the FP1-B implementation PR against current main.
