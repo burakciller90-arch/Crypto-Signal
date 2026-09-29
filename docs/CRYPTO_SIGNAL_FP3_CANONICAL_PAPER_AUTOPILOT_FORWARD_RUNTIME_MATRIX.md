@@ -1,6 +1,6 @@
 # Crypto Signal — FP3 Canonical Paper Capital Autopilot Forward Runtime Matrix
 
-Status: **AUDIT COMPLETE / FP3-A IMPLEMENTATION AUTHORIZED**
+Status: **FP3-A ACCEPTED / FP3-B NEXT**
 Date: 2026-09-29
 Base main: `439f304d423a643597b089653bbf53f030981a45`
 Active branch: `fp3/canonical-paper-autopilot-forward-runtime`
@@ -196,3 +196,40 @@ Truth tables are UPDATE/DELETE protected.
 Implement FP3-A only: isolated activation/receipt/replay owner over the already accepted `IntelligenceStreamCapitalForwardRuntime`. Add focused tests for future-bound activation, no backfill, HOLD/decision composition, exact-idempotent replay, crash-style missing-receipt recovery and immutable receipt storage.
 
 Do not implement FP3-B/C trade execution in the same commit.
+
+
+## 9. FP3-A UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head:
+- head SHA: `5bcad4b766f41bcdf6c3b2deb2432a404f317087`;
+- run: `36590509829`;
+- job: `109482068773`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- exact-source checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 branch wiring restored in `08fc8491bd3dd32ee21f8ff550755a7dba3a01dd`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted FP3-A result:
+- one canonical forward owner composes the already accepted Capital forward runtime;
+- isolated activation/receipt store is append-only and immutable;
+- pre-activation issuance cannot backfill;
+- exact replay returns receipt without re-touching canonical ledgers;
+- crash after accepted front-half writes but before receipt is recoverable by idempotent rerun + missing-receipt append;
+- no sizing/trade execution was added yet;
+- no R21/R22/S11 engine was duplicated;
+- no Product/Development deploy or RDP11 soaked-runtime mutation occurred.
+
+Next mechanically allowed slice:
+**FP3-B — eligible fixed-fractional sizing bridge**.
