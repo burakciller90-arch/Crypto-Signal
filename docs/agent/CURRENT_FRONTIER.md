@@ -2533,3 +2533,48 @@ Current blocker:
 
 Exact nextAction:
 Audit the accepted Stream/system-view/signal-detail/exact-evidence/Decision-Proof payloads specifically for FP1-B, record a bounded FP1-B field/source matrix, then implement the smallest read-only slice only after that audit is durable.
+
+
+## FP1-B1 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_B1_IMPLEMENTATION_START
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+activeBranch: fp1b/attention-workspace-family-summary
+auditDocument: docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md
+auditCommit: 81198cd62fa83a4ebf6a8b930ffda0289acdb76c
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Bounded implementation:
+- add Attention Situations read model only from persisted Stream/System View truth;
+- canonical narrative admission requires persisted materiality=PUBLISH/MATERIAL;
+- important System View admission uses its own persisted importance field and is not mislabeled as core materiality-policy output;
+- no new materiality/confidence/predictive score;
+- deterministic ordering only: critical > important, then event time desc, then immutable identity;
+- add enriched Five-Family Summary by joining System View rows to verified source family narrative detail;
+- preserve source_as_of, evidence domains, uncertainty and unavailable state;
+- default customer layer hides SHA/raw enum/database vocabulary;
+- audit mode preserves exact provenance;
+- no Workspace/Decision-Proof implementation in B1;
+- no Product route/frontend/deploy/runtime mutation.
+
+B1 PASS:
+- explicit unavailable on missing Stream DB/table;
+- read-only only;
+- routine/silent message cannot enter Attention;
+- exact material candidates remain eligible;
+- important System View candidates remain eligible but source semantics remain distinct;
+- deterministic bounded top-N;
+- family source time/freshness/evidence domains/uncertainty derive from verified family fact detail;
+- no source narrative -> explicit unavailable enrichment;
+- no SHA/raw internal state in default customer payload;
+- audit provenance exact;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- RDP11 untouched;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect current final_product_read_model.py and its focused test fixture one last time, then implement the smallest FP1-B1 extension plus deterministic temp-ledger tests without changing web.py or frontend files.
