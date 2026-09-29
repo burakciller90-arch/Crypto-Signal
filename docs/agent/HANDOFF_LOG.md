@@ -5448,3 +5448,33 @@ Bounded fix:
 Exact nextAction:
 Apply exactly the two Ruff fixes, rerun exact-head UID504 acceptance, then inspect strict mypy separately if it becomes the next blocker.
 
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 3 — 123/123 PYTEST PASS / FINAL RUFF FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_3_STYLE_ONLY
+acceptanceRun: 36600284263
+acceptanceJob: 109515587164
+attemptedHead: 4ee15ba455247c241e46d55befc7050cf083668f
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest: 123/123 PASS;
+- prior Stream-context failure is closed;
+- prior import-order Ruff failure is closed;
+- one Ruff finding remains only;
+- Product/Development non-mutation PASS.
+
+Exact remaining Ruff finding:
+- SIM102: combine the no-quantity action-set nested if in FP3ActionIntent validation.
+
+Bounded fix:
+- style-only conditional refactor;
+- no action policy, quantity rule, replay, R21/R22 mutation, Stream projection, persistence or lifecycle semantic change.
+
+Exact nextAction:
+Combine the final nested action/quantity guard, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
