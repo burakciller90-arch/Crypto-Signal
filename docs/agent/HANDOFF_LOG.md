@@ -1527,3 +1527,32 @@ minimalRepair:
 
 nextAction:
 - exact-head pre-soak fulltest; PR/merge only after PASS; then Development sync + canonical fulltest before Product deploy.
+
+
+
+---
+
+## 2026-09-29 — RDP11 third pre-soak failure handoff
+
+status: BLOCKED_LINT_ONLY
+testedHead: d0520641b94d20ba7d539ebf8a798d1e4fba5c4e
+run: 36538027413
+job: 109306720103
+conclusion: FAILURE
+pytestReached100Percent: YES
+canonicalDevelopmentMutated: NO
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+
+remainingBlocker:
+- Ruff I001 only: tests/test_rdp1_runtime_reliability.py import ordering.
+- production/runtime semantics are not implicated.
+- mypy/JS acceptance remains pending because Ruff stopped the shell first.
+
+minimalRepair:
+- import ordering only.
+
+nextAction:
+- fix import order; rerun exact-head pre-soak workflow; require complete PASS before PR/merge.
