@@ -4249,3 +4249,31 @@ Bounded fix:
 Exact nextAction:
 Apply the one-line empty-universe normalization fix and rerun exact-head UID504 acceptance.
 
+
+
+## FP1-F ACCEPTANCE ATTEMPT 3 FAIL / STYLE-ONLY FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_3_STYLE_ONLY
+acceptanceRun: 36582841674
+acceptanceJob: 109457334434
+attemptedHead: c474c1ebd7c3015bb946c05b253b69acd584fa48
+realCapital: 0
+historicalBackfill: NO
+
+Observed acceptance progression:
+- the workflow progressed past focused/regression pytest into Ruff;
+- prior timeframe and empty configured-symbol semantic failures no longer appeared;
+- gate failed only at Ruff with exactly three style findings.
+
+Exact Ruff findings:
+1. import order: DashboardReader must precede DashboardReadError;
+2. prefer row.symbol.removesuffix("USDT") over the conditional slice;
+3. combine nested signal-ledger exact-identity if statements.
+
+Bounded fix:
+- style/refactor only;
+- no source contract, query, ordering, dedupe, coverage, ranking or persistence semantic change.
+
+Exact nextAction:
+Apply exactly the three Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to exact current-main content.
+
