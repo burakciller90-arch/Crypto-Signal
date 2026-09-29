@@ -1961,3 +1961,64 @@ No evidence/source/trading semantics may change.
 ### Exact nextAction
 
 Implement the bounded large-DB probe and completion-time observation semantics, then rerun the dedicated UID504 dry-run gate and whole-repository pre-soak regression on the exact final head.
+
+
+## RDP11 observer exact-head branch acceptance checkpoint — 2026-09-29
+
+Accepted code head:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+
+Dedicated real UID504 observer acceptance:
+- workflow: RDP11 Soak Observer UID504
+- run: `36546432974`
+- job: `109333830960`
+- conclusion: SUCCESS
+- exact runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Product/Development exact target + clean check: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health HTTP 200 / 0.003638s
+  - messages HTTP 200 / 4.223819s
+  - finite SSE HTTP 200 / 2.106748s
+  - intelligence center HTTP 200 / 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Whole-repository regression on same code head:
+- workflow: RDP11 Pre-Soak Fulltest UID504
+- run: `36546433066`
+- job: `109334016913`
+- conclusion: SUCCESS
+- pytest PASS
+- Ruff: All checks passed
+- mypy: no issues in 267 source files
+- `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted observer semantics:
+- recurring large live Market Tape verification is bounded read/lock/schema inspection rather than a multi-minute full DB scan;
+- smaller control/evidence databases retain read-only quick-check validation;
+- heartbeat/raw freshness uses the wall-clock at each live read boundary;
+- strict future timestamp rejection remains;
+- 120s collector freshness threshold remains;
+- successful observation timestamp is completion-time, so it cannot predate evidence sampled during the observation;
+- branch/PR acceptance never creates a soak anchor or acceptance sidecar.
+
+Soak status:
+- immutable 72h anchor: NOT CREATED
+- RDP11 clock: NOT STARTED
+- RDP11 PASS: NO
+
+Current blocker:
+- final PR-head acceptance and merge are still required;
+- only merged-main non-dry-run observation may create/reuse the immutable soak anchor.
+
+Exact nextAction:
+Recheck canonical main and duplicate PRs, open one PR from this isolated branch, require both dedicated observer PR acceptance and pre-soak fulltest on the final PR head, then merge with expected-head guard only if main has not advanced incompatibly.
