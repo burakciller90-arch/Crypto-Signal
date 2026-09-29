@@ -6155,3 +6155,25 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - no R21/R22 mutation, deploy/backfill or real capital
 - REAL_CAPITAL=0; Durdurulmaz/Quantum untouched
 - nextAction: implement isolated immutable envelope + tests, then exact-head UID504 acceptance
+
+
+## 2026-09-29 — FP5-A portfolio-risk implementation checkpoint
+
+- task-start main: `5d5852a422ae48d2a53e0e99303372289197e251`
+- branch: `fp5a/portfolio-risk-envelope-v2`
+- final FP4 Workbench: `36628675283/109612066152` PASS, exact main `5d5852a422ae48d2a53e0e99303372289197e251`, main, dirty0
+- implemented immutable `PortfolioRiskSnapshotV2` and `PortfolioAllocationAssessmentV2`
+- explicit sorted asset gross exposure + correlation-cluster membership/caps
+- portfolio gross cap, cluster cap, minimum cash reserve, max drawdown and fixed-fractional risk fraction are frozen in snapshot identity
+- candidate allocation consumes transaction-cost fraction + stop/invalidation fraction and computes risk-limited notional
+- current BTC exposure contributes to ETH/SOL candidate CRYPTO_BETA cluster exposure; exposure cannot escape cluster cap
+- event/liquidity/conflict flags are strict booleans and fail closed
+- missing snapshot or missing/ambiguous candidate cluster => NOT_PROVEN, zero capacity
+- 100% cash/HOLD_CASH is valid; no forced deployment
+- Kelly/leverage/borrowing all hard disabled
+- existing FP3 sizing/risk + Smart Capital Slice1 + read-only portfolio owners remain unchanged
+- dedicated workflow: `.github/workflows/fp5a-portfolio-risk-uid504.yml`
+- no R21/R22 mutation, deploy or backfill
+- REAL_CAPITAL=0; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not yet run
+- nextAction: open isolated PR and require dedicated FP5-A + existing-owner compatibility + full regression + WC6/RDP11/F10 before merge
