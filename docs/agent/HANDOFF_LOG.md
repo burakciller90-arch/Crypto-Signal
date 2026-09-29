@@ -4578,3 +4578,55 @@ Current blocker:
 Exact nextAction:
 Implement vault_v3.py with deterministic constitution/allocation identities, explicit STOP/ARCHIVE lifecycle and immutable separate SQLite store; add focused tests proving identity, no-reset, idempotence, read-only/missing behavior and legacy byte non-mutation.
 
+
+
+## FP2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_ACCEPTANCE_START
+verifiedMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+implementationHead: bb1049720c63f693fccb8ded644e29bfcd2f35dc
+branchAheadMain: 7
+branchBehindMain: 0
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- separate Paper Vault V3 constitution namespace;
+- deterministic allocation-policy identity;
+- deterministic constitution identity over exact starting capital/policies/instruments/evidence refs;
+- default 10,000 USDT builder value frozen per constitution, custom positive capital supported;
+- V3 policy books CORE/TACTICAL/OPPORTUNITY/CASH;
+- minimum market exposure exactly 0, 100% cash valid;
+- cross-vault borrowing false and forced deployment false;
+- separate caller-supplied SQLite store; exact Epoch1/Epoch2 filenames rejected;
+- immutable constitution/lifecycle tables with UPDATE/DELETE abort triggers;
+- idempotent exact constitution/event append;
+- STOP and ARCHIVE append-only lifecycle with no reactivation/reset;
+- read-only missing-store semantics non-creating;
+- stored payload digest/canonical identity/REAL_CAPITAL/authority verification;
+- no edits to epochs.py, epoch2_accounting.py, transaction tape, Smart Capital Allocator, routes/frontend/runtime/deploy.
+
+Focused tests:
+- deterministic/canonical identity and policy freeze;
+- custom starting capital creates distinct vault instead of reset;
+- 100% cash/no forced exposure/no borrowing;
+- separate V3 persistence preserves legacy sentinel bytes;
+- SQL UPDATE/DELETE immutability;
+- STOP -> ARCHIVE lifecycle and stale-transition rejection;
+- direct ACTIVE -> ARCHIVE;
+- missing constitution/backfill rejection;
+- missing DB reads non-creating;
+- Epoch1/Epoch2 ledger filename rejection;
+- corrupted persisted payload fails closed;
+- multiple constitutions coexist as separate histories.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance to this branch with test_paper_vault_v3.py and vault_v3.py added to pytest/Ruff/mypy, inspect exact logs, fix only evidenced failures, then restore workflow to current-main blob after PASS.
+
