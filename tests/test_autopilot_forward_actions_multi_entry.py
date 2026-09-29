@@ -325,7 +325,14 @@ def test_fp3_c2_scale_in_then_exit_preserves_multi_entry_lineage_and_replays(
     assert len(active_entries) == 2
     assert active_entries[0].forecast_identity == first_issuance.forecast.forecast_identity
     assert active_entries[1].forecast_identity == second_issuance.forecast.forecast_identity
-    assert active_entries[0].sizing_assessment_identity != active_entries[1].sizing_assessment_identity
+    assert (
+        active_entries[0].sizing_assessment_identity
+        != active_entries[1].sizing_assessment_identity
+    )
+    assert (
+        active_entries[0].sizing_decision_identity
+        == active_entries[1].sizing_decision_identity
+    )
 
     history = R22Epoch2AtomicTape(epoch2_path).read_trade_history(
         PaperVaultId.CORE,
