@@ -6234,3 +6234,37 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - all old-head PASS results become stale for merge
 - REAL_CAPITAL=0; no runtime mutation/deploy/backfill
 - nextAction: fresh new-head FP5-A/WC6/RDP11/F10 only
+
+
+## 2026-09-30 — RDP11 invalidated-soak re-anchor R2 task start
+
+status: RDP11_REANCHOR_PREP
+mainShaAtStart: d98db8d7cbc020eb8c90471ae089aa810f5810bb
+branch: rdp11/reanchor-invalidated-epoch-r2
+worktree: no session-local /Volumes worktree
+runtimeTargetSha: 3d9f33db3f1189571d40566125fbeabd00c04930
+oldEpoch: rdp11-3d9f33db-20260929
+firstInvalidationRunJob: 36622461578 / 109591020809
+reason: ConnectionResetError:[Errno 54] Connection reset by peer
+surface: observer GET /api/intelligence-center
+newEpochCandidate: rdp11-3d9f33db-20260930-r2
+
+facts:
+- old epoch is mechanically invalidated and cannot close RDP11 even after its former 72h date;
+- old anchor/observations/failures/invalidated.json remain immutable and preserved;
+- subsequent endpoint probes recovered, but the gate will not be weakened or retrospectively repaired;
+- duplicate audit found no competing open RDP11 re-anchor PR/branch before this task;
+- FP5-A PR #1698 merged separately as d98db8d7cbc020eb8c90471ae089aa810f5810bb and does not mutate the frozen RDP11 Product/Development target.
+
+safety:
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- Product/Development deploy or mutation: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+nextAction:
+- change only the scheduled RDP11 epoch pointer to rdp11-3d9f33db-20260930-r2;
+- require exact-head branch/PR dry-run plus pre-soak regression acceptance;
+- recheck main immediately before merge;
+- after merge require a successful non-dry-run observation creating a fresh immutable anchor against the same frozen runtime SHA.

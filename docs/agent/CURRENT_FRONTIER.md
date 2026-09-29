@@ -6941,3 +6941,42 @@ Recovery:
 Acceptance rule:
 - previous dedicated/F10 PASS remain useful diagnostics but are stale for merge after this commit;
 - require dedicated FP5-A + WC6 + RDP11 + F10 PASS again on the new exact head before merge.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-30 — RDP11 invalidated soak re-anchor R2
+
+status: RDP11_REANCHOR_PREP
+canonicalMainAtTaskStart: `d98db8d7cbc020eb8c90471ae089aa810f5810bb`
+activeBranch: `rdp11/reanchor-invalidated-epoch-r2`
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+frozenRuntimeTarget: `3d9f33db3f1189571d40566125fbeabd00c04930`
+invalidatedEpoch: `rdp11-3d9f33db-20260929`
+firstMechanicalInvalidationRunJob: `36622461578/109591020809`
+invalidationReason: `ConnectionResetError:[Errno 54] Connection reset by peer`
+invalidationSurface: `GET /api/intelligence-center` inside immutable soak observer
+candidateReplacementEpoch: `rdp11-3d9f33db-20260930-r2`
+
+Duplicate/stale-work audit:
+- open RDP11/re-anchor PR: NONE
+- open RDP11/re-anchor branch: NONE before this branch
+- old epoch is immutable evidence and MUST NOT be deleted, rewritten, or backfilled
+- the old 2026-10-02 eligibility timestamp is void for PASS because the epoch is mechanically invalidated
+- endpoint probes recovered after the event; no evidence authorizes weakening/retrying-away the historical continuity failure
+
+Bounded task:
+- change only the scheduled observer epoch pointer needed to start a new immutable epoch against the same accepted frozen runtime SHA;
+- keep observer semantics and failure thresholds unchanged;
+- require branch/PR dry-run acceptance before merge;
+- require first merged-main live observation to create a brand-new anchor and prove canonical Product/Development remained untouched.
+
+Safety:
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- frozen/historical evidence mutation: FORBIDDEN
+- Product/Development deployment: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Advance only the RDP11 workflow epoch id to `rdp11-3d9f33db-20260930-r2`, run exact-head dry-run/pre-soak acceptance, recheck main/duplicates immediately before merge, then accept the new 72h clock only from the first successful merged-main non-dry-run anchor.

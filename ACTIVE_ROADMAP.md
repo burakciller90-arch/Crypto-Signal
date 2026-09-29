@@ -1,7 +1,7 @@
 # Crypto Signal — ACTIVE ROADMAP POINTER
 
 Status: **ACTIVE / CANONICAL**
-Updated: 2026-09-29
+Updated: 2026-09-30
 Repository: `burakciller90-arch/Crypto-Signal`
 Safety: **REAL_CAPITAL=0**
 
@@ -33,16 +33,18 @@ Mechanical gate authority while FP0 is open:
 
 **`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`**
 
-Current anchored soak:
-- frozen Product/Development runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`;
-- epoch: `rdp11-3d9f33db-20260929`;
-- soak start UTC: `2026-09-29T09:13:21.134000Z`;
-- earliest 72h eligibility UTC: `2026-10-02T09:13:21.134000Z`;
-- earliest eligibility Europe/Istanbul: `2026-10-02T12:13:21.134000+03:00`;
+Current RDP11 soak state:
+- frozen Product/Development runtime target remains: `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- previous epoch `rdp11-3d9f33db-20260929`: **INVALIDATED / IMMUTABLE HISTORICAL EVIDENCE**;
+- first mechanical invalidation proof: run/job `36622461578/109591020809`, observer `/api/intelligence-center` read raised `ConnectionResetError:[Errno 54] Connection reset by peer`;
+- previous `2026-10-02T09:13:21.134000Z` eligibility timestamp is **VOID FOR PASS**;
+- replacement epoch candidate: `rdp11-3d9f33db-20260930-r2`;
+- replacement epoch state: **PENDING_MERGED_MAIN_ANCHOR**;
+- replacement soak start / 72h eligibility: **NOT ASSERTED until the first successful merged-main non-dry-run observation creates the new immutable anchor**;
 - RDP0-RDP10: PASS;
 - RDP11: ACTIVE / NOT PASS.
 
-Elapsed time alone does not close FP0. The epoch must remain non-invalidated and the final RDP11 evidence audit must PASS mechanically.
+Do not delete, rewrite, backfill or reinterpret the invalidated epoch. Elapsed time alone never closes FP0; the replacement epoch must acquire a real immutable anchor, remain non-invalidated for its own full 72-hour minimum, and pass the final RDP11 evidence audit mechanically.
 
 ## 3. Locked post-FP0 sequence
 

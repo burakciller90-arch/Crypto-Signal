@@ -831,18 +831,22 @@ PASS:
 
 ## RDP11 — Continuous soak + final Evidence PASS
 
-Status: **ACTIVE — 72H SOAK RUNNING**
+Status: **ACTIVE — PRIOR EPOCH INVALIDATED / R2 RE-ANCHOR PENDING**
 
-Active soak checkpoint:
-- observer/anchor PR #1666 merged as main `02793adde16d18b681e869bbb560e736cc933ec5`;
-- durable soak handoff PR #1667 merged as main `e454f51bd9c6decf63abf9c33c7d8694af4d1e11`;
-- frozen Product/Development soak target remains `3d9f33db3f1189571d40566125fbeabd00c04930`;
-- merged-main observer run `36547457482` / job `109337164207`: SUCCESS;
-- `RDP11_SOAK_ANCHOR_CREATED=YES`;
-- soak start UTC: `2026-09-29T09:13:21.134000Z`;
-- earliest 72h eligibility UTC: `2026-10-02T09:13:21.134000Z`;
-- earliest 72h eligibility Europe/Istanbul: `2026-10-02T12:13:21.134000+03:00`;
-- `RDP11_SOAK_72H_ELIGIBLE=NO`;
+Current checkpoint:
+- observer/anchor PR #1666 originally created epoch `rdp11-3d9f33db-20260929` against frozen runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- that epoch is now **INVALIDATED** and remains immutable historical sidecar evidence;
+- first mechanical invalidation proof: scheduled observer run `36622461578` / job `109591020809`;
+- failure surface: observer `GET /api/intelligence-center` after the workflow latency probes had returned HTTP 200;
+- failure: `ConnectionResetError:[Errno 54] Connection reset by peer`;
+- subsequent observations correctly fail closed with `soak epoch is already invalidated`;
+- the old soak start `2026-09-29T09:13:21.134000Z` and old `2026-10-02T09:13:21.134000Z` eligibility timestamp can no longer close RDP11;
+- frozen Product/Development target remains unchanged at `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- replacement epoch candidate: `rdp11-3d9f33db-20260930-r2`;
+- replacement state: **PENDING_MERGED_MAIN_ANCHOR**;
+- new start/72h eligibility: **NOT ASSERTED until a successful merged-main non-dry-run observation creates the fresh immutable anchor**;
+- old epoch deletion/rewrite/backfill: FORBIDDEN;
+- observer semantics/thresholds are not weakened for the restart;
 - `RDP11_SOAK_SIDE_CAR_ONLY=YES`;
 - `RDP11_CANONICAL_RUNTIME_MUTATED=NO`;
 - `HISTORICAL_BACKFILL=NO`;

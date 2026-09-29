@@ -34,7 +34,7 @@ jobs:
       DEV: /Volumes/Crypto-504/Crypto-Signal/Development
       PRODUCT: /Volumes/Crypto-504/Crypto-Signal/Product
       TARGET_SHA: 3d9f33db3f1189571d40566125fbeabd00c04930
-      SOAK_EPOCH: rdp11-3d9f33db-20260929
+      SOAK_EPOCH: rdp11-3d9f33db-20260930-r2
     steps:
       - uses: actions/checkout@v4
 
