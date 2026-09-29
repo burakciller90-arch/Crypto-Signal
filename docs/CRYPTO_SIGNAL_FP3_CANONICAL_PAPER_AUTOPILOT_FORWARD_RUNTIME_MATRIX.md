@@ -493,3 +493,44 @@ No SCALE_IN claim is allowed before FP3-C2 acceptance PASS.
 
 Exact next action:
 Implement FP3-C1 only, then mechanically accept it before opening FP3-C2.
+
+
+## 14. FP3-C1 UID504 acceptance
+
+Status: **ACCEPTED / REVIEW READY**
+
+Accepted exact head:
+- SHA: `0d982d0fcf0456deabae332db1da9bb3763fd857`;
+- UID504 run: `36600881901`;
+- job: `109517801922`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- exact-source checkout PASS;
+- focused/regression pytest gate PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 7 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 wiring restored in `afd9c632c7e53e6e08199633fca706453ac70b56`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted C1 behavior:
+- OPEN -> canonical BUY only with accepted FP3-A/FP3-B lineage and zero prior position;
+- WAIT -> explicit no-trade;
+- STOP_UPDATE -> explicit unavailable;
+- SCALE_IN -> explicit unavailable pending FP3-C2 multi-entry lineage;
+- PARTIAL_TAKE_PROFIT -> canonical REDUCE;
+- TAKE_PROFIT / STOP / CLOSE -> canonical EXIT;
+- base forward Stream decision context is a fail-closed prerequisite before any R21/R22 mutation;
+- action evidence is bound into canonical R22 source lineage;
+- exact preflight replay + fill-to-bundle recovery prevents duplicate accounting after crash;
+- canonical Stream lifecycle projection owns execution/accounting/outcome messages;
+- action receipts are append-only in the isolated FP3 store;
+- no second accounting/execution/order engine exists.
+
+Exact next action:
+Open and merge FP3-C1 as an isolated PR after current-main/overlap checks. Then start FP3-C2 on fresh main with a new task-start checkpoint; do not claim SCALE_IN support until C2 acceptance PASS.
