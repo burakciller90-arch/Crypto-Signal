@@ -185,19 +185,19 @@ class PortfolioAllocationAssessmentV2:
         if self.policy_version != FP5_PORTFOLIO_RISK_POLICY_VERSION:
             raise ValueError("unsupported FP5 assessment policy")
         _require_asset(self.candidate_asset, "candidate_asset")
-        for value, label in (
+        for decimal_value, label in (
             (self.transaction_cost_fraction, "transaction_cost_fraction"),
             (self.stop_invalidation_fraction, "stop_invalidation_fraction"),
         ):
-            _require_unit_interval(value, label)
+            _require_unit_interval(decimal_value, label)
         if self.stop_invalidation_fraction == Decimal(0):
             raise ValueError("stop/invalidation fraction must be positive")
-        for value, label in (
+        for flag_value, label in (
             (self.event_risk_clear, "event_risk_clear"),
             (self.liquidity_eligible, "liquidity_eligible"),
             (self.conflict_clear, "conflict_clear"),
         ):
-            _require_bool(value, label)
+            _require_bool(flag_value, label)
         if self.reason_codes != tuple(sorted(set(self.reason_codes))):
             raise ValueError("reason codes must be sorted unique")
         _require_non_negative_decimal(
@@ -239,7 +239,7 @@ class PortfolioAllocationAssessmentV2:
             _require_sha256(self.snapshot_identity, "snapshot_identity")
             if self.candidate_cluster_id is None:
                 raise ValueError("proven assessment requires candidate cluster")
-            for label, value in (
+            for label, optional_decimal in (
                 ("current_gross_exposure_usdt", self.current_gross_exposure_usdt),
                 (
                     "current_cluster_exposure_usdt",
@@ -254,9 +254,9 @@ class PortfolioAllocationAssessmentV2:
                 ),
                 ("risk_limited_notional_usdt", self.risk_limited_notional_usdt),
             ):
-                if value is None:
+                if optional_decimal is None:
                     raise ValueError(f"proven assessment requires {label}")
-                _require_non_negative_decimal(value, label)
+                _require_non_negative_decimal(optional_decimal, label)
             if self.status is PortfolioRiskStatus.HOLD_CASH:
                 if self.max_deployable_notional_usdt != Decimal(0):
                     raise ValueError("HOLD_CASH must expose zero deployable capacity")
