@@ -3173,3 +3173,45 @@ Acceptance harness rule:
 
 Exact nextAction:
 Temporarily wire the existing MI1 UID504 harness to the FP1-B branch, run exact head acceptance, record the exact first mechanical failure before any repair, and do not claim B2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
+
+
+## FP1-B2 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_TEST_FIX_REQUIRED
+activeBranch: fp1b/attention-workspace-family-summary
+acceptanceHead: d23ffb7b0f5141cf5c9e4e5d8cb8f4bdd889de9d
+uid504Run: 36560940382
+uid504Job: 109381375352
+artifactId: 11030080876
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- focused suite reached 100%;
+- exactly one B2 test failed:
+  test_workspace_configured_conflicting_decision_proof_fails_closed;
+- System View Workspace PASS;
+- Family Workspace PASS;
+- Decision Workspace with missing optional Decision Evidence PASS;
+- customer no-SHA/raw-state vocabulary test PASS;
+- source byte/WAL non-mutation assertions PASS;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- Ruff/mypy did not run because pytest fail-fast stopped the command chain.
+
+Exact failure interpretation:
+- conflict fixture proof payload omitted immutable Decision Ledger authority boundary fields;
+- ImmutableDecisionEvidenceLedger._verified_payload therefore fails earlier on its own persisted REAL_CAPITAL boundary before B2 reaches the intended Stream-vs-proof identity mismatch assertion;
+- public B2 behavior still fails closed as designed, but the test is exercising the wrong fail-closed layer.
+
+Repair classification:
+- TEST FIX ONLY;
+- do not change production Workspace semantics;
+- add real_capital=0 and production_authority=false to the synthetic conflicting proof payload;
+- retain a deliberately different proof_identity so B2 itself must raise Decision Evidence proof lineage mismatch.
+
+Exact nextAction:
+Patch only tests/test_final_product_read_model.py conflict fixture with the mandatory Decision Ledger authority fields, then rerun the same exact UID504 pytest/Ruff/mypy/non-mutation/project-isolation acceptance harness.
