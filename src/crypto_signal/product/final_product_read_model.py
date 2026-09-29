@@ -36,7 +36,7 @@ from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
 from crypto_signal.product.models import ProductDataStatus
-from crypto_signal.product.reader import DashboardReadError, DashboardReader
+from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
@@ -1500,11 +1500,7 @@ class FinalProductReadModel:
                     include_audit=True,
                 )
                 for row in screener.items:
-                    base_asset = (
-                        row.symbol[:-4]
-                        if row.symbol.endswith("USDT")
-                        else row.symbol
-                    )
+                    base_asset = row.symbol.removesuffix("USDT")
                     exact_asset = lowered in {
                         row.symbol.casefold(),
                         base_asset.casefold(),
@@ -1669,9 +1665,12 @@ class FinalProductReadModel:
             except FinalProductReadError:
                 event_coverage = "Olay araması doğrulanamadı"
 
-        if exact_identity and self.signal_ledger_path is not None:
-            if self.signal_ledger_path.is_file():
-                try:
+        if (
+            exact_identity
+            and self.signal_ledger_path is not None
+            and self.signal_ledger_path.is_file()
+        ):
+            try:
                     detail = DashboardReader(
                         self.signal_ledger_path
                     ).signal_detail(normalized_query)
@@ -1713,8 +1712,8 @@ class FinalProductReadModel:
                                 signal.signal_freeze_identity,
                             ),
                         )
-                except (DashboardReadError, ValueError):
-                    stream_coverage = "Signal araması doğrulanamadı"
+            except (DashboardReadError, ValueError):
+                stream_coverage = "Signal araması doğrulanamadı"
 
         if exact_identity and self.epoch2_path is not None and self.epoch2_path.is_file():
             try:
