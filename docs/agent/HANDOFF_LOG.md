@@ -5985,3 +5985,53 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; frozen RDP11 target untouched; Durdurulmaz/Quantum untouched
 - blocker: exact-head FP4-C acceptance not yet run
 - nextAction: open isolated PR and require focused adapter/cost + derivatives compatibility + full regression + non-mutation PASS
+
+
+## 2026-09-29 — FP4-B latency/queue/timeout implementation start
+
+- task-start main: `10af3c32f3c83e17aa66b5d8e12503e006e33550`
+- branch: `fp4b/latency-queue-timeout-v2`
+- session-local worktree: not created in connector session
+- duplicate audit: no existing latency/queue/timeout paper-execution owner or open PR
+- REUSE immutable OrderBookSnapshot + PublicTradeObservation; REUSE FP4-A for marketable/depth execution
+- BUILD passive-limit timing/queue proof only
+- unknown queue/stale evidence/late evidence -> fail closed; candle wick cannot prove fill
+- configurable latency + timeout + explicit cancel; public trades alone can consume proven queue
+- no R21/R22 mutation, no deploy/backfill; REAL_CAPITAL=0
+- Durdurulmaz/Quantum untouched
+- blocker: implementation/acceptance pending
+- nextAction: implement focused V2 passive-limit contract + tests + UID504 gate
+
+
+## 2026-09-29 — FP4-B passive-limit timing/queue implementation checkpoint
+
+- task-start main: `10af3c32f3c83e17aa66b5d8e12503e006e33550`
+- branch: `fp4b/latency-queue-timeout-v2`
+- session-local worktree: not created in connector session
+- implementation: isolated `execution_limit_v2.py`; v1 and FP4-A remain unchanged
+- immutable inputs: arrival `OrderBookSnapshot` + ordered `PublicTradeObservation` evidence
+- configurable latency -> exact effective arrival; pre-arrival trades cannot fill
+- passive queue proof: displayed same-side quantity at limit must be explicitly accepted; otherwise FILL_NOT_PROVEN
+- opposite-aggressor trades at/through limit consume queue before own quantity
+- stale/future/late-known evidence fails closed
+- marketable limit rejected to FP4-A path; candle touch is not fill proof
+- timeout and cancel are explicit terminal states; partial support is explicit/versioned
+- passive fill price frozen to limit price; no optimistic price improvement
+- no R21/R22 mutation, no deploy/backfill, REAL_CAPITAL=0
+- dedicated workflow: `.github/workflows/fp4b-passive-limit-uid504.yml`
+- Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not run yet
+- nextAction: open isolated PR and require focused FP4-B + FP4-A/v1 compatibility + full regression + frozen runtime non-mutation PASS
+
+
+## 2026-09-29 — FP4-B duplicate resolved; PR #1692 canonical
+
+- canonical PR/branch: #1692 / `fp4b/latency-queue-timeout-v2`
+- canonical head at checkpoint: `97db5f05c1984cf62e7524135d1efcc5c783315e`
+- superseded PR/branch: #1691 / `fp4b/timing-queue-uncertainty-v2`; closed unmerged
+- reason: #1692 covers latency/timeout/cancel plus real immutable public-trade queue-depletion proof and explicit partial/unproven terminal semantics; merging both would create duplicate execution owners
+- #1691 remains historical evidence only and MUST NOT MERGE
+- #1692 RDP11 pre-soak run/job `36621349201` / `109587532435` PASS
+- dedicated FP4-B + WC6 remain pending
+- REAL_CAPITAL=0; Product/Development frozen; no deploy/backfill; Durdurulmaz/Quantum untouched
+- nextAction: accept/merge only #1692 after dedicated + WC6 + full regression non-mutation PASS
