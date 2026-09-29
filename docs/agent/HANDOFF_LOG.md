@@ -4851,3 +4851,31 @@ Acceptance blocker:
 Exact nextAction:
 Temporarily wire MI1 UID504 acceptance to include autopilot_forward_runtime.py and test_autopilot_forward_runtime.py; inspect exact logs and fix only evidenced failures, then restore workflow to current-main blob after PASS.
 
+
+
+## FP3-A ACCEPTANCE ATTEMPT 1 — PYTEST PASS / RUFF FIX START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_FIX_1_STYLE_ONLY
+acceptanceRun: 36589928271
+acceptanceJob: 109480058124
+attemptedHead: c90cf4e024238c4cdecaa184f414e2b961671f54
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest reached 100% PASS;
+- no FP3-A semantic/product assertion failure;
+- Ruff blocked the gate on one unused test import only.
+
+Exact Ruff finding:
+- F401 unused PaperVaultId import in tests/test_autopilot_forward_runtime.py.
+
+Bounded fix:
+- remove unused import only;
+- no runtime, receipt, replay, activation or persistence semantic change.
+
+Exact nextAction:
+Remove the one unused import, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to current-main content.
+
