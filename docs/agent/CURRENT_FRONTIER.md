@@ -5752,3 +5752,36 @@ Bounded repair:
 
 Exact nextAction:
 Patch the test helper only, rerun exact-head acceptance, then inspect the next mechanical failure or complete PASS.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 5 FAIL / DISTINCT-LINEAGE CONTRACT REPAIR — 2026-09-29
+
+status: FP3_C2_CONTRACT_FIX_DISTINCT_ASSESSMENT_NOT_RESULT
+pr: 1683
+testedHead: 6af18ab22da8a9e49b6db2d90f2ae5edfd31fa1b
+rdp11FulltestRun: 36606670456
+rdp11FulltestJob: 109537345063
+f10Run: 36606670385
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- exact source/clean Development PASS;
+- F10 PASS;
+- full pytest reaches genuine second-cycle FP3-C2 SCALE_IN;
+- failure: \`FP3-C SCALE_IN requires distinct forecast/proof/sizing lineage\`;
+- source audit proves \`SizingMethodResult.result_identity\` is intentionally derived only from method/status/fraction/notional/probability semantics and does NOT include sizing context or assessment identity;
+- therefore two genuinely distinct assessments can legitimately share the same deterministic fixed-fractional result identity;
+- the C2 guard incorrectly treated this context-free method-result identity as an entry-lineage identity;
+- cleanup still reports RDP11 repair non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded production repair:
+- require SCALE_IN forecast identity to differ from every active BUY;
+- require proof identity to differ from every active BUY;
+- require sizing assessment identity to differ from every active BUY;
+- DO NOT require sizing method result identity to differ, because exact same reviewed sizing result semantics may repeat across distinct assessments;
+- keep exact R22 assessment+result lineage on every entry and keep duplicate same-assessment SCALE_IN fail-closed.
+
+Exact nextAction:
+Remove only the invalid sizing-result distinctness check, add regression proof that distinct assessments may share deterministic result identity, then rerun full exact-head acceptance.
