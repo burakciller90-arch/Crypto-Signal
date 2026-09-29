@@ -176,7 +176,12 @@ def test_passive_limit_later_touch_is_fill_not_proven() -> None:
 
 def test_passive_limit_can_be_cancelled_before_later_touch() -> None:
     passive = _book(source_timestamp_ms=1_100, sequence=1, ask="105")
-    later_touch = _book(source_timestamp_ms=1_200, sequence=2, ask="100")
+    later_touch = _book(
+        source_timestamp_ms=1_200,
+        sequence=2,
+        bid="99",
+        ask="100",
+    )
     decision = evaluate_timed_execution(
         request=_request(
             order_type=PaperOrderType.LIMIT,
