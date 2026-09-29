@@ -1748,3 +1748,46 @@ nextAction:
 - add ops/rdp11_soak_observer.py + tests + UID504 observer workflow;
 - branch run is dry-run/non-mutating;
 - merge only on exact-head acceptance.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 observer live acceptance
+
+This checkpoint is written before any acceptance-workflow/code change on this task branch.
+
+- canonical main at task start: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- inherited observer candidate head: `9cda0aa6173a4f831ca6449d85119c7ba072f900`
+- active branch: `rdp11/observer-live-acceptance`
+- session-local /Volumes worktree: NONE
+- duplicate open observer/soak-acceptance PRs: NONE
+- parallel branch `rdp11/deploy-soak-anchor` is treated as read-only upstream input; this agent will not mutate it
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence mutation: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Duplicate/stale-work audit
+
+The inherited observer implementation already exists at `9cda0aa6173a4f831ca6449d85119c7ba072f900` and will not be reimplemented.
+
+The existing successful RDP11 Pre-Soak Fulltest run `36543524550` / job `109324346599` does **not** mechanically accept the observer itself:
+- it runs whole-repository pytest/Ruff/mypy/JS;
+- it never invokes `ops/rdp11_soak_observer.py`;
+- it therefore does not prove the real UID504 Product/Development/runtime read-only observation contract, dry-run sidecar non-mutation, or the exact observer PASS markers.
+
+### Bounded goal
+
+Close only the missing observer-acceptance gap:
+1. add a dedicated UID504 workflow that executes the candidate observer against the already deployed exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+2. branch/PR acceptance must run `--dry-run` only and must not create RDP11 soak sidecar state;
+3. require exact Product + Development SHA/clean state, live Product/Stream/frozen-proof/source checks, explicit `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0`;
+4. after exact-head branch + PR acceptance, merge only after rechecking current main;
+5. only merged-main non-dry-run observation may create the immutable 72-hour soak anchor.
+
+### Current blocker
+
+The observer candidate has no dedicated real-runtime execution proof. Workflow SUCCESS from the generic full-suite is insufficient.
+
+### Exact nextAction
+
+Add the focused RDP11 observer UID504 workflow without changing the observer semantics; push-trigger it on this isolated branch and require the explicit dry-run PASS markers plus sidecar non-mutation before opening a PR.
