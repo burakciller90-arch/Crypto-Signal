@@ -35,12 +35,16 @@ from crypto_signal.product.intelligence_stream_read_model import (
 from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
+from crypto_signal.product.models import ProductDataStatus
+from crypto_signal.product.reader import DashboardReadError, DashboardReader
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
 DEFAULT_EVENT_RAIL_FRESH_AFTER_MS = 30 * 60 * 1000
 DEFAULT_CAPITAL_MOVEMENTS_LIMIT = 50
 MAX_CAPITAL_MOVEMENTS_LIMIT = 200
+DEFAULT_GLOBAL_SEARCH_LIMIT = 30
+MAX_GLOBAL_SEARCH_LIMIT = 100
 DEFAULT_ATTENTION_LIMIT = 5
 MAX_ATTENTION_LIMIT = 20
 _ATTENTION_SCAN_LIMIT = 200
@@ -604,6 +608,79 @@ class TradePassportView:
     realized_pnl_delta_usdt: str | None
     unrealized_pnl_delta_usdt: str | None
     audit: TradePassportAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+
+@dataclass(frozen=True, slots=True)
+class ScreenerAudit:
+    narrative_identity: str
+
+
+@dataclass(frozen=True, slots=True)
+class ScreenerRow:
+    symbol: str
+    timeframe: str
+    updated_at_ms: int
+    freshness_label: str
+    stance_label: str
+    support_score_0_100: str
+    opposition_score_0_100: str
+    evidence_coverage_0_100: str
+    event_risk_label: str
+    provider_quality_label: str
+    main_contradiction_label: str | None
+    summary: str
+    family_state_labels: tuple[str, ...]
+    audit: ScreenerAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ScreenerView:
+    availability_label: str
+    observed_at_ms: int
+    items: tuple[ScreenerRow, ...]
+    missing_symbols: tuple[str, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class GlobalSearchAudit:
+    source_identity: str
+    stream_narrative_identity: str | None = None
+    event_identity: str | None = None
+    bundle_identity: str | None = None
+    forecast_identity: str | None = None
+    proof_identity: str | None = None
+    signal_freeze_identity: str | None = None
+    raw_category: str | None = None
+    raw_subtype: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GlobalSearchItem:
+    kind_label: str
+    title: str
+    summary: str
+    symbol: str | None
+    timestamp_ms: int | None
+    source_label: str
+    audit: GlobalSearchAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GlobalSearchView:
+    query: str
+    items: tuple[GlobalSearchItem, ...]
+    stream_coverage_label: str
+    event_coverage_label: str
+    trade_coverage_label: str
+    proof_coverage_label: str
+    direct_proof_identity_label: str = "Ham proof kimliği doğrudan aranamaz"
     read_only: bool = True
     real_capital: int = REAL_CAPITAL
     schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
@@ -1298,6 +1375,485 @@ class FinalProductReadModel:
                 "Trade Passport güvenli projekte edilemedi"
             ) from exc
 
+    def screener(
+        self,
+        *,
+        symbols: tuple[str, ...],
+        observed_at_ms: int,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> ScreenerView:
+        pulse = self.market_pulse(
+            symbols=symbols,
+            observed_at_ms=observed_at_ms,
+            stale_after_ms=stale_after_ms,
+            include_audit=True,
+        )
+        rows = tuple(
+            ScreenerRow(
+                symbol=item.symbol,
+                timeframe=item.timeframe,
+                updated_at_ms=item.updated_at_ms,
+                freshness_label=item.freshness_label,
+                stance_label=item.stance_label,
+                support_score_0_100=item.support_score_0_100,
+                opposition_score_0_100=item.opposition_score_0_100,
+                evidence_coverage_0_100=item.evidence_coverage_0_100,
+                event_risk_label=item.event_risk_label,
+                provider_quality_label=item.provider_quality_label,
+                main_contradiction_label=item.main_contradiction_label,
+                summary=item.summary,
+                family_state_labels=tuple(
+                    f"{family.family_label}: {family.state_label}"
+                    for family in item.families
+                ),
+                audit=(
+                    ScreenerAudit(
+                        narrative_identity=item.audit.narrative_identity
+                    )
+                    if include_audit and item.audit is not None
+                    else None
+                ),
+            )
+            for item in sorted(
+                pulse.items,
+                key=lambda value: (value.symbol, value.timeframe),
+            )
+        )
+        return ScreenerView(
+            availability_label=pulse.availability_label,
+            observed_at_ms=observed_at_ms,
+            items=rows,
+            missing_symbols=pulse.missing_symbols,
+        )
+
+    def global_search(
+        self,
+        *,
+        query: str,
+        configured_symbols: tuple[str, ...],
+        observed_at_ms: int,
+        event_window_start_ms: int,
+        event_window_end_ms: int,
+        limit: int = DEFAULT_GLOBAL_SEARCH_LIMIT,
+        include_audit: bool = False,
+    ) -> GlobalSearchView:
+        normalized_query = query.strip()
+        if not normalized_query:
+            raise ValueError("global search query cannot be blank")
+        if observed_at_ms < 0:
+            raise ValueError("global search observation time must be non-negative")
+        if (
+            event_window_start_ms < 0
+            or event_window_end_ms < 0
+            or event_window_start_ms > event_window_end_ms
+        ):
+            raise ValueError("global search event window is invalid")
+        if limit < 1 or limit > MAX_GLOBAL_SEARCH_LIMIT:
+            raise ValueError(
+                f"global search limit must be inside 1..{MAX_GLOBAL_SEARCH_LIMIT}"
+            )
+
+        symbols = _normalize_symbols(configured_symbols)
+        lowered = normalized_query.casefold()
+        exact_identity = _looks_like_sha256(normalized_query)
+        candidates: list[
+            tuple[
+                int,
+                int,
+                int,
+                str,
+                str,
+                tuple[str, str],
+                GlobalSearchItem,
+            ]
+        ] = []
+
+        stream_coverage = (
+            "Stream araması kullanılabilir"
+            if self.stream_ledger_path.is_file()
+            else "Stream araması kullanılamıyor"
+        )
+        event_coverage = (
+            "Olay araması kullanılabilir"
+            if self.event_source_runtime_path is not None
+            and self.event_source_runtime_path.is_file()
+            else "Olay araması kullanılamıyor"
+        )
+        trade_coverage = (
+            "Trade Passport araması kullanılabilir"
+            if self.epoch2_path is not None and self.epoch2_path.is_file()
+            else "Trade Passport araması kullanılamıyor"
+        )
+        proof_coverage = (
+            "Karar kanıtı araması kullanılabilir"
+            if self.decision_evidence_path is not None
+            and self.decision_evidence_path.is_file()
+            else "Karar kanıtı araması kullanılamıyor"
+        )
+
+        try:
+            screener = self.screener(
+                symbols=symbols,
+                observed_at_ms=observed_at_ms,
+                include_audit=True,
+            )
+            for row in screener.items:
+                base_asset = (
+                    row.symbol[:-4]
+                    if row.symbol.endswith("USDT")
+                    else row.symbol
+                )
+                exact_asset = lowered in {
+                    row.symbol.casefold(),
+                    base_asset.casefold(),
+                }
+                partial_asset = (
+                    lowered in row.symbol.casefold()
+                    or lowered in base_asset.casefold()
+                )
+                if not partial_asset:
+                    continue
+                source_identity = (
+                    row.audit.narrative_identity
+                    if row.audit is not None
+                    else row.symbol
+                )
+                item = GlobalSearchItem(
+                    kind_label="Varlık",
+                    title=f"{row.symbol} · {row.stance_label}",
+                    summary=row.summary,
+                    symbol=row.symbol,
+                    timestamp_ms=row.updated_at_ms,
+                    source_label="Crypto Signal Screener",
+                    audit=(
+                        GlobalSearchAudit(
+                            source_identity=source_identity,
+                            stream_narrative_identity=(
+                                row.audit.narrative_identity
+                                if row.audit is not None
+                                else None
+                            ),
+                        )
+                        if include_audit
+                        else None
+                    ),
+                )
+                _append_search_candidate(
+                    candidates,
+                    priority=1 if exact_asset else 2,
+                    item=item,
+                    source_key=("asset", source_identity),
+                )
+        except FinalProductReadError:
+            stream_coverage = "Stream araması doğrulanamadı"
+
+        if self.stream_ledger_path.is_file():
+            reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+            try:
+                page_limit = min(100, max(20, limit * 3))
+                stream_records: dict[str, dict[str, Any]] = {}
+                for record in reader.read_messages(
+                    StreamMessageQuery(
+                        limit=page_limit,
+                        text=normalized_query,
+                    )
+                ).items:
+                    stream_records[
+                        _required_sha(record, "narrative_identity")
+                    ] = record
+
+                normalized_symbol = normalized_query.upper()
+                if normalized_symbol in symbols:
+                    for record in reader.read_messages(
+                        StreamMessageQuery(
+                            limit=page_limit,
+                            symbol=normalized_symbol,
+                        )
+                    ).items:
+                        stream_records[
+                            _required_sha(record, "narrative_identity")
+                        ] = record
+
+                if exact_identity:
+                    exact_record = reader.read_message(normalized_query)
+                    if exact_record is not None:
+                        stream_records[
+                            _required_sha(
+                                exact_record,
+                                "narrative_identity",
+                            )
+                        ] = exact_record
+
+                for narrative_identity, record in stream_records.items():
+                    item, source_key = _global_search_stream_item(
+                        record,
+                        include_audit=include_audit,
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=(
+                            0
+                            if exact_identity
+                            and narrative_identity == normalized_query
+                            else 2
+                        ),
+                        item=item,
+                        source_key=source_key,
+                    )
+            except (FileNotFoundError, StreamReadModelError, KeyError, TypeError, ValueError):
+                stream_coverage = "Stream araması doğrulanamadı"
+
+        if (
+            self.event_source_runtime_path is not None
+            and self.event_source_runtime_path.is_file()
+        ):
+            try:
+                rail = self.event_rail(
+                    observed_at_ms=observed_at_ms,
+                    window_start_ms=event_window_start_ms,
+                    window_end_ms=event_window_end_ms,
+                    limit=200,
+                    include_audit=True,
+                )
+                for event in rail.items:
+                    event_identity = (
+                        event.audit.event_identity
+                        if event.audit is not None
+                        else ""
+                    )
+                    exact_event = (
+                        exact_identity
+                        and event_identity == normalized_query
+                    )
+                    haystack = " ".join(
+                        (
+                            event.title,
+                            event.category_label,
+                            event.source_provider,
+                            *event.affected_assets,
+                        )
+                    ).casefold()
+                    if not exact_event and lowered not in haystack:
+                        continue
+                    item = GlobalSearchItem(
+                        kind_label="Olay",
+                        title=event.title,
+                        summary=(
+                            f"{event.category_label} · "
+                            f"{event.temporal_label} · {event.scope_label}"
+                        ),
+                        symbol=(
+                            event.affected_assets[0]
+                            if len(event.affected_assets) == 1
+                            else None
+                        ),
+                        timestamp_ms=event.scheduled_at_ms,
+                        source_label=event.source_provider,
+                        audit=(
+                            GlobalSearchAudit(
+                                source_identity=event_identity,
+                                event_identity=event_identity,
+                            )
+                            if include_audit and event_identity
+                            else None
+                        ),
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=0 if exact_event else 3,
+                        item=item,
+                        source_key=("event", event_identity or event.title),
+                    )
+            except FinalProductReadError:
+                event_coverage = "Olay araması doğrulanamadı"
+
+        if exact_identity and self.signal_ledger_path is not None:
+            if self.signal_ledger_path.is_file():
+                try:
+                    detail = DashboardReader(
+                        self.signal_ledger_path
+                    ).signal_detail(normalized_query)
+                    if (
+                        detail.status is ProductDataStatus.READY
+                        and detail.signal is not None
+                    ):
+                        signal = detail.signal
+                        item = GlobalSearchItem(
+                            kind_label="Kanıt",
+                            title=(
+                                f"{signal.symbol} · "
+                                f"{signal.direction.value}"
+                            ),
+                            summary=(
+                                f"{signal.setup_type} · "
+                                f"{signal.state.value} · {signal.timeframe}"
+                            ),
+                            symbol=signal.symbol,
+                            timestamp_ms=signal.frozen_at_ms,
+                            source_label="Frozen Signal Archive",
+                            audit=(
+                                GlobalSearchAudit(
+                                    source_identity=signal.signal_freeze_identity,
+                                    signal_freeze_identity=(
+                                        signal.signal_freeze_identity
+                                    ),
+                                )
+                                if include_audit
+                                else None
+                            ),
+                        )
+                        _append_search_candidate(
+                            candidates,
+                            priority=0,
+                            item=item,
+                            source_key=(
+                                "signal",
+                                signal.signal_freeze_identity,
+                            ),
+                        )
+                except (DashboardReadError, ValueError):
+                    stream_coverage = "Signal araması doğrulanamadı"
+
+        if exact_identity and self.epoch2_path is not None and self.epoch2_path.is_file():
+            try:
+                passport = self.trade_passport(
+                    bundle_identity=normalized_query,
+                    include_audit=True,
+                )
+                if passport.availability_label == "Doğrulanmış veri":
+                    item = GlobalSearchItem(
+                        kind_label="İşlem",
+                        title=(
+                            f"{passport.symbol or 'İşlem'} · "
+                            f"{passport.action_label or 'Trade Passport'}"
+                        ),
+                        summary=" · ".join(
+                            value
+                            for value in (
+                                passport.outcome_label,
+                                passport.vault_label,
+                                passport.proof_availability_label,
+                            )
+                            if value
+                        ),
+                        symbol=passport.symbol,
+                        timestamp_ms=passport.filled_at_ms,
+                        source_label="Paper Capital · Epoch 2",
+                        audit=(
+                            GlobalSearchAudit(
+                                source_identity=normalized_query,
+                                bundle_identity=normalized_query,
+                                forecast_identity=(
+                                    passport.audit.forecast_identity
+                                    if passport.audit is not None
+                                    else None
+                                ),
+                                proof_identity=(
+                                    passport.audit.proof_identity
+                                    if passport.audit is not None
+                                    else None
+                                ),
+                                signal_freeze_identity=(
+                                    passport.audit.signal_freeze_identity
+                                    if passport.audit is not None
+                                    else None
+                                ),
+                            )
+                            if include_audit
+                            else None
+                        ),
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=0,
+                        item=item,
+                        source_key=("trade", normalized_query),
+                    )
+            except FinalProductReadError:
+                trade_coverage = "Trade Passport araması doğrulanamadı"
+
+        if (
+            exact_identity
+            and self.decision_evidence_path is not None
+            and self.decision_evidence_path.is_file()
+        ):
+            try:
+                ledger = ImmutableDecisionEvidenceLedger(
+                    self.decision_evidence_path
+                )
+                issuance = ledger.read_issuance_for_signal(
+                    normalized_query
+                )
+                proof: dict[str, Any] | None = None
+                if issuance is not None:
+                    _, proof = issuance
+                else:
+                    proof = ledger.read_proof_for_forecast(
+                        normalized_query
+                    )
+                if proof is not None:
+                    proof_identity = _required_sha(
+                        proof,
+                        "proof_identity",
+                    )
+                    forecast_identity = _required_sha(
+                        proof,
+                        "forecast_identity",
+                    )
+                    signal_identity = _required_sha(
+                        proof,
+                        "signal_freeze_identity",
+                    )
+                    symbol = _required_text(proof, "symbol")
+                    item = GlobalSearchItem(
+                        kind_label="Kanıt",
+                        title=f"{symbol} · Karar kanıtı",
+                        summary=_required_text(
+                            proof,
+                            "conditional_thesis",
+                        ),
+                        symbol=symbol,
+                        timestamp_ms=_required_int(
+                            proof,
+                            "issued_at_ms",
+                        ),
+                        source_label="Decision Evidence",
+                        audit=(
+                            GlobalSearchAudit(
+                                source_identity=proof_identity,
+                                forecast_identity=forecast_identity,
+                                proof_identity=proof_identity,
+                                signal_freeze_identity=signal_identity,
+                            )
+                            if include_audit
+                            else None
+                        ),
+                    )
+                    _append_search_candidate(
+                        candidates,
+                        priority=0,
+                        item=item,
+                        source_key=("proof", proof_identity),
+                    )
+            except (
+                DecisionLedgerConflictError,
+                KeyError,
+                TypeError,
+                ValueError,
+            ):
+                proof_coverage = "Karar kanıtı araması doğrulanamadı"
+
+        ordered = _ordered_search_items(candidates, limit=limit)
+        return GlobalSearchView(
+            query=normalized_query,
+            items=ordered,
+            stream_coverage_label=stream_coverage,
+            event_coverage_label=event_coverage,
+            trade_coverage_label=trade_coverage,
+            proof_coverage_label=proof_coverage,
+        )
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -1472,6 +2028,141 @@ def _plain_decimal_text(value: Decimal) -> str:
     if "." in raw:
         raw = raw.rstrip("0").rstrip(".")
     return raw or "0"
+
+
+def _looks_like_sha256(value: str) -> bool:
+    return len(value) == 64 and all(
+        character in "0123456789abcdef"
+        for character in value
+    )
+
+
+def _append_search_candidate(
+    candidates: list[
+        tuple[
+            int,
+            int,
+            int,
+            str,
+            str,
+            tuple[str, str],
+            GlobalSearchItem,
+        ]
+    ],
+    *,
+    priority: int,
+    item: GlobalSearchItem,
+    source_key: tuple[str, str],
+) -> None:
+    timestamp = item.timestamp_ms
+    candidates.append(
+        (
+            priority,
+            1 if timestamp is None else 0,
+            0 if timestamp is None else -timestamp,
+            item.kind_label,
+            item.title,
+            source_key,
+            item,
+        )
+    )
+
+
+def _ordered_search_items(
+    candidates: list[
+        tuple[
+            int,
+            int,
+            int,
+            str,
+            str,
+            tuple[str, str],
+            GlobalSearchItem,
+        ]
+    ],
+    *,
+    limit: int,
+) -> tuple[GlobalSearchItem, ...]:
+    seen: set[tuple[str, str]] = set()
+    ordered: list[GlobalSearchItem] = []
+    for _, _, _, _, _, source_key, item in sorted(candidates):
+        if source_key in seen:
+            continue
+        seen.add(source_key)
+        ordered.append(item)
+        if len(ordered) >= limit:
+            break
+    return tuple(ordered)
+
+
+def _global_search_stream_item(
+    record: dict[str, Any],
+    *,
+    include_audit: bool,
+) -> tuple[GlobalSearchItem, tuple[str, str]]:
+    narrative_identity = _required_sha(
+        record,
+        "narrative_identity",
+    )
+    text = _required_mapping(record, "text")
+    title = _required_text(text, "collapsed_text")
+    summary = (
+        _optional_text_value(text.get("simple_text"))
+        or _optional_text_value(text.get("capital_text"))
+        or _optional_text_value(text.get("intelligence_text"))
+        or title
+    )
+    symbol = _optional_text_value(record.get("symbol"))
+    event_at_ms = _optional_non_negative_int_value(
+        record.get("event_at_ms")
+    )
+    category = _optional_text_value(record.get("category"))
+    subtype = _optional_text_value(record.get("subtype"))
+    bundle_identity = _optional_sha(record.get("bundle_identity"))
+    trade_subtypes = {
+        "capital_executed",
+        "capital_reduced",
+        "capital_exited",
+    }
+    is_trade = (
+        category == "capital"
+        and subtype in trade_subtypes
+        and bundle_identity is not None
+    )
+    kind_label = "İşlem" if is_trade else "Akış"
+    source_label = (
+        "Crypto Signal Capital Stream"
+        if is_trade
+        else "Crypto Signal Intelligence Stream"
+    )
+    audit = None
+    if include_audit:
+        audit = GlobalSearchAudit(
+            source_identity=(
+                bundle_identity
+                if is_trade and bundle_identity is not None
+                else narrative_identity
+            ),
+            stream_narrative_identity=narrative_identity,
+            bundle_identity=bundle_identity if is_trade else None,
+            raw_category=category,
+            raw_subtype=subtype,
+        )
+    return (
+        GlobalSearchItem(
+            kind_label=kind_label,
+            title=title,
+            summary=summary,
+            symbol=symbol,
+            timestamp_ms=event_at_ms,
+            source_label=source_label,
+            audit=audit,
+        ),
+        (
+            "trade" if is_trade else "stream",
+            bundle_identity if is_trade and bundle_identity else narrative_identity,
+        ),
+    )
 
 
 def _trade_passport_unavailable(reason: str) -> TradePassportView:
