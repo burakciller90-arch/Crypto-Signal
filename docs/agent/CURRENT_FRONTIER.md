@@ -4740,3 +4740,37 @@ Bounded fix:
 Exact nextAction:
 Remove the one unused import, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to current-main content.
 
+
+
+## FP3-A ACCEPTANCE ATTEMPT 2 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_FIX_2_TYPING_ONLY
+acceptanceRun: 36590133359
+acceptanceJob: 109481017176
+attemptedHead: 553da0f4575914f40e1413c0cc80fa6e495f1994
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- canonical non-mutation PASS;
+- strict mypy blocked the gate with exactly four local typing/narrowing errors.
+
+Exact mypy findings:
+1. timestamp validation loop reuses prior str-typed local name `value`;
+2. same reuse causes _require_non_negative_int arg-type error;
+3. decision loop reuses dict-typed local name `raw` for dict.get optional result;
+4. heterogeneous provisional payload indexes hold_or_block_count as object.
+
+Bounded fix:
+- rename timestamp loop local;
+- use a separate decision_raw local after explicit None guard;
+- compute hold_or_block_count as an int local before payload construction;
+- no runtime/replay/receipt/persistence semantics change.
+
+Exact nextAction:
+Apply only the typing/narrowing fixes, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
+
