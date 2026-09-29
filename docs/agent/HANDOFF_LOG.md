@@ -5194,3 +5194,48 @@ Bounded fix:
 Exact nextAction:
 Apply the typing-only constructor/narrowing fix, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
 
+
+
+## FP3-B UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_B_REVIEW_READY
+verifiedMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+acceptedHead: d73cde9dd8d3a42dadac4fe85704c2a112d98e42
+acceptedRun: 36595609945
+acceptedJob: 109499792310
+cleanupHead: 2faa27fe79685ba42b4ab0905d68d675e74fba0c
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-B semantics:
+- exact FP3-A receipt and allocator lineage gate sizing;
+- only ELIGIBLE vault can enter sizing;
+- exact R21 current drawdown must match caller risk context;
+- sizing cannot predate canonical vault decision chronology;
+- only accepted fixed-fractional method can become canonical;
+- HOLD/BLOCK/risk-gated paths create no trade;
+- canonical sizing event + Stream sizing projection are exact-idempotent;
+- crash-style missing-receipt recovery is supported;
+- no BUY/REDUCE/EXIT commit occurs in FP3-B.
+
+Current blocker:
+- none inside FP3-B; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-B PR with docs/sizing-module/focused-tests only, verify PR checks, merge if isolated, then start FP3-C on fresh main with a new task-start checkpoint.
+
