@@ -16,6 +16,7 @@ from crypto_signal.paper.epoch2_accounting import (
     read_epoch2_state_read_only,
 )
 from crypto_signal.paper.epochs import PaperVaultId
+from crypto_signal.paper.models import PaperSymbol
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
@@ -1424,6 +1425,203 @@ class FinalProductReadModel:
                 raise
             raise FinalProductReadError(
                 "Trade Passport güvenli projekte edilemedi"
+            ) from exc
+
+    def trade_lifecycle(
+        self,
+        *,
+        bundle_identity: str,
+        include_audit: bool = False,
+    ) -> TradeLifecycleView:
+        _sha_text(bundle_identity, "trade lifecycle bundle identity")
+        if self.epoch2_path is None or not self.epoch2_path.is_file():
+            return _trade_lifecycle_unavailable(
+                "Trade lifecycle verisi kullanılamıyor"
+            )
+
+        tape = R22Epoch2AtomicTape(self.epoch2_path)
+        try:
+            requested = cast(
+                dict[str, Any],
+                tape.read_bundle_story_context(bundle_identity),
+            )
+        except ValueError as exc:
+            if str(exc) == "R22 audit bundle not found":
+                return _trade_lifecycle_unavailable(
+                    "Trade lifecycle bulunamadı"
+                )
+            raise FinalProductReadError(
+                "Trade lifecycle kaynağı güvenli doğrulanamadı"
+            ) from exc
+
+        try:
+            requested_intent = _required_mapping(requested, "intent")
+            vault_id = PaperVaultId(
+                _required_text(requested_intent, "vault_id")
+            )
+            symbol = PaperSymbol(
+                _required_text(requested_intent, "symbol")
+            )
+            history = tape.read_trade_history(vault_id, symbol)
+            episodes = _verified_trade_lifecycle_episodes(
+                tape=tape,
+                history=history,
+                vault_id=vault_id,
+                symbol=symbol,
+            )
+            matching = tuple(
+                episode
+                for episode in episodes
+                if any(
+                    item["bundle_identity"] == bundle_identity
+                    for item in episode
+                )
+            )
+            if len(matching) != 1:
+                raise ValueError(
+                    "Trade lifecycle bundle does not resolve to one exact episode"
+                )
+            episode = matching[0]
+
+            event_views: list[TradeLifecycleEventView] = []
+            for sequence, item in enumerate(episode, start=1):
+                event_bundle_identity = _sha_text(
+                    item["bundle_identity"],
+                    "trade lifecycle event bundle identity",
+                )
+                passport = self.trade_passport(
+                    bundle_identity=event_bundle_identity,
+                    include_audit=include_audit,
+                )
+                event_views.append(
+                    TradeLifecycleEventView(
+                        sequence=sequence,
+                        lifecycle_label=_trade_lifecycle_label(
+                            str(item["lifecycle_kind"])
+                        ),
+                        event_at_ms=_required_non_negative_int_value(
+                            item["event_at_ms"],
+                            "trade lifecycle event time",
+                        ),
+                        passport=passport,
+                        audit=(
+                            TradeLifecycleEventAudit(
+                                bundle_identity=event_bundle_identity,
+                                intent_identity=_sha_text(
+                                    item["intent_identity"],
+                                    "trade lifecycle intent identity",
+                                ),
+                                fill_identity=_sha_text(
+                                    item["fill_identity"],
+                                    "trade lifecycle fill identity",
+                                ),
+                                forecast_identity=_sha_text(
+                                    item["forecast_identity"],
+                                    "trade lifecycle forecast identity",
+                                ),
+                                proof_identity=_sha_text(
+                                    item["proof_identity"],
+                                    "trade lifecycle proof identity",
+                                ),
+                                raw_action=str(item["raw_action"]),
+                                lifecycle_kind=str(item["lifecycle_kind"]),
+                                reason_codes=cast(
+                                    tuple[str, ...],
+                                    item["reason_codes"],
+                                ),
+                            )
+                            if include_audit
+                            else None
+                        ),
+                    )
+                )
+
+            root = episode[0]
+            tail = episode[-1]
+            closed = Decimal(str(tail["position_after_quantity"])) == 0
+            final_outcome = (
+                event_views[-1].passport.outcome_label
+                if closed
+                else None
+            )
+            audit = None
+            if include_audit:
+                audit = TradeLifecycleAudit(
+                    lifecycle_root_bundle_identity=_sha_text(
+                        root["bundle_identity"],
+                        "trade lifecycle root bundle",
+                    ),
+                    requested_bundle_identity=bundle_identity,
+                    bundle_identities=tuple(
+                        _sha_text(
+                            item["bundle_identity"],
+                            "trade lifecycle bundle",
+                        )
+                        for item in episode
+                    ),
+                    intent_identities=tuple(
+                        _sha_text(
+                            item["intent_identity"],
+                            "trade lifecycle intent",
+                        )
+                        for item in episode
+                    ),
+                    fill_identities=tuple(
+                        _sha_text(
+                            item["fill_identity"],
+                            "trade lifecycle fill",
+                        )
+                        for item in episode
+                    ),
+                    forecast_identities=tuple(
+                        _sha_text(
+                            item["forecast_identity"],
+                            "trade lifecycle forecast",
+                        )
+                        for item in episode
+                    ),
+                    proof_identities=tuple(
+                        _sha_text(
+                            item["proof_identity"],
+                            "trade lifecycle proof",
+                        )
+                        for item in episode
+                    ),
+                )
+            return TradeLifecycleView(
+                availability_label="Doğrulanmış veri",
+                program_label="Paper Capital · Epoch 2",
+                lifecycle_state_label=(
+                    "Kapalı işlem" if closed else "Açık işlem"
+                ),
+                vault_label=_capital_vault_label(vault_id.value),
+                symbol=symbol.value,
+                opened_at_ms=_required_non_negative_int_value(
+                    root["event_at_ms"],
+                    "trade lifecycle open time",
+                ),
+                closed_at_ms=(
+                    _required_non_negative_int_value(
+                        tail["event_at_ms"],
+                        "trade lifecycle close time",
+                    )
+                    if closed
+                    else None
+                ),
+                final_outcome_label=final_outcome,
+                event_count=len(event_views),
+                events=tuple(event_views),
+                unavailable_capabilities=(
+                    "STOP_UPDATE · exact trade-root bağı mevcut değil",
+                    "CORRECTION/SUPERSEDED · canonical kayıt mevcut değil",
+                ),
+                audit=audit,
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "Trade lifecycle güvenli projekte edilemedi"
             ) from exc
 
     def screener(
