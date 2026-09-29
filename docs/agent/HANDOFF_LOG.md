@@ -6547,3 +6547,33 @@ QuantumCapitalTouched: NO
 - optional V2 selection now narrows through a separate local before assignment
 - no behavior/identity/schema change
 - all results from `8d551faf...` stale; fresh exact-head quartet required
+
+
+## 2026-09-30 — FP5 whole phase PASS; FP6 audit frontier opened
+
+- canonical main `a171d58fd112a0f2654252f81e93e61467237b36` = FP5-C merge #1703
+- accepted source head `1a3b61c3280ba1c03cb30866a73dbc8c1c9640f2`
+- exact-head acceptance: FP5-C `36643214619` SUCCESS; WC6 `36643214489` SUCCESS; RDP11 Pre-Soak `36643214488` SUCCESS; F10 `36643214499` SUCCESS
+- post-merge WC6 `36643923964/109662373958` SUCCESS including whole repo + Development non-mutation
+- post-merge Workbench `36643923963/109662373210` SUCCESS: main exact `a171d58f...`, dirty0, `SSD504_WORKBENCH_PASS=YES`, REAL_CAPITAL=0
+- latest RDP11 observer `36644328462/109663660246` SUCCESS: R2 anchor reused, sidecar-only, no backfill, canonical runtime mutation NO; RDP11 itself remains ACTIVE/NOT PASS
+
+FP5 roadmap PASS:
+- explicit cluster exposure: PASS
+- drawdown/event/liquidity/conflict fail closed: PASS
+- 100% cash is valid: PASS
+- eligible evidence can produce positive bounded forward deployment through S11 -> FP3-C -> R22/R21: PASS
+- 100% cash HOLD is a valid state and produces no sizing/trade authority: PASS
+- Kelly/leverage/borrowing/forced deployment disabled
+- FP5 final status: PASS
+
+Canonical-history warning:
+- transient heads `98bd02f...` / `f63157cf...` were not merged;
+- use #1703 head `1a3b61c...` + merge `a171d58f...` as authority.
+
+FP6 duplicate audit:
+- no competing FP6/passport PR/branch
+- DO NOT create a second Trade Passport ledger
+- accepted FP1-E owner already exists: `FinalProductReadModel.trade_passport()` keyed by immutable R22 bundle identity and reusing R22/R21/S11/Decision Proof
+- remaining FP6 work is trade-wide lifecycle + exact per-event frozen proof + historical immutability audit/extension, not a greenfield passport
+- nextAction: isolated FP6-A owner/gap matrix after this docs-only closeout merges

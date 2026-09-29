@@ -7556,3 +7556,104 @@ Repair:
 
 Acceptance rule:
 Prior head `8d551faf...` is stale. Require fresh exact-head FP5-C + WC6 + RDP11 Pre-Soak + F10 after the durable repair checkpoint.
+
+
+## FP5 WHOLE-PHASE PASS / FP6 OWNER-AUDIT START — 2026-09-30
+
+status: FP5_PASS_FP6_AUDIT_START
+canonicalMainAtTaskStart: a171d58fd112a0f2654252f81e93e61467237b36
+fp5SourcePR: #1703
+fp5AcceptedHead: 1a3b61c3280ba1c03cb30866a73dbc8c1c9640f2
+fp5MergeCommit: a171d58fd112a0f2654252f81e93e61467237b36
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+FP5-C accepted exact-head gates:
+- dedicated FP5-C `36643214619/109660099687`: SUCCESS
+- WC6 `36643214489/109660099952`: SUCCESS
+- RDP11 Pre-Soak `36643214488/109660100293`: SUCCESS
+- F10 `36643214499/109660103915`: SUCCESS
+- later duplicate PR-close runs are non-canonical/redundant and are not required for acceptance
+
+Post-merge canonical proof:
+- main `a171d58fd112a0f2654252f81e93e61467237b36`
+- post-merge WC6 `36643923964/109662373958`: SUCCESS
+  - exact source PASS
+  - focused recovery PASS
+  - full paper subsystem PASS
+  - whole-repository regression PASS
+  - Development non-mutation PASS
+- post-merge SSD504 Workbench `36643923963/109662373210`: SUCCESS
+  - `REPO_HEAD=a171d58fd112a0f2654252f81e93e61467237b36`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- latest RDP11 observer `36644328462/109663660246`: SUCCESS
+  - epoch `rdp11-3d9f33db-20260930-r2`
+  - anchor reused
+  - sidecar-only YES
+  - historical backfill NO
+  - canonical runtime mutated NO
+  - RDP11 R2 remains ACTIVE / NOT PASS until its independent soak clock/contract closes
+
+FP5 master-roadmap PASS clause audit:
+1. cluster exposure explicit — PASS
+   - FP5-A uses explicit `AssetGrossExposure` + `CorrelationCluster`;
+   - tests prove existing BTC exposure constrains ETH in the same cluster and exhausted cluster cap holds cash.
+2. drawdown/event/liquidity/conflict gates fail closed — PASS
+   - parameterized existing FP3 sizing risk-gate test covers correlation, drawdown, volatility, liquidity and transaction-cost gates;
+   - Event Risk non-clear and M6 confluence conflict each produce HOLD_CASH with exact bound identity.
+3. cash remains valid — PASS
+   - genuine 100% cash portfolio is valid and can be DEPLOYABLE.
+4. allocator can deploy eligible capital without forced under-use — PASS
+   - natural FP3 forward path consumes immutable FP5 assessment;
+   - DEPLOYABLE produces positive portfolio-bounded canonical S11 sizing;
+   - exact V2 sizing selection/event reaches FP3-C BUY and canonical R22/R21;
+   - forced deployment remains disabled.
+5. allocator can hold 100% cash without being marked failed — PASS
+   - FP5-A cash-only HOLD_CASH test passes;
+   - FP5-C persists explicit `HELD_PORTFOLIO_RISK` with no S11 event or R22 trade.
+
+FP5 final invariants:
+- V1 sizing path preserved when no FP5 assessment is supplied;
+- FP5 source-time risk identity and current FP3 sizing-risk identity remain independent immutable lineages;
+- stale R21 portfolio source / sizing-policy mismatch fail closed;
+- HOLD_CASH / NOT_PROVEN cannot create positive sizing or trade authority;
+- Kelly, leverage, borrowing and forced deployment remain disabled;
+- no new allocator, no duplicate R21/R22 store, no receipt/table schema fork.
+
+FP5 status:
+**PASS — Capital Allocator V2 / Portfolio Risk is mechanically complete against the master-roadmap PASS contract.**
+
+Non-canonical branch-history note:
+- transient post-gate checkpoint heads `98bd02f...` and `f63157cf...` were not the merged PR head;
+- canonical accepted implementation is PR #1703 head `1a3b61c...` and merge `a171d58f...`;
+- do not use discarded transient heads as implementation authority.
+
+FP6 duplicate / owner audit start:
+- master roadmap next phase: FP6 — Trade Passport & Immutable Capital Archive;
+- open competing FP6/passport PR: NONE at audit start;
+- open competing FP6/passport branch: NONE at audit start;
+- no separate `TradePassport` canonical ledger/store exists or should be created;
+- ACCEPTED existing owner exists: `docs/CRYPTO_SIGNAL_FP1E_TRADE_PASSPORT_FIELD_SOURCE_MATRIX.md`;
+- accepted implementation: `FinalProductReadModel.trade_passport(bundle_identity, include_audit=False)` in `src/crypto_signal/product/final_product_read_model.py`;
+- canonical passport key is immutable R22 bundle identity;
+- existing owner REUSES `R22Epoch2AtomicTape.read_bundle_story_context()`, R21 before/after accounting, S11 outcome lineage and optional exact Decision Proof;
+- customer-safe single-bundle passport + audit already PASS; missing proof is explicit, mismatched proof fails closed, source DB stays read-only.
+
+Preliminary FP6 gap:
+- FP1-E is a single-R22-bundle read model, not yet proven as one trade-wide append-only lifecycle passport;
+- FP6 additionally requires OPEN / SCALE_IN / STOP_UPDATE / PARTIAL_TAKE_PROFIT / REDUCE / CLOSE / CORRECTION-or-SUPERSEDED timeline semantics;
+- every lifecycle event must open the exact proof that existed then;
+- later model versions must be unable to alter historical passport content;
+- full frozen five-family/Market Story proof reconstruction remains owned by accepted RDP10/Stream proof readers and must be reused rather than copied.
+
+Exact nextAction:
+1. merge this docs-only FP5 closeout on current main without touching runtime;
+2. start isolated FP6-A owner/gap audit from resulting main;
+3. map R22 bundle story + FP3 action receipts/capital lifecycle Stream + S11 outcomes + Decision Proof/RDP10 frozen readers into one trade-lifecycle key;
+4. classify each FP6 field/event as REUSE / EXTEND / EXPLICITLY_UNAVAILABLE;
+5. only then implement the smallest read-only lifecycle passport extension; no new canonical truth store, no backfill, REAL_CAPITAL=0.
