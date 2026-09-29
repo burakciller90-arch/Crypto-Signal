@@ -5415,3 +5415,50 @@ Current blocker:
 Exact nextAction:
 Recheck current main and overlap state, open one FP3-C1 PR with only the accepted matrix/agent-state/canonical action-read-support/action-bridge/tests diff, verify PR checks, merge if isolated, then start FP3-C2 on fresh main.
 
+
+
+## FP3-C1 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_C1_REVIEW_READY
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+acceptedHead: 0d982d0fcf0456deabae332db1da9bb3763fd857
+acceptedRun: 36600881901
+acceptedJob: 109517801922
+cleanupHead: afd9c632c7e53e6e08199633fca706453ac70b56
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 7 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-C1 semantics:
+- WAIT produces no R21/R22 mutation;
+- STOP_UPDATE remains explicitly unavailable;
+- SCALE_IN remains explicitly unavailable in C1 pending accepted multi-entry lineage;
+- OPEN commits only canonical BUY and only after exact Stream decision context + FP3-A/B lineage validation;
+- PARTIAL_TAKE_PROFIT commits canonical REDUCE;
+- TAKE_PROFIT / STOP / CLOSE commit canonical EXIT;
+- canonical BUY/SELL functions remain sole R21/R22 mutation owners;
+- exact preflight replay prevents duplicate accounting;
+- crash recovery resolves existing fill->bundle read-only and projects missing Stream lifecycle idempotently;
+- action-stage receipt is append-only and immutable;
+- no second execution/accounting/order engine exists.
+
+Current blocker:
+- none inside FP3-C1; PR review/merge gate remains.
+
+Exact nextAction:
+Open one FP3-C1 PR, verify exact seven-file diff and PR gates, merge if isolated, then start FP3-C2 on fresh main with a new task-start checkpoint. Do not claim SCALE_IN support before FP3-C2 acceptance PASS.
+
