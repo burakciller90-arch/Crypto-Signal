@@ -798,7 +798,13 @@ PASS:
 
 ## RDP10 — Exact frozen customer-proof contract
 
-Status: **ACTIVE**
+Status: **PASS**
+
+Closure:
+- RDP10 exact frozen customer-proof contract is mechanically accepted on main before RDP11.
+- Geometry, Liquidity, Order Flow, Derivatives, On-chain and Event Risk/context retain exact/fail-closed proof semantics; hashes remain provenance metadata rather than the customer-facing proof itself.
+- RDP10 closeout is durable in `docs/agent/CURRENT_FRONTIER.md` and `docs/agent/HANDOFF_LOG.md`.
+- `REAL_CAPITAL=0`.
 
 Goal:
 - finish the backend contract required by the later frontend.
@@ -824,6 +830,22 @@ PASS:
 - historical proof never reads current live data.
 
 ## RDP11 — Continuous soak + final Evidence PASS
+
+Status: **ACTIVE — 72H SOAK RUNNING**
+
+Active soak checkpoint:
+- observer/anchor PR #1666 merged as main `02793adde16d18b681e869bbb560e736cc933ec5`;
+- frozen Product/Development soak target remains `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- merged-main observer run `36547457482` / job `109337164207`: SUCCESS;
+- `RDP11_SOAK_ANCHOR_CREATED=YES`;
+- soak start UTC: `2026-09-29T09:13:21.134000Z`;
+- earliest 72h eligibility UTC: `2026-10-02T09:13:21.134000Z`;
+- earliest 72h eligibility Europe/Istanbul: `2026-10-02T12:13:21.134000+03:00`;
+- `RDP11_SOAK_72H_ELIGIBLE=NO`;
+- `RDP11_SOAK_SIDE_CAR_ONLY=YES`;
+- `RDP11_CANONICAL_RUNTIME_MUTATED=NO`;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`.
 
 Goal:
 - prove the system survives real time, not only tests.
@@ -938,7 +960,9 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP10 — Exact frozen customer-proof contract**
+**RDP11 — Continuous soak + final Evidence PASS**
+
+The observer is anchored and scheduled. RDP11 remains ACTIVE until the real 72-hour minimum has elapsed without epoch invalidation and final Evidence PASS is mechanically verified.
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 
