@@ -6141,3 +6141,96 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - FP3-D remains WAITING; global RDP11 remains ACTIVE / NOT PASS
 - REAL_CAPITAL=0; no deploy/backfill; frozen runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: docs-only F10 -> merge -> final Workbench -> FP5 start checkpoint
+
+
+## 2026-09-29 — FP5-A portfolio-risk envelope start
+
+- task-start main: `5d5852a422ae48d2a53e0e99303372289197e251`
+- branch: `fp5a/portfolio-risk-envelope-v2`
+- FP4 final durable closeout is merged and Workbench exact-main verified
+- duplicate audit: no FP5 branch/PR; existing FP3 sizing/risk and Smart Capital Slice1 must be reused, not duplicated
+- FP5-A scope: live portfolio metrics + explicit correlation clusters + hard gross/cluster/cash/drawdown/event/liquidity/conflict gates
+- Kelly stays disabled; fixed-fractional/risk-budgeted only; 100% cash valid
+- missing portfolio/cluster truth fails closed
+- no R21/R22 mutation, deploy/backfill or real capital
+- REAL_CAPITAL=0; Durdurulmaz/Quantum untouched
+- nextAction: implement isolated immutable envelope + tests, then exact-head UID504 acceptance
+
+
+## 2026-09-29 — FP5-A portfolio-risk implementation checkpoint
+
+- task-start main: `5d5852a422ae48d2a53e0e99303372289197e251`
+- branch: `fp5a/portfolio-risk-envelope-v2`
+- final FP4 Workbench: `36628675283/109612066152` PASS, exact main `5d5852a422ae48d2a53e0e99303372289197e251`, main, dirty0
+- implemented immutable `PortfolioRiskSnapshotV2` and `PortfolioAllocationAssessmentV2`
+- explicit sorted asset gross exposure + correlation-cluster membership/caps
+- portfolio gross cap, cluster cap, minimum cash reserve, max drawdown and fixed-fractional risk fraction are frozen in snapshot identity
+- candidate allocation consumes transaction-cost fraction + stop/invalidation fraction and computes risk-limited notional
+- current BTC exposure contributes to ETH/SOL candidate CRYPTO_BETA cluster exposure; exposure cannot escape cluster cap
+- event/liquidity/conflict flags are strict booleans and fail closed
+- missing snapshot or missing/ambiguous candidate cluster => NOT_PROVEN, zero capacity
+- 100% cash/HOLD_CASH is valid; no forced deployment
+- Kelly/leverage/borrowing all hard disabled
+- existing FP3 sizing/risk + Smart Capital Slice1 + read-only portfolio owners remain unchanged
+- dedicated workflow: `.github/workflows/fp5a-portfolio-risk-uid504.yml`
+- no R21/R22 mutation, deploy or backfill
+- REAL_CAPITAL=0; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not yet run
+- nextAction: open isolated PR and require dedicated FP5-A + existing-owner compatibility + full regression + WC6/RDP11/F10 before merge
+
+
+## 2026-09-29 — FP5-A semantic owner-binding audit
+
+- audited head: `62239a6808bccda8c741aa12cb21ab6b7d47326c`
+- no duplicate implementation created; existing parallel FP5-A source/test/workflow retained
+- acceptance blocker found before PR: raw boolean evidence gates + duplicated FP3 risk policy + incomplete cluster coverage + inconsistent cash-only test
+- repair required: bind accepted FP3 risk/sizing + Event/Confluence identities, classify every exposure uniquely, reconcile cash+gross to NAV, fix 100% cash proof
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: patch existing FP5-A in place and only then open acceptance PR
+
+
+## 2026-09-29 — FP5-A semantic hardening checkpoint
+
+- after first WC6 mypy-only repair, static audit found a portfolio-risk gap before acceptance
+- previous snapshot allowed an existing exposure asset to belong to zero or multiple correlation clusters
+- that could make cluster exposure incomplete/ambiguous even though portfolio gross exposure remained counted
+- hardened snapshot invariant: every asset with current gross exposure must belong to exactly one correlation cluster
+- added focused tests for unclustered and multiply-clustered existing exposures
+- candidate asset still requires exactly one cluster; missing/ambiguous candidate remains NOT_PROVEN
+- no allocation formula, FP3 sizing owner, Smart Capital owner, R21/R22 or runtime state changed
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 PASS before merge
+
+
+## 2026-09-29 — FP5-A owner-bound repair acceptance-ready checkpoint
+
+- source semantic repair: `1e7a2bc14d915e4411225804acf66ed9a4d62a89`
+- focused owner-bound tests: `919f91347166c6ab9280b023d915027187c3d884`
+- PR #1698 is the sole FP5-A PR; no duplicate owner created
+- FP3 sizing/risk + PositionSizingPolicy + Event Risk + M6 Confluence are now reused by identity/type rather than replaced with raw booleans/duplicate thresholds
+- portfolio snapshot now proves cash/NAV/gross reconciliation and explicit cluster coverage truth
+- unclassified current exposure and missing candidate cluster fail closed as NOT_PROVEN
+- genuine 100% cash proof fixed to cash == NAV, zero exposure
+- all pre-repair workflow runs are stale and MUST NOT close the gate
+- REAL_CAPITAL=0; no R21/R22 mutation, deploy or backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: run fresh exact-head FP5-A + WC6 + RDP11 + F10; repair only mechanically observed failures before any merge
+
+
+## 2026-09-29 — FP5-A owner-bound mypy-only repair checkpoint
+
+- stale diagnostic run/job `36630561758/109618412662` exposed only mypy Optional-Decimal loop-variable reuse after pytest completed
+- bounded source repair: `9b0caf475ecb263fb1ff7599dbe57baa2212ed5d`
+- no behavior/identity/gate formula changed
+- REAL_CAPITAL=0; frozen runtime non-mutation preserved
+- nextAction: fresh exact-head FP5-A/WC6/RDP11/F10 only; no stale run can close gate
+
+
+## 2026-09-29 — FP5-A UID504 runner-stall retry checkpoint
+
+- head `f7bec8c8bebc0220616782cba85d7c82c3b523ea`: dedicated FP5-A PASS and F10 PASS
+- WC6 `36630937756/109619699806` stalled in isolated venv/pip setup after exact-source PASS; no code/test failure observed
+- historical WC6 install stage normally completes in seconds
+- recovery is docs-only head advance to activate PR concurrency cancellation/retry
+- all old-head PASS results become stale for merge
+- REAL_CAPITAL=0; no runtime mutation/deploy/backfill
+- nextAction: fresh new-head FP5-A/WC6/RDP11/F10 only

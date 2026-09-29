@@ -6759,3 +6759,185 @@ Global gates remain independent:
 
 Exact nextAction:
 Run docs-only closeout F10 and merge this handoff. Verify final Workbench exact-main sync. Then start FP5 Capital Allocator V2 from the resulting exact main, reusing existing FP3 sizing/risk evidence and adding only missing live portfolio/cluster risk controls.
+
+
+## FP5-A PORTFOLIO RISK ENVELOPE V2 START — 2026-09-29
+
+status: FP5A_IMPLEMENTATION_START
+taskStartMain: 5d5852a422ae48d2a53e0e99303372289197e251
+activeBranch: fp5a/portfolio-risk-envelope-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+classification: EXTEND existing FP3 fixed-fractional/risk inputs with missing live portfolio + correlation-cluster hard-cap layer
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP4 prerequisite:
+- FP4 is PASS and durable closeout merged on exact main `5d5852a422ae48d2a53e0e99303372289197e251`.
+- final Workbench run/job `36628675283/109612066152` PASS: exact main `5d5852a422ae48d2a53e0e99303372289197e251`, branch main, dirty 0, SSD504_WORKBENCH_PASS=YES.
+
+Duplicate/ownership audit:
+- no FP5 branch or open FP5 Capital Allocator PR exists at task start;
+- existing FP3 sizing already owns expected win/loss R, transaction cost R, absolute correlation scalar, drawdown, volatility, liquidity and fixed-fractional promotion;
+- existing Smart Capital allocator Slice1 owns evidence/event-risk eligibility and static Epoch2 vault envelopes, but explicitly forbids live portfolio metrics/notional sizing;
+- existing read-only portfolio view owns current cash/NAV/positions when exact marks are available;
+- DO NOT rebuild those owners.
+
+FP5-A bounded scope:
+- immutable live portfolio-risk snapshot from caller-supplied accepted portfolio metrics;
+- explicit per-asset gross exposure and named correlation-cluster exposure;
+- hard portfolio gross-exposure cap and per-cluster cap;
+- current drawdown + cash reserve gates;
+- accepted event/liquidity/conflict eligibility flags remain explicit and fail closed;
+- transaction-cost and stop/invalidation risk budget inputs bind the envelope;
+- fixed-fractional/risk-budgeted capacity only; no Kelly enablement;
+- 100% cash is a valid outcome;
+- missing/unknown cluster or portfolio metrics => HOLD_CASH / NOT_PROVEN rather than optimistic capacity;
+- no leverage/borrowing/forced deployment;
+- no R21/R22 mutation or runtime deploy in this slice.
+
+PASS gate:
+- cluster exposure is explicit and deterministic;
+- same asset exposure cannot escape its cluster cap;
+- drawdown/event/liquidity/conflict/cash gates fail closed;
+- exact replay identity stable;
+- cash-only portfolio remains valid;
+- eligible portfolio can expose non-zero deployable risk budget without forced under-use;
+- Kelly remains disabled;
+- whole repo regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation + exact-head acceptance not yet exist.
+
+Exact nextAction:
+Implement isolated FP5-A immutable portfolio-risk envelope + focused tests, preserving existing FP3 sizing and Smart Capital owners; then run UID504 acceptance.
+
+
+### FP5-A OWNER-BINDING AUDIT — 2026-09-29
+
+status: FP5A_SEMANTIC_REPAIR_REQUIRED
+auditedBranchHead: 62239a6808bccda8c741aa12cb21ab6b7d47326c
+
+Audit findings before acceptance:
+- implementation correctly adds deterministic portfolio/cluster/cash capacity and keeps Kelly/leverage/borrowing/forced deployment disabled;
+- however event/liquidity/conflict are currently accepted as raw booleans rather than bound accepted evidence identities/types;
+- fixed-fractional and drawdown thresholds are currently duplicated inside FP5 snapshot instead of binding the accepted FP3 sizing/risk policy owner;
+- current asset exposures are not required to have unique correlation-cluster classification; only the candidate cluster is checked;
+- the existing “100% cash” test uses cash=100/nav=1000 with zero exposures, which is internally inconsistent and does not prove a genuine 100% cash portfolio.
+
+Required repair before PR:
+- bind FP5-A assessment to existing FP3 risk inputs + PositionSizingPolicy rather than duplicating their risk gates;
+- bind Event Risk and Confluence through accepted identities/state, not untraceable booleans;
+- require every non-zero current exposure to resolve to exactly one cluster, otherwise NOT_PROVEN;
+- require gross exposure + cash to reconcile to NAV for this long-only/no-leverage slice;
+- repair cash-only test to cash=nav and prove it is valid;
+- preserve isolated/read-only/no-runtime behavior.
+
+Exact nextAction:
+Patch existing FP5-A implementation/tests in place; do not create a second allocator. Then open PR and run fresh exact-head UID504 acceptance.
+
+
+### FP5-A ACCEPTANCE ATTEMPT 1 / MYPY-ONLY REPAIR — 2026-09-29
+
+- PR: #1698
+- tested head before repair: `62239a6808bccda8c741aa12cb21ab6b7d47326c`
+- WC6 run/job: `36629394984` / `109614470041`
+- exact source + clean/frozen Development boundary PASS
+- focused WC6 recovery acceptance PASS
+- full paper subsystem stopped only at mypy in `portfolio_risk_v2.py`
+- exact errors: loop-variable inference reused Decimal variable for bools (line 195) and Optional Decimal values (line 242)
+- Development non-mutation PASS; whole-repo step skipped after mypy failure
+- bounded repair: variable names/narrowing only; allocation semantics unchanged
+- nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 acceptance; inspect any remaining failure mechanically before merge
+
+
+### FP5-A OWNER-BOUND REPAIR IMPLEMENTED / ACCEPTANCE READY — 2026-09-29
+
+status: FP5A_ACCEPTANCE_READY
+sourceRepairCommit: `1e7a2bc14d915e4411225804acf66ed9a4d62a89`
+focusedTestCommit: `919f91347166c6ab9280b023d915027187c3d884`
+activeBranch: `fp5a/portfolio-risk-envelope-v2`
+pr: #1698
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Semantic repair now implemented in-place:
+- one FP5-A owner only; no duplicate allocator/module;
+- FP5 portfolio policy owns only genuinely new controls: portfolio gross cap, cash reserve, per-cluster cap and new-trade loss cap;
+- accepted FP3 `FP3SizingRiskInputs` owns correlation/drawdown/volatility/liquidity/transaction-cost inputs;
+- accepted `PositionSizingPolicy` owns fixed-fractional and corresponding risk thresholds;
+- accepted `CircuitBreakerAnalysis` identity/state owns Event Risk gate;
+- accepted `ConfluenceMatrixSnapshot` identity/resolution owns conflict/partial/not-evaluable gate;
+- current portfolio snapshot binds source portfolio identity, exact cash/NAV and asset/cluster exposures;
+- long-only/no-borrowing invariant requires cash + gross exposure = NAV;
+- every unclassified existing exposure is preserved explicitly and makes assessment NOT_PROVEN;
+- candidate must resolve to a policy cluster;
+- same-cluster exposure consumes the same cap regardless of symbol;
+- baseline notional is current NAV × existing fixed-fractional fraction, then bounded downward by gross, cluster, cash and stop+transaction-cost risk caps;
+- Kelly/leverage/borrowing/forced deployment/production authority remain hard disabled;
+- missing snapshot/cluster truth => NOT_PROVEN; ordinary risk/evidence/cap breach => HOLD_CASH; both expose zero capacity.
+
+Focused proof set rewritten against real accepted owners:
+- genuine 100% cash means cash == NAV and zero gross exposure; eligible evidence can expose positive fixed-fractional capacity;
+- same 100% cash state may HOLD_CASH cleanly under Event Risk;
+- BTC exposure constrains ETH inside CRYPTO_BETA;
+- exhausted cluster cap => HOLD_CASH;
+- unclassified existing exposure => NOT_PROVEN;
+- missing candidate cluster => NOT_PROVEN;
+- overlapping cluster policy rejected;
+- FP3 correlation/drawdown/volatility/liquidity/transaction-cost gates fail closed;
+- Event Risk non-CLEAR and M6 CONFLICT/PARTIAL fail closed with bound evidence identities;
+- cash + gross != NAV rejected;
+- exact replay identity stable;
+- as-of/market lineage mismatch rejected;
+- Kelly/leverage/borrowing/forced deployment remain disabled.
+
+Important acceptance rule:
+- all runs on earlier heads, including `62239a6808bccda8c741aa12cb21ab6b7d47326c`, are stale for merge evidence;
+- require fresh dedicated FP5-A + WC6 + RDP11 + F10 on the final exact PR head after this checkpoint.
+
+
+### FP5-A OWNER-BOUND ACCEPTANCE ATTEMPT / MYPY-ONLY REPAIR — 2026-09-29
+
+- code-equivalent tested head: `919f91347166c6ab9280b023d915027187c3d884`
+- RDP11 run/job: `36630561758/109618412662`
+- exact source + frozen Development boundary PASS
+- full pytest completed before static type failure; no behavioral test failure reported
+- exact sole blocker:
+  - `portfolio_risk_v2.py:296` mypy loop-variable type reuse
+  - `portfolio_risk_v2.py:312` same Optional Decimal narrowing consequence
+- frozen Development non-mutation PASS
+- repair commit: `9b0caf475ecb263fb1ff7599dbe57baa2212ed5d`
+- repair classification: typing-only variable rename/narrowing; no allocation formula, identity, evidence gate or safety semantics changed
+- all prior runs remain stale for merge acceptance
+- nextAction: require fresh exact-head dedicated FP5-A + WC6 + RDP11 + F10 PASS after this checkpoint.
+
+
+### FP5-A UID504 RUNNER-STALL RETRY CHECKPOINT — 2026-09-29
+
+status: FP5A_ACCEPTANCE_RETRY_RUNNER_STALL
+stalledExactHead: `f7bec8c8bebc0220616782cba85d7c82c3b523ea`
+stalledWC6RunJob: `36630937756/109619699806`
+
+Observed facts:
+- dedicated FP5-A `36630937872/109619685584` PASS on stalled head;
+- F10 `36630937804/109619687546` PASS on stalled head;
+- dedicated markers verified: exact source, frozen target, focused, existing-owner compatibility, full regression, Product/Development non-mutation, HISTORICAL_BACKFILL=NO, REAL_CAPITAL=0;
+- WC6 exact source/clean Development passed, then remained stuck in `Create isolated test environment`;
+- historical successful WC6 shows the same venv/pip setup normally completes in seconds;
+- no source/test failure was emitted and in-progress job logs were unavailable via GitHub blob storage;
+- connected GitHub tooling has rerun-failed but no cancel-running action.
+
+Recovery:
+- this docs-only checkpoint intentionally advances the PR head;
+- PR concurrency `cancel-in-progress: true` must retire the stuck WC6 lane and start all acceptance lanes on one new exact head;
+- no production/test source changed in this retry checkpoint.
+
+Acceptance rule:
+- previous dedicated/F10 PASS remain useful diagnostics but are stale for merge after this commit;
+- require dedicated FP5-A + WC6 + RDP11 + F10 PASS again on the new exact head before merge.
