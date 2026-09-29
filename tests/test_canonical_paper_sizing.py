@@ -279,7 +279,7 @@ def test_s11_v2_portfolio_risk_caps_notional_and_binds_lineage(
     assert selection.canonical_notional_usdt == (
         portfolio_assessment.max_deployable_notional_usdt
     )
-    assert selection.canonical_notional_usdt < Decimal("12")
+    assert selection.canonical_notional_usdt < Decimal(12)
     assert selection.portfolio_risk_assessment_identity == (
         portfolio_assessment.assessment_identity
     )
