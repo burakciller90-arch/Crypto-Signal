@@ -3503,3 +3503,47 @@ Repair classification:
 
 Exact nextAction:
 Patch only the C1 test helper attribute access, then rerun the same UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness against the new exact head.
+
+
+## FP1-C1 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_PASS
+activeBranch: fp1c/event-rail-read-model
+acceptedHead: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+uid504Run: 36565167503
+uid504Job: 109395207062
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- all focused event-source Product/runtime tests PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation.
+
+Accepted C1 semantics:
+- Product Event Rail source adapter reads only accepted structured calendar observations;
+- news observations remain separate and are not mixed into scheduled Event Rail;
+- only successful point-in-time calendar fetch lineage can surface structured events;
+- orphan/future/late-ingested rows remain excluded;
+- latest provider failure removes stale previous current-coverage claim;
+- asset/global and category filters are exact;
+- ordering is deterministic;
+- empty/no-event claims remain coverage-aware;
+- source DB/sidecars remain read-only;
+- no Event Risk scoring/window logic is duplicated.
+
+Temporary acceptance harness:
+- branch currently contains temporary MI1 FP1-C trigger/test wiring;
+- this is acceptance infrastructure only and must be restored to exact current-main content before review.
+
+Exact nextAction:
+Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml to exact current-main content, verify blob equality, then start FP1-C2 customer Event Rail projection in final_product_read_model.py only after recording a C2 task-start checkpoint.
