@@ -1132,3 +1132,63 @@ Deploy/soak:
 
 Exact nextAction:
 Apply the import-only regression cleanup, require the resulting exact-head pre-soak fulltest to pass pytest + Ruff + mypy + JS acceptance, then proceed to PR/merge and canonical Development fulltest before any Product deployment.
+
+
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-29 — RDP11 exact-main runtime deployment STARTED
+
+This checkpoint is written before any runtime sync/deploy command for the merged pre-soak repair.
+
+Canonical main / deployment target:
+- `3d9f33db3f1189571d40566125fbeabd00c04930`
+- merged pre-soak repair PR: #1660
+- active branch: `rdp11/deploy-soak-anchor`
+- duplicate RDP11 deploy/soak PRs before branch creation: NONE
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Accepted pre-soak repair evidence:
+- exact branch head: `94c640b8c5d3c7a05f17b9f56a0388a8c78fc326`
+- push acceptance run `36538322648` / job `109307809244`: SUCCESS
+- PR acceptance run `36538473225` / job `109307968366`: SUCCESS
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- Ruff: all checks passed
+- mypy: no issues in 267 source files
+- Product freshness JS contract: PASS
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Merged-main prerequisite:
+- SSD504 Workbench Bootstrap run `36538809494` / job `109309045273`: SUCCESS
+  - `GITHUB_SHA=3d9f33db3f1189571d40566125fbeabd00c04930`
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=3d9f33db3f1189571d40566125fbeabd00c04930`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- Agent Memory Bootstrap run `36538809268` / job `109309048414`: SUCCESS
+  - durable context rebuild PASS
+  - exact-main RDP9 focused acceptance PASS
+  - live cross-venue read-only classification PASS
+
+Generic hosted Stage10 run `36538809416` failed before meaningful job steps and is not used as RDP11 acceptance. The authoritative deployment gate is the exact UID504 sequence below.
+
+### Exact deployment sequence
+
+Do not skip/reorder:
+1. `sync` canonical Development to exact main;
+2. `producttest` on exact Development;
+3. `fulltest` on exact Development;
+4. `productdeploy` with exact target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+5. `productstate` and real health inspection.
+
+Hard soak rule:
+- the 72-hour clock remains **NOT STARTED** until exact Product target and real health/proof inspection pass.
+- deployment failure must rollback/fail closed and must not start the clock.
+
+Exact nextAction:
+Trigger UID504 `sync`; record issue/run/job and verify Development exact head/clean state. Continue automatically through producttest/fulltest only when each previous step succeeds.
