@@ -34,6 +34,7 @@ from crypto_signal.paper.canonical_capital_runtime import (
     CanonicalCapitalSellCommitResult,
     commit_canonical_paper_buy,
     commit_canonical_paper_sell,
+    read_canonical_active_buy_entries,
 )
 from crypto_signal.paper.canonical_sizing import CanonicalPaperSizingSelection
 from crypto_signal.paper.canonical_vault_eligibility import CanonicalVaultEligibilityProof
@@ -50,8 +51,10 @@ from crypto_signal.product.intelligence_stream_ledger import IntelligenceStreamL
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 FP3_ACTION_SCHEMA_VERSION = "fp3-preregistered-action-bridge-v1/1"
-FP3_ACTION_POLICY_VERSION = "fp3-preregistered-action-policy-v1/1"
-FP3_ACTION_ENGINE_VERSION = "fp3-preregistered-action-engine-v1/1"
+FP3_ACTION_POLICY_V1 = "fp3-preregistered-action-policy-v1/1"
+FP3_ACTION_POLICY_VERSION = "fp3-preregistered-action-policy-v2/1"
+FP3_ACTION_ENGINE_V1 = "fp3-preregistered-action-engine-v1/1"
+FP3_ACTION_ENGINE_VERSION = "fp3-preregistered-action-engine-v2/1"
 _ACTION_RECEIPT_TABLE = "fp3_paper_autopilot_action_receipts"
 
 
@@ -80,7 +83,7 @@ class FP3ActionProcessDisposition(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
-_REASON_ACTION: dict[FP3ActionReason, PaperAction | None] = {
+_REASON_ACTION_V1: dict[FP3ActionReason, PaperAction | None] = {
     FP3ActionReason.OPEN: PaperAction.BUY,
     FP3ActionReason.SCALE_IN: None,
     FP3ActionReason.PARTIAL_TAKE_PROFIT: PaperAction.REDUCE,
@@ -90,6 +93,31 @@ _REASON_ACTION: dict[FP3ActionReason, PaperAction | None] = {
     FP3ActionReason.WAIT: None,
     FP3ActionReason.STOP_UPDATE: None,
 }
+
+_REASON_ACTION: dict[FP3ActionReason, PaperAction | None] = {
+    **_REASON_ACTION_V1,
+    FP3ActionReason.SCALE_IN: PaperAction.BUY,
+}
+
+
+def _reason_actions_for_policy(
+    policy_version: str,
+) -> dict[FP3ActionReason, PaperAction | None]:
+    if policy_version == FP3_ACTION_POLICY_V1:
+        return _REASON_ACTION_V1
+    if policy_version == FP3_ACTION_POLICY_VERSION:
+        return _REASON_ACTION
+    raise ValueError("unsupported FP3-C action policy")
+
+
+def _reason_actions_for_engine(
+    engine_version: str,
+) -> dict[FP3ActionReason, PaperAction | None]:
+    if engine_version == FP3_ACTION_ENGINE_V1:
+        return _REASON_ACTION_V1
+    if engine_version == FP3_ACTION_ENGINE_VERSION:
+        return _REASON_ACTION
+    raise ValueError("unsupported FP3-C action engine")
 
 _EXIT_REASON_CODES: dict[FP3ActionReason, tuple[str, ...]] = {
     FP3ActionReason.PARTIAL_TAKE_PROFIT: ("partial_take_profit",),
@@ -131,31 +159,34 @@ class FP3PreregisteredActionIntent:
             _require_sha256(value, label)
         if self.sizing_receipt_identity is not None:
             _require_sha256(self.sizing_receipt_identity, "FP3-C sizing receipt")
-        if self.policy_version != FP3_ACTION_POLICY_VERSION:
-            raise ValueError("unsupported FP3-C action policy")
+        reason_actions = _reason_actions_for_policy(self.policy_version)
+        if (
+            self.policy_version == FP3_ACTION_POLICY_V1
+            and self.engine_version != FP3_ACTION_ENGINE_V1
+        ) or (
+            self.policy_version == FP3_ACTION_POLICY_VERSION
+            and self.engine_version != FP3_ACTION_ENGINE_VERSION
+        ):
+            raise ValueError("FP3-C action policy/engine version mismatch")
         if not isinstance(self.vault_id, PaperVaultId):
             raise TypeError("FP3-C action intent requires canonical vault")
         if not isinstance(self.symbol, PaperSymbol):
             raise TypeError("FP3-C action intent requires canonical symbol")
         if not isinstance(self.reason, FP3ActionReason):
             raise TypeError("FP3-C action intent requires preregistered reason")
-        expected_action = _REASON_ACTION[self.reason]
+        expected_action = reason_actions[self.reason]
         if self.canonical_action is not expected_action:
             raise ValueError("FP3-C reason/action policy mismatch")
         expected_exit_codes = _EXIT_REASON_CODES.get(self.reason, ())
         if self.exit_reason_codes != expected_exit_codes:
             raise ValueError("FP3-C exit reason codes differ from preregistered policy")
         _require_non_negative_int(self.requested_at_ms, "FP3-C requested time")
-        trade_reason = self.reason not in {
-            FP3ActionReason.WAIT,
-            FP3ActionReason.STOP_UPDATE,
-            FP3ActionReason.SCALE_IN,
-        }
+        trade_reason = self.canonical_action is not None
         if trade_reason and self.sizing_receipt_identity is None:
             raise ValueError("FP3-C trade intent requires accepted FP3-B receipt")
         if not trade_reason and self.sizing_receipt_identity is not None:
             raise ValueError("FP3-C no-trade intent cannot invent sizing receipt")
-        if self.reason is FP3ActionReason.OPEN:
+        if self.reason in {FP3ActionReason.OPEN, FP3ActionReason.SCALE_IN}:
             if self.quantity is not None:
                 raise ValueError("FP3-C BUY action quantity comes from canonical sizing")
         elif (
@@ -175,7 +206,6 @@ class FP3PreregisteredActionIntent:
                 FP3ActionReason.CLOSE,
                 FP3ActionReason.WAIT,
                 FP3ActionReason.STOP_UPDATE,
-                FP3ActionReason.SCALE_IN,
             }
             and self.quantity is not None
         ):
@@ -186,8 +216,7 @@ class FP3PreregisteredActionIntent:
         )
         if self.schema_version != FP3_ACTION_SCHEMA_VERSION:
             raise ValueError("unsupported FP3-C action schema")
-        if self.engine_version != FP3_ACTION_ENGINE_VERSION:
-            raise ValueError("unsupported FP3-C action engine")
+        _reason_actions_for_engine(self.engine_version)
         if canonical_sha256(_action_intent_payload(self)) != self.action_intent_identity:
             raise ValueError("FP3-C action intent identity mismatch")
 
@@ -253,7 +282,7 @@ class FP3ActionStageReceipt:
             raise TypeError("FP3-C receipt requires canonical vault")
         if not isinstance(self.symbol, PaperSymbol):
             raise TypeError("FP3-C receipt requires canonical symbol")
-        expected_action = _REASON_ACTION[self.reason]
+        expected_action = _reason_actions_for_engine(self.engine_version)[self.reason]
         if self.canonical_action is not expected_action:
             raise ValueError("FP3-C receipt reason/action mismatch")
         if self.exit_reason_codes != _EXIT_REASON_CODES.get(self.reason, ()):
@@ -291,8 +320,7 @@ class FP3ActionStageReceipt:
         )
         if self.schema_version != FP3_ACTION_SCHEMA_VERSION:
             raise ValueError("unsupported FP3-C receipt schema")
-        if self.engine_version != FP3_ACTION_ENGINE_VERSION:
-            raise ValueError("unsupported FP3-C receipt engine")
+        _reason_actions_for_engine(self.engine_version)
         if canonical_sha256(_action_receipt_payload(self)) != self.receipt_identity:
             raise ValueError("FP3-C action receipt identity mismatch")
 
@@ -484,12 +512,16 @@ class FP3PreregisteredActionBridge:
         *,
         processed_at_ms: int,
     ) -> FP3ActionProcessResult:
-        if intent.reason not in {
-            FP3ActionReason.WAIT,
-            FP3ActionReason.STOP_UPDATE,
-            FP3ActionReason.SCALE_IN,
-        }:
-            raise ValueError("FP3-C no-trade API accepts WAIT/STOP_UPDATE/SCALE_IN only")
+        legacy_scale_in = (
+            intent.reason is FP3ActionReason.SCALE_IN
+            and intent.canonical_action is None
+            and intent.policy_version == FP3_ACTION_POLICY_V1
+        )
+        if (
+            intent.reason not in {FP3ActionReason.WAIT, FP3ActionReason.STOP_UPDATE}
+            and not legacy_scale_in
+        ):
+            raise ValueError("FP3-C no-trade API accepts WAIT/STOP_UPDATE only")
         front = self.autopilot_store.read_receipt_for_forecast(intent.forecast_identity)
         if front is None:
             raise ValueError("FP3-C requires accepted FP3-A receipt")
@@ -539,8 +571,11 @@ class FP3PreregisteredActionBridge:
         snapshot_at_ms: int,
         processed_at_ms: int,
     ) -> FP3ActionProcessResult:
-        if intent.canonical_action is not PaperAction.BUY:
-            raise ValueError("FP3-C BUY API requires OPEN intent in C1")
+        if (
+            intent.canonical_action is not PaperAction.BUY
+            or intent.reason not in {FP3ActionReason.OPEN, FP3ActionReason.SCALE_IN}
+        ):
+            raise ValueError("FP3-C BUY API requires OPEN or SCALE_IN intent")
         front, sizing = self._validate_trade_inputs(
             intent,
             issuance=issuance,
@@ -587,10 +622,33 @@ class FP3PreregisteredActionBridge:
             vault_id=intent.vault_id,
             symbol=intent.symbol,
         )
-        if intent.reason is not FP3ActionReason.OPEN:
-            raise ValueError("FP3-C C1 supports OPEN as the only BUY reason")
-        if current_quantity != Decimal(0):
-            raise ValueError("FP3-C OPEN requires zero current position")
+        if intent.reason is FP3ActionReason.OPEN:
+            if current_quantity != Decimal(0):
+                raise ValueError("FP3-C OPEN requires zero current position")
+        else:
+            if current_quantity <= Decimal(0):
+                raise ValueError("FP3-C SCALE_IN requires positive current position")
+            active_entries = read_canonical_active_buy_entries(
+                epoch2_path=self.epoch2_path,
+                vault_id=intent.vault_id,
+                symbol=intent.symbol,
+            )
+            if not active_entries:
+                raise ValueError("FP3-C SCALE_IN requires exact active BUY lineage")
+            for entry in active_entries:
+                if (
+                    entry.forecast_identity == intent.forecast_identity
+                    or entry.proof_identity == intent.proof_identity
+                    or entry.sizing_assessment_identity
+                    == sizing_assessment.assessment_identity
+                ):
+                    raise ValueError(
+                        "FP3-C SCALE_IN requires distinct forecast/proof/sizing lineage"
+                    )
+            if intent.requested_at_ms <= max(
+                entry.decided_at_ms for entry in active_entries
+            ):
+                raise ValueError("FP3-C SCALE_IN must follow all active BUY decisions")
         if sizing.front_receipt_identity != front.receipt_identity:
             raise ValueError("FP3-C sizing/front receipt mismatch")
 
@@ -612,7 +670,7 @@ class FP3PreregisteredActionBridge:
             mutated_at_ms=mutated_at_ms,
             snapshot_at_ms=snapshot_at_ms,
             additional_source_evidence_identities=(intent.action_evidence_identity,),
-            additional_reason_codes=("fp3_action_open",),
+            additional_reason_codes=(f"fp3_action_{intent.reason.value.lower()}",),
         )
         return self._finalize_buy(
             intent=intent,

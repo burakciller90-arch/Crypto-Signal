@@ -5462,3 +5462,456 @@ Current blocker:
 Exact nextAction:
 Open one FP3-C1 PR, verify exact seven-file diff and PR gates, merge if isolated, then start FP3-C2 on fresh main with a new task-start checkpoint. Do not claim SCALE_IN support before FP3-C2 acceptance PASS.
 
+
+
+## FP3-C2 MULTI-ENTRY LINEAGE TASK START — 2026-09-29
+
+status: FP3_C2_MULTI_ENTRY_LINEAGE_AUDIT_START
+taskStartMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+workbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchVerificationRun: 36602456827
+workbenchVerificationJob: 109522957589
+workbenchVerifiedHead: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+workbenchVerifiedBranch: main
+workbenchDirtyCount: 0
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md#13
+mechanicalGate: FP0 / RDP11 remains ACTIVE / NOT PASS
+classification: REUSE canonical S11/R21/R22 + EXTEND FP3-C action/sell lineage only
+duplicateCheck: no fp3c2 branch and no FP3-C2 PR existed at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Verified predecessor closure:
+- FP3-C1 merged via PR #1682 -> main 1260d6096900107eeb9839ea9a094bb5ce9f028e;
+- FP3-C1 UID504 run 36600881901 / job 109517801922 PASS;
+- PR RDP11 pre-soak run 36601813835 / job 109520818391 PASS;
+- PR F10 closeout run 36601813700 PASS;
+- PR WC6 recovery run 36601813730 PASS;
+- latest RDP11 observer run 36601534398 / job 109519874167 keeps target 3d9f33db3f1189571d40566125fbeabd00c04930 exact, side-car only, canonical runtime unmutated, 72h eligible=NO.
+
+Bounded FP3-C2 goal:
+- represent multiple accepted BUY entry lineages without collapsing forecast/proof/sizing identities;
+- validate the full active-entry set before REDUCE/EXIT;
+- preserve accepted R22 weighted-average cost basis and exact evidence per entry;
+- enable SCALE_IN -> BUY only with positive existing position plus a distinct accepted FP3-B sizing/forecast lineage;
+- prove REDUCE/EXIT after multiple entries deterministic and replay-idempotent;
+- keep STOP_UPDATE explicitly unavailable;
+- do not add a second accounting, execution, sizing or order engine.
+
+Known soak evidence:
+- RDP11 observer failures 36571824625 and 36589525017 occurred during Product HTTP probes while frozen runtime SHA still matched target; they remain evidence for final continuity acceptance and are not erased by later success.
+
+Current blocker:
+- exact active-entry representation and sell-lineage validation changes have not yet been source-audited against merged FP3-C1.
+
+Exact nextAction:
+Audit canonical R22 BUY history, weighted-average cost-basis reconstruction, canonical sell lineage validation and FP3-C1 BUY preconditions; freeze the minimal C2 lineage contract before code.
+
+
+## FP3-C2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C2_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+classification: REUSE weighted-average R22 fill truth + EXTEND active-entry lineage validation only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Audit result:
+- reconstruct_open_cost_basis already supports multiple BUY fills and weighted-average basis exactly;
+- R21 position state already accumulates multiple BUY quantities;
+- canonical BUY commit already supports adding to an existing position at accounting level;
+- blocker is only _validate_sell_lineage requiring every active BUY to share one forecast/proof/sizing-assessment and one sizing result;
+- each accepted R22 BUY intent already immutably stores its own forecast/proof/sizing-assessment/sizing-result/decision lineage;
+- CanonicalCapitalOutcomeEvidence already persists all prior fill identities and weighted-average basis;
+- no R22 schema version bump is required for C2.
+
+Frozen minimal C2 contract:
+- OPEN remains BUY only when current quantity == 0;
+- SCALE_IN becomes BUY only when current quantity > 0;
+- SCALE_IN must use a distinct forecast identity and distinct accepted FP3-B sizing receipt/selection from every currently active BUY entry;
+- exact existing-trade replay preflight remains before mutation;
+- sell caller continues to provide the original/open anchor forecast+proof+sizing assessment used by C1;
+- sell validation must require exactly one active BUY matching that anchor lineage;
+- all other active BUY entries are trusted only as verified immutable R22 BUY intents/fills previously accepted by canonical BUY commits;
+- collect full active entry intent + fill identities and include them in sell intent/source evidence;
+- weighted-average cost basis remains reconstruct_open_cost_basis; do not recalculate elsewhere;
+- REDUCE/EXIT remains deterministic against full current holdings;
+- after partial REDUCE, remaining entry set stays the same until quantity reaches zero; after EXIT it resets naturally with R22 history replay;
+- STOP_UPDATE remains unavailable.
+
+Current blocker:
+- none for implementation; focused multi-entry regression and acceptance are pending.
+
+Exact nextAction:
+Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only, then add focused SCALE_IN -> REDUCE/EXIT weighted-average/replay tests. Do not begin FP3-D before C2 mechanical PASS.
+
+
+
+## FP3-C2 SOURCE AUDIT COMPLETE / TEST IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C2_TEST_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+lineageCommit: c49537eb7baa3893dcd069fa3072ab3c4de6e804
+actionBridgeCommit: c8c5ceaafc871381af2c897aaec3259652793e6e
+realCapital: 0
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Source-audit result:
+- canonical weighted-average cost-basis replay already supports multiple BUY fills; do not replace it;
+- the unsafe C1 assumption was isolated to canonical sell lineage requiring every active BUY to share one forecast/proof/sizing assessment;
+- C2 now represents the verified immutable active BUY entry set from R22 intent/fill truth and binds sell action to the latest active entry while carrying evidence for the full active-entry set;
+- SCALE_IN now maps to canonical BUY only under action-policy v2, positive existing holdings, accepted FP3-A/B sizing and lineage identities distinct from every active BUY;
+- C1 policy/engine v1 remains readable for immutable historical receipts; STOP_UPDATE remains explicit unavailable.
+
+Current blocker:
+- focused multi-entry tests have not yet mechanically proved second BUY, weighted-average basis, REDUCE/EXIT and replay idempotency.
+
+Exact nextAction:
+Add a genuine two-issuance FP3-A/B fixture and prove OPEN -> SCALE_IN -> REDUCE/EXIT plus exact replay/non-duplication; then run PR/full UID504 acceptance and fix only evidenced failures.
+
+
+## FP3-C2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+activeHeadBeforeAcceptanceDocs: 71cc33157097941ce14a9d9a973335d273fed8c0
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- immutable read-only CanonicalActiveBuyEntry representation over verified R22 BUY intent/fill truth;
+- full active-entry set validation with latest-entry sell anchor;
+- every active entry's intent/fill/forecast/proof/sizing/allocator/decision evidence carried into canonical sell evidence;
+- weighted-average cost-basis engine reused unchanged;
+- FP3 action policy/engine v2 maps SCALE_IN -> BUY while v1 remains readable;
+- SCALE_IN requires positive current position, exact FP3-A/B lineage and forecast/proof/sizing identities distinct from every active BUY;
+- STOP_UPDATE remains unavailable;
+- focused test uses a genuinely distinct second unified-decision issuance and proves second BUY, duplicate-lineage rejection, two-entry cost-basis reconstruction, EXIT and exact replay/non-duplication.
+
+Acceptance blocker:
+- no PR/full UID504 acceptance result exists for this head yet.
+
+Exact nextAction:
+Open one isolated FP3-C2 PR, run full PR UID504 gates, inspect exact pytest/Ruff/mypy/non-mutation failures, fix only evidenced C2 defects, then restore/recheck main before merge.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 1 FAIL / FIXTURE TARGET REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_1_TEST_FIXTURE
+pr: 1683
+acceptanceRun: 36603817819
+acceptanceJob: 109527616375
+testedPRMergeSha: b3c6406557
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical failure:
+- exact PR virtual-merge source checkout reached full pytest;
+- one and only reported failure: \`test_fp3_c2_scale_in_then_exit_preserves_multi_entry_lineage_and_replays\`;
+- second issuance fixture requested \`target_scale_in\`, but the frozen signal geometry only contains the accepted target label \`target_1\`;
+- failure: \`ValueError: R20 target must exist in frozen signal geometry\`;
+- RDP11 repair cleanup still reported non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- keep the second issuance distinct through its later \`issued_at_ms\`;
+- reuse canonical frozen geometry target label \`target_1\`;
+- no production/runtime semantic change.
+
+Exact nextAction:
+Apply only the fixture target-label correction, rerun exact PR fulltest and inspect the next mechanical failure or complete pytest/Ruff/mypy/non-mutation PASS.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 2 FAIL / DISTINCT SIGNAL FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_2_DISTINCT_FROZEN_SIGNAL
+pr: 1683
+evidenceRun: 36604239843
+evidenceJob: 109529058060
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical failure:
+- WC6 exact-source, focused paper execution-lab and paper regression stages all PASS;
+- full regression reached the FP3-C2 two-entry test and failed while processing the second issuance into Capital Forward;
+- error: \`StreamLedgerConflictError: immutable Stream source-event identity conflict\`;
+- root cause is test-fixture aliasing: the second issuance changed issue time but reused the exact same frozen SignalDecision identity, which caused capital Stream projection to attempt rebinding an immutable source identity;
+- WC6 cleanup reported Development non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- preserve same valid frozen geometry/target and market context;
+- create a genuinely distinct second frozen signal identity for the second issuance, rather than weakening Stream immutability;
+- no production or ledger contract relaxation.
+
+Exact nextAction:
+Patch only the second-issuance fixture to carry a distinct frozen signal identity, then rerun full acceptance and inspect exact failure/PASS output.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 3 FAIL / NEXT-MARKET-CYCLE FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_3_NEXT_MARKET_CYCLE
+pr: 1683
+testedHead: 57176f484bfca78ab19f01b8f8966b15680e1936
+evidenceRun: 36604895788
+evidenceJob: 109531303801
+f10Run: 36604895638
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- exact-source check PASS;
+- WC6 focused execution-lab PASS;
+- WC6 paper regression PASS;
+- F10 closeout PASS;
+- full regression fails only in the new FP3-C2 two-entry test while projecting the second Smart Capital candidate;
+- error remains \`StreamLedgerConflictError: immutable Stream source-event identity conflict\`;
+- exact root cause: SmartCapitalCandidate identity is derived from asset + as_of + confluence + event-risk (+ optional auxiliary evidence), not from forecast/signal identity. The second fixture changed signal/forecast identity but reused the same market as_of, confluence and event-risk, so it still represented the same immutable capital candidate with a different assessment time;
+- Development cleanup non-mutating PASS; REAL_CAPITAL=0.
+
+Bounded repair:
+- construct the second issuance as a genuinely later market cycle with shifted source as_of;
+- rebuild bullish family evidence and Event Risk at that later as_of, preserving the same accepted geometry/target and policy semantics;
+- keep Stream immutability and canonical Smart Capital identity rules unchanged.
+
+Exact nextAction:
+Patch only the second-cycle test fixture (later as_of + rebuilt bullish family/event evidence), rerun exact PR full acceptance, and fix only the next evidenced failure if any.
+
+
+## FP3-C2 ACCEPTANCE RETRY 4 START — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_RETRY_4
+pr: 1683
+head: f5a415ac754fb494b4f25eff857800a4c51ac7e9
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+rdp11FulltestRun: 36605648432
+wc6Run: 36605648281
+f10Run: 36605648280
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Repair applied:
+- second test entry is now a genuinely later market cycle;
+- source as_of advances by 10s;
+- bullish family evidence is rebuilt at the later as_of with distinct exact source identities;
+- Event Risk and frozen signal are rebuilt at the same later as_of;
+- valid frozen geometry target remains target_1;
+- immutable Stream and Smart Capital identity rules remain unchanged.
+
+Current blocker:
+- retry 4 exact PR full acceptance is still queued/pending.
+
+Exact nextAction:
+Inspect retry-4 UID504 WC6 + RDP11 fulltest outputs; if both mechanically pass pytest/Ruff/mypy/non-mutation, recheck main/PR duplicate state immediately before merge. Otherwise record and repair only the exact next failure.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 4 FAIL / EVENT-CONTEXT FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_4_EVENT_CONTEXT
+pr: 1683
+testedHead: 4124c5d5017fd74474fe31c8db1a8b3fab28600c
+wc6Run: 36605732421
+wc6Job: 109534138077
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- actions/checkout explicitly fetched and checked out exact PR head 4124c5d5017fd74474fe31c8db1a8b3fab28600c;
+- WC6 exact-source PASS;
+- focused execution-lab PASS;
+- paper subsystem regression PASS;
+- whole-repository regression reached only the new FP3-C2 test and failed with \`ValueError: capital forward Event Risk/forecast identity mismatch\`;
+- root cause is local test-helper state: \`_size_existing_issuance\` still supplied the original fixed \`_event_context()\` after the second issuance was correctly moved to a later market as_of;
+- Development non-mutating PASS; REAL_CAPITAL=0.
+
+Bounded repair:
+- derive the fixture Event Risk context from \`issuance.forecast.source_as_of_ms\` and reuse that exact context for Stream projection, FP3 front processing and capital auxiliary evidence;
+- no production/runtime/identity contract change.
+
+Exact nextAction:
+Patch the test helper only, rerun exact-head acceptance, then inspect the next mechanical failure or complete PASS.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 5 FAIL / DISTINCT-LINEAGE CONTRACT REPAIR — 2026-09-29
+
+status: FP3_C2_CONTRACT_FIX_DISTINCT_ASSESSMENT_NOT_RESULT
+pr: 1683
+testedHead: 6af18ab22da8a9e49b6db2d90f2ae5edfd31fa1b
+rdp11FulltestRun: 36606670456
+rdp11FulltestJob: 109537345063
+f10Run: 36606670385
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- exact source/clean Development PASS;
+- F10 PASS;
+- full pytest reaches genuine second-cycle FP3-C2 SCALE_IN;
+- failure: \`FP3-C SCALE_IN requires distinct forecast/proof/sizing lineage\`;
+- source audit proves \`SizingMethodResult.result_identity\` is intentionally derived only from method/status/fraction/notional/probability semantics and does NOT include sizing context or assessment identity;
+- therefore two genuinely distinct assessments can legitimately share the same deterministic fixed-fractional result identity;
+- the C2 guard incorrectly treated this context-free method-result identity as an entry-lineage identity;
+- cleanup still reports RDP11 repair non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded production repair:
+- require SCALE_IN forecast identity to differ from every active BUY;
+- require proof identity to differ from every active BUY;
+- require sizing assessment identity to differ from every active BUY;
+- DO NOT require sizing method result identity to differ, because exact same reviewed sizing result semantics may repeat across distinct assessments;
+- keep exact R22 assessment+result lineage on every entry and keep duplicate same-assessment SCALE_IN fail-closed.
+
+Exact nextAction:
+Remove only the invalid sizing-result distinctness check, add regression proof that distinct assessments may share deterministic result identity, then rerun full exact-head acceptance.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 6 FAIL / TRIGGER-ZONE FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_6_TRIGGER_ZONE
+pr: 1683
+testedHead: 871d81202a164457ef99a25bd0a193342e74e882
+rdp11FulltestRun: 36607251651
+rdp11FulltestJob: 109539306982
+f10Run: 36607252037
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- F10 PASS;
+- exact source/clean Development PASS;
+- distinct forecast/proof/sizing-assessment guard no longer rejects genuine second-cycle SCALE_IN;
+- test reaches canonical S11 BUY validation;
+- failure: \`S11 BUY reference price must be inside exact trigger zone\`;
+- fixture used 103 while frozen signal trigger zone is 100–102;
+- canonical S11 trigger-zone protection is correct and remains unchanged;
+- cleanup reports non-mutating PASS and REAL_CAPITAL=0.
+
+Bounded repair:
+- change only genuine SCALE_IN test reference/mark price to 102, inside the exact frozen trigger zone;
+- preserve the frozen signal geometry and all production validation.
+
+Exact nextAction:
+Patch fixture price only, rerun exact-head full acceptance, then inspect next failure or PASS.
+
+
+## FP3-C2 PASS-CONTRACT AUDIT / REDUCE PROOF GAP — 2026-09-29
+
+status: FP3_C2_REDUCE_PROOF_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+pr: 1683
+auditedHead: d40c1d919890583271e2373db3aafee0db6f39a3
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Mechanical contract audit:
+- exact FP3-C2 PASS contract requires OPEN -> distinct SCALE_IN -> two BUY entries;
+- duplicate/replayed SCALE_IN must not create another mutation;
+- REDUCE after two entries must use exact weighted-average basis and remain replay-idempotent;
+- EXIT after the remaining multi-entry position must flatten deterministically;
+- current focused C2 test proves two BUYs, duplicate-lineage rejection and EXIT replay, but does not yet execute a REDUCE between SCALE_IN and EXIT;
+- therefore FP3-C2 cannot be claimed PASS even if generic/full workflows become green on the current proof set.
+
+Bounded goal:
+- extend only the focused multi-entry acceptance test;
+- execute PARTIAL_TAKE_PROFIT/REDUCE on half the accumulated position after two BUY entries;
+- prove REDUCE inserted once and exact replay leaves Epoch2 + Stream bytes unchanged;
+- prove remaining open basis/quantity still reconcile;
+- then EXIT the remaining position and verify final R22 action sequence BUY, BUY, REDUCE, EXIT.
+- no production/runtime behavior change.
+
+Exact nextAction:
+Patch the focused C2 test with multi-entry REDUCE + replay proof, then run exact-head UID504 acceptance and inspect mechanical output.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 7 FAIL / WEIGHTED-AVERAGE DECIMAL INVARIANT REPAIR — 2026-09-29
+
+status: FP3_C2_CONTRACT_FIX_WEIGHTED_AVERAGE_DECIMAL
+pr: 1683
+testedHead: 7c2319c562bb06447d0f6a6d95910ee1b869bf47
+rdp11FulltestRun: 36608541557
+rdp11FulltestJob: 109543735446
+wc6Run: 36608541741
+wc6Job: 109543738406
+f10Run: 36608541361
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- F10 PASS;
+- WC6 exact-source PASS;
+- WC6 focused execution-lab PASS;
+- WC6 paper regression PASS;
+- both RDP11 fulltest and WC6 full regression hit the same C2 failure during the first genuine two-entry REDUCE;
+- failure: \`S11 outcome basis-before does not reconcile\`;
+- root cause: \`CanonicalCapitalOutcomeEvidence\` still validates \`basis == average * quantity\` with exact Decimal equality;
+- weighted-average multi-entry basis can produce a repeating Decimal quotient, so multiplying the rounded context result back by quantity need not exactly recover the original basis;
+- \`ReconstructedOpenCostBasis\` already uses the correct directional invariant \`average == basis / quantity\`;
+- full-position EXIT must remove the exact remaining basis rather than a rounded \`average * full_quantity\`, otherwise a microscopic phantom basis/PnL residual can be created.
+
+Bounded production repair:
+- validate outcome average using \`average == basis_before / position_quantity_before\`;
+- for REDUCE, removed basis remains \`average * reduced_quantity\`;
+- for EXIT, removed basis is the exact entire remaining basis;
+- reconstruction applies the same EXIT rule so immutable history verification remains deterministic;
+- keep remaining-basis and realized-PnL exact accounting invariants;
+- no tolerance/epsilon, no schema rewrite, no historical backfill.
+
+Separate observed signal:
+- RDP11 full suite also reported \`test_final_product_read_model.py::test_attention_reuses_materiality_and_prioritizes_newer_system_view\`;
+- branch does not touch that read-model code; investigate separately after C2 cost-basis failure is repaired and rerun establishes whether it is reproducible.
+
+Exact nextAction:
+Patch the S11 weighted-average outcome/reconstruction invariant plus focused regression, rerun exact-head UID504 acceptance, then isolate any remaining unrelated full-suite failure.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 8 FAIL / LINT-ONLY CLEANUP — 2026-09-29
+
+status: FP3_C2_LINT_CLEANUP
+pr: 1683
+testedHead: f69e7b793b95644250e1b1733113c51626dab8f9
+wc6Run: 36612394403
+wc6Job: 109556830119
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- WC6 exact-source PASS;
+- WC6 focused execution-lab PASS;
+- WC6 full paper subsystem regression PASS;
+- whole-repository pytest completed without a C2 functional failure;
+- whole-repository gate then failed in Ruff with 14 x FURB157, all fixable verbose integer Decimal constructors in the new multi-entry test;
+- Development non-mutating PASS; REAL_CAPITAL=0.
+- therefore the weighted-average S11 production repair and C2 REDUCE/EXIT behavior are functionally accepted so far; only lint blocks the gate.
+
+Bounded repair:
+- mechanical test-only Decimal constructor cleanup;
+- no source/runtime/ledger behavior change.
+
+Exact nextAction:
+Replace the 14 verbose integer Decimal string constructors in the new multi-entry test, rerun exact-head WC6/RDP11/F10, then inspect any remaining gate output.

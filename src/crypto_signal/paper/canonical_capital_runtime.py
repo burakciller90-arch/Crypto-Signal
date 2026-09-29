@@ -172,6 +172,100 @@ class CanonicalCapitalSellCommitResult:
             raise ValueError("S11 sell cannot grant production/real-capital authority")
 
 
+
+@dataclass(frozen=True, slots=True)
+class CanonicalActiveBuyEntry:
+    """Read-only representation of one immutable BUY contributing to an open position."""
+
+    intent_identity: str
+    fill_identity: str
+    forecast_identity: str
+    proof_identity: str
+    sizing_assessment_identity: str
+    sizing_decision_identity: str
+    allocator_candidate_identity: str
+    decision_identity: str
+    source_evidence_identities: tuple[str, ...]
+    quantity: Decimal
+    decided_at_ms: int
+
+    def __post_init__(self) -> None:
+        for identity, label in (
+            (self.intent_identity, "active BUY intent"),
+            (self.fill_identity, "active BUY fill"),
+            (self.forecast_identity, "active BUY forecast"),
+            (self.proof_identity, "active BUY proof"),
+            (self.sizing_assessment_identity, "active BUY sizing assessment"),
+            (self.sizing_decision_identity, "active BUY sizing decision"),
+            (self.allocator_candidate_identity, "active BUY allocator candidate"),
+            (self.decision_identity, "active BUY paper decision"),
+        ):
+            _require_sha256(identity, label)
+        if (
+            self.source_evidence_identities
+            != tuple(sorted(set(self.source_evidence_identities)))
+        ):
+            raise ValueError("active BUY source evidence must be sorted unique")
+        for identity in self.source_evidence_identities:
+            _require_sha256(identity, "active BUY source evidence")
+        required = {
+            self.proof_identity,
+            self.sizing_assessment_identity,
+            self.sizing_decision_identity,
+            self.allocator_candidate_identity,
+            self.decision_identity,
+        }
+        if not required.issubset(set(self.source_evidence_identities)):
+            raise ValueError("active BUY lost canonical R22 source lineage")
+        if (
+            not isinstance(self.quantity, Decimal)
+            or not self.quantity.is_finite()
+            or self.quantity <= 0
+        ):
+            raise ValueError("active BUY quantity must be positive finite Decimal")
+        if self.decided_at_ms < 0:
+            raise ValueError("active BUY decision time must be non-negative")
+
+    @property
+    def lineage_evidence_identities(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                {
+                    self.intent_identity,
+                    self.fill_identity,
+                    self.forecast_identity,
+                    self.proof_identity,
+                    self.sizing_assessment_identity,
+                    self.sizing_decision_identity,
+                    self.allocator_candidate_identity,
+                    self.decision_identity,
+                    *self.source_evidence_identities,
+                }
+            )
+        )
+
+
+def read_canonical_active_buy_entries(
+    *,
+    epoch2_path: Path,
+    vault_id: PaperVaultId,
+    symbol: PaperSymbol,
+) -> tuple[CanonicalActiveBuyEntry, ...]:
+    """Read the exact immutable BUY-entry set that still contributes to R21 holdings."""
+
+    state = Epoch2CanonicalLedger(epoch2_path).read_state()
+    current = _current_vault(state, vault_id)
+    history = R22Epoch2AtomicTape(epoch2_path).read_trade_history(vault_id, symbol)
+    open_quantity, entries = _active_buy_entries_from_history(
+        history,
+        vault_id=vault_id,
+        symbol=symbol,
+    )
+    if open_quantity != _held_quantity(current.positions, symbol):
+        raise ValueError("active BUY entry set disagrees with current R21 holdings")
+    return entries
+
+
 def commit_canonical_paper_buy(
     *,
     epoch2_path: Path,
@@ -531,7 +625,7 @@ def commit_canonical_paper_sell(
     if action is PaperAction.EXIT and quantity not in {None, current_quantity}:
         raise ValueError("S11 EXIT quantity must be omitted or equal full holdings")
 
-    sizing_result = _validate_sell_lineage(
+    sizing_result, active_entry_evidence = _validate_sell_lineage(
         state=state,
         current=current,
         history=history,
@@ -591,6 +685,7 @@ def commit_canonical_paper_sell(
                 reference_price_evidence_identity,
                 mark_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *active_entry_evidence,
                 *additional_source_evidence_identities,
             }
         )
@@ -642,7 +737,7 @@ def commit_canonical_paper_sell(
                     reference_price_evidence_identity,
                     mark_evidence_identity,
                     execution_snapshot.snapshot_identity,
-                *additional_source_evidence_identities,
+                    *active_entry_evidence,
                     *additional_source_evidence_identities,
                 }
             )
@@ -689,6 +784,7 @@ def commit_canonical_paper_sell(
                 mark_evidence_identity,
                 reference_price_evidence_identity,
                 execution_snapshot.snapshot_identity,
+                *active_entry_evidence,
                 *additional_source_evidence_identities,
             }
         )
@@ -853,6 +949,137 @@ def _validate_trade_lineage(
         raise ValueError("S11 accounting snapshot must advance vault time")
 
 
+def _history_identity(
+    raw: Mapping[str, object],
+    key: str,
+    label: str,
+) -> str:
+    value = raw.get(key)
+    if not isinstance(value, str):
+        raise TypeError(f"{label} must be SHA256 text")
+    _require_sha256(value, label)
+    return value
+
+
+def _history_identity_tuple(
+    raw: Mapping[str, object],
+    key: str,
+    label: str,
+) -> tuple[str, ...]:
+    value = raw.get(key)
+    if not isinstance(value, (list, tuple)):
+        raise TypeError(f"{label} must be an identity list")
+    identities = tuple(value)
+    if any(not isinstance(item, str) for item in identities):
+        raise TypeError(f"{label} entries must be text")
+    typed = tuple(str(item) for item in identities)
+    if typed != tuple(sorted(set(typed))):
+        raise ValueError(f"{label} must be sorted unique")
+    for identity in typed:
+        _require_sha256(identity, label)
+    return typed
+
+
+def _active_buy_entries_from_history(
+    history: tuple[dict[str, object], ...],
+    *,
+    vault_id: PaperVaultId,
+    symbol: PaperSymbol,
+) -> tuple[Decimal, tuple[CanonicalActiveBuyEntry, ...]]:
+    open_quantity = Decimal(0)
+    entries: list[CanonicalActiveBuyEntry] = []
+    for record in history:
+        fill_raw = record.get("fill")
+        intent_raw = record.get("intent")
+        if not isinstance(fill_raw, dict) or not isinstance(intent_raw, dict):
+            raise TypeError("S11 active-entry history requires verified intent/fill mappings")
+        if fill_raw.get("vault_id") != vault_id.value:
+            raise ValueError("S11 active-entry history crossed vaults")
+        if fill_raw.get("symbol") != symbol.value:
+            raise ValueError("S11 active-entry history crossed symbols")
+        action = PaperAction(str(fill_raw["action"]))
+        fill_quantity = Decimal(str(fill_raw["quantity"]))
+        if not fill_quantity.is_finite() or fill_quantity <= 0:
+            raise ValueError("S11 active-entry history has invalid fill quantity")
+        if action is PaperAction.BUY:
+            if open_quantity == 0:
+                entries = []
+            if (
+                intent_raw.get("action") != PaperAction.BUY.value
+                or intent_raw.get("vault_id") != vault_id.value
+                or intent_raw.get("symbol") != symbol.value
+            ):
+                raise ValueError("S11 active BUY intent/fill lineage mismatch")
+            intent_identity = _history_identity(
+                intent_raw,
+                "intent_identity",
+                "S11 active BUY intent",
+            )
+            fill_intent_identity = _history_identity(
+                fill_raw,
+                "intent_identity",
+                "S11 active BUY fill intent",
+            )
+            if fill_intent_identity != intent_identity:
+                raise ValueError("S11 active BUY fill references different intent")
+            entry = CanonicalActiveBuyEntry(
+                intent_identity=intent_identity,
+                fill_identity=_history_identity(
+                    fill_raw,
+                    "fill_identity",
+                    "S11 active BUY fill",
+                ),
+                forecast_identity=_history_identity(
+                    intent_raw,
+                    "forecast_identity",
+                    "S11 active BUY forecast",
+                ),
+                proof_identity=_history_identity(
+                    intent_raw,
+                    "proof_identity",
+                    "S11 active BUY proof",
+                ),
+                sizing_assessment_identity=_history_identity(
+                    intent_raw,
+                    "sizing_assessment_identity",
+                    "S11 active BUY sizing assessment",
+                ),
+                sizing_decision_identity=_history_identity(
+                    intent_raw,
+                    "sizing_decision_identity",
+                    "S11 active BUY sizing decision",
+                ),
+                allocator_candidate_identity=_history_identity(
+                    intent_raw,
+                    "allocator_candidate_identity",
+                    "S11 active BUY allocator candidate",
+                ),
+                decision_identity=_history_identity(
+                    intent_raw,
+                    "decision_identity",
+                    "S11 active BUY paper decision",
+                ),
+                source_evidence_identities=_history_identity_tuple(
+                    intent_raw,
+                    "source_evidence_identities",
+                    "S11 active BUY source evidence",
+                ),
+                quantity=fill_quantity,
+                decided_at_ms=int(str(intent_raw["decided_at_ms"])),
+            )
+            open_quantity += fill_quantity
+            entries.append(entry)
+            continue
+        if action not in {PaperAction.REDUCE, PaperAction.EXIT}:
+            raise ValueError("S11 active-entry history found unsupported trade action")
+        open_quantity -= fill_quantity
+        if open_quantity < 0:
+            raise ValueError("S11 sell history reconstructed negative position")
+        if open_quantity == 0:
+            entries = []
+    return open_quantity, tuple(entries)
+
+
 def _validate_sell_lineage(
     *,
     state: Epoch2LedgerState,
@@ -868,7 +1095,7 @@ def _validate_sell_lineage(
     filled_at_ms: int,
     mutated_at_ms: int,
     snapshot_at_ms: int,
-) -> SizingMethodResult:
+) -> tuple[SizingMethodResult, tuple[str, ...]]:
     if proof.forecast_identity != forecast.forecast_identity:
         raise ValueError("S11 sell proof/forecast identity mismatch")
     if proof.signal_freeze_identity != forecast.signal_freeze_identity:
@@ -890,62 +1117,51 @@ def _validate_sell_lineage(
     if snapshot_at_ms <= current.snapshot_at_ms:
         raise ValueError("S11 sell accounting snapshot must advance vault time")
 
-    open_quantity = Decimal(0)
-    active_buy_intents: list[dict[str, object]] = []
-    for record in history:
-        fill_raw = record.get("fill")
-        intent_raw = record.get("intent")
-        if not isinstance(fill_raw, dict) or not isinstance(intent_raw, dict):
-            raise TypeError("S11 sell history requires verified intent/fill mappings")
-        action = PaperAction(str(fill_raw["action"]))
-        fill_quantity = Decimal(str(fill_raw["quantity"]))
-        if action is PaperAction.BUY:
-            if open_quantity == 0:
-                active_buy_intents = []
-            open_quantity += fill_quantity
-            active_buy_intents.append(intent_raw)
-        elif action in {PaperAction.REDUCE, PaperAction.EXIT}:
-            open_quantity -= fill_quantity
-            if open_quantity < 0:
-                raise ValueError("S11 sell history reconstructed negative position")
-            if open_quantity == 0:
-                active_buy_intents = []
+    open_quantity, active_entries = _active_buy_entries_from_history(
+        history,
+        vault_id=current.vault_id,
+        symbol=symbol,
+    )
     if open_quantity != _held_quantity(current.positions, symbol):
         raise ValueError("S11 sell history does not match current R21 holdings")
-    if not active_buy_intents:
+    if not active_entries:
         raise ValueError("S11 sell cannot find open BUY lineage")
 
-    result_ids: set[str] = set()
-    for intent_raw in active_buy_intents:
-        if (
-            intent_raw.get("forecast_identity") != forecast.forecast_identity
-            or intent_raw.get("proof_identity") != proof.proof_identity
-            or intent_raw.get("sizing_assessment_identity")
-            != sizing_assessment.assessment_identity
-        ):
-            raise ValueError("S11 sell open BUY decision/proof/sizing lineage mismatch")
-        result_identity = intent_raw.get("sizing_decision_identity")
-        if not isinstance(result_identity, str):
-            raise TypeError("S11 sell open BUY lost sizing decision identity")
-        result_ids.add(result_identity)
-    if len(result_ids) != 1:
-        raise ValueError("S11 sell open position has ambiguous sizing lineage")
-    result_identity = next(iter(result_ids))
+    latest = active_entries[-1]
+    if (
+        latest.forecast_identity != forecast.forecast_identity
+        or latest.proof_identity != proof.proof_identity
+        or latest.sizing_assessment_identity != sizing_assessment.assessment_identity
+    ):
+        raise ValueError("S11 sell must bind the latest active BUY lineage")
+    if decided_at_ms <= latest.decided_at_ms:
+        raise ValueError("S11 sell decision must follow latest active BUY decision")
+
     matches = tuple(
-        item for item in sizing_assessment.results
-        if item.result_identity == result_identity
+        item
+        for item in sizing_assessment.results
+        if item.result_identity == latest.sizing_decision_identity
     )
     if len(matches) != 1:
-        raise ValueError("S11 sell sizing result is not in supplied assessment")
+        raise ValueError("S11 sell sizing result is not in latest active assessment")
     result = matches[0]
     if (
         result.method is not SizingMethod.FIXED_FRACTIONAL
         or result.status is not SizingMethodStatus.AVAILABLE_SHADOW
         or result.hypothetical_notional_usdt is None
     ):
-        raise ValueError("S11 sell requires original available fixed-fractional sizing")
-    return result
+        raise ValueError("S11 sell requires latest available fixed-fractional sizing")
 
+    active_entry_evidence = tuple(
+        sorted(
+            {
+                identity
+                for entry in active_entries
+                for identity in entry.lineage_evidence_identities
+            }
+        )
+    )
+    return result, active_entry_evidence
 
 def _held_quantity(
     positions: tuple[PaperPosition, ...],
