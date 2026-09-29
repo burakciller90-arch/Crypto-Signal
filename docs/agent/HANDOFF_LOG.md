@@ -6066,3 +6066,22 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - `SSD504_WORKBENCH_PASS=YES`; `BOOTSTRAP_SHA=906db410e692a5119b752998301cb58a3eba8b6a`; `REAL_CAPITAL=0`
 - no Product/Development deployment, no historical backfill
 - nextAction: merge docs handoff, rebase FP4-D onto resulting main, then run exact-head acceptance
+
+
+## 2026-09-29 — FP4-D instrument-specific fee schedule implementation checkpoint
+
+- task-start main: `356b30add6eedb8f7d041abb2f39f58b87db08f7` (pre-FP4-B merge)
+- branch: `fp4d/instrument-fee-schedule-v2`
+- session-local worktree: not created in connector session
+- source contract: Binance Spot Account Commission Rates result shape; normalization only, no credential fetch/deploy in this slice
+- immutable snapshot freezes symbol, observed/ingested time, raw payload hash, standard/special/tax maker/taker/buyer/seller rates and discount metadata
+- fee projection selects maker/taker + buyer/seller components and includes special + tax explicitly
+- BNB discount is never assumed; it applies only with explicit payment-proof identity and when both account+symbol discount flags are enabled
+- missing snapshot => FEE_NOT_PROVEN; future-ingested snapshot rejected
+- projection emits fee cost only; spread/slippage/funding are not re-added, preventing double-counting at this layer
+- existing venue precision/min-notional/tick-size rules remain authoritative and are not duplicated
+- dedicated workflow: `.github/workflows/fp4d-instrument-fee-uid504.yml`
+- IMPORTANT: FP4-B has since merged as `906db410e692a5119b752998301cb58a3eba8b6a`; this branch MUST rebase/replay onto docs-complete latest main before acceptance
+- REAL_CAPITAL=0; no backfill/deploy; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- blocker: rebase + exact-head acceptance pending
+- nextAction: merge docs handoff #1694, replay FP4-D files onto latest main, then open PR and run dedicated/WC6/RDP11/F10 acceptance
