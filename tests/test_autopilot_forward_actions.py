@@ -5,6 +5,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 
 import pytest
+from test_autopilot_forward_runtime import _paths
 from test_autopilot_forward_sizing import (
     _current_vault,
     _front,
@@ -16,6 +17,9 @@ from test_autopilot_forward_sizing import (
 from test_canonical_capital_runtime import _execution_snapshot
 from test_immutable_forecast_stream import _event_context
 
+from crypto_signal.paper.autopilot_forward_runtime import (
+    CanonicalPaperAutopilotForwardRuntime,
+)
 from crypto_signal.paper.autopilot_forward_actions import (
     FP3ActionProcessDisposition,
     FP3ActionReason,
@@ -42,10 +46,32 @@ from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.intelligence_stream_capital_forward_evidence import (
     build_capital_forward_auxiliary_evidence,
 )
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
+)
 
 
 def _sized_chain(tmp_path: Path):
-    epoch2_path, stream_path, autopilot_path, issuance, front = _front(tmp_path)
+    epoch2_path, stream_path, autopilot_path, issuance = _paths(tmp_path)
+    IntelligenceStreamForwardRuntime(stream_path).project_issuance(issuance)
+    assessed_at_ms = issuance.forecast.issued_at_ms + 1
+    front_runtime = CanonicalPaperAutopilotForwardRuntime(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+        autopilot_path=autopilot_path,
+    )
+    front_runtime.ensure_activated(
+        activated_at_ms=issuance.forecast.issued_at_ms,
+    )
+    front_result = front_runtime.process_issuance(
+        issuance,
+        event_context=_event_context(),
+        base_asset="BTC",
+        assessed_at_ms=assessed_at_ms,
+        processed_at_ms=assessed_at_ms + 5,
+    )
+    assert front_result.receipt is not None
+    front = front_result.receipt
     risk = _risk(
         epoch2_path=epoch2_path,
         front_assessed_at_ms=front.assessed_at_ms,
