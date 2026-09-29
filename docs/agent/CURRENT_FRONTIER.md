@@ -6339,3 +6339,52 @@ Current blocker:
 
 Exact nextAction:
 Start isolated FP4-B from current exact main. Audit duplicate latency/queue/timeout owners, then build only the missing fail-closed execution-timing/queue contract over immutable Market Tape truth without mutating the frozen RDP11 runtime.
+
+
+## FP4-B TIMING / QUEUE UNCERTAINTY V2 START — 2026-09-29
+
+status: FP4B_IMPLEMENTATION_START
+taskStartMain: 918e269e70f1e87df492fd0db00f8b21b397d3e1
+fp4aMergeSha: 918e269e70f1e87df492fd0db00f8b21b397d3e1
+activeBranch: fp4b/timing-queue-uncertainty-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+classification: BUILD isolated timing/queue evidence contract on top of accepted FP4-A depth execution
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate audit:
+- no open FP4 PR and no existing FP4-B branch was found;
+- FP4-A is merged and owns deterministic frozen depth consumption only;
+- no current implementation was found for configurable paper latency, timeout/cancel state, or passive limit queue uncertainty;
+- accepted Market Tape order-book snapshots already provide immutable event/source/ingest times and identity and will be REUSED;
+- no candle-touch inference will be introduced.
+
+FP4-B bounded scope:
+- freeze submission time, configured latency, deadline, optional cancellation and optional limit price into one deterministic request identity;
+- select only immutable order-book observations that are causally eligible after latency and available by the evaluation cutoff;
+- future-ingested snapshots must not influence historical evaluation;
+- market-style requests may become depth-execution-ready using the first causally eligible book;
+- immediately marketable limit requests may become execution-ready only when price condition is explicitly satisfied by the selected book;
+- passive/touched limit orders remain FILL_NOT_PROVEN without explicit queue/trade proof; candle wick touch is never accepted;
+- explicit PENDING / TIMEOUT / CANCELLED / FILL_NOT_PROVEN / EXECUTION_READY states;
+- no R21/R22 mutation and no active runtime deployment in this slice.
+
+PASS gate:
+- exact replay identity is deterministic;
+- configured latency changes eligibility mechanically;
+- future snapshots cannot change a historical result;
+- cancellation and timeout are deterministic;
+- passive limit touch/cross without queue proof cannot become a fill;
+- FP4-A and v1 execution regressions remain PASS;
+- UID504 full regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation and acceptance do not yet exist.
+
+Exact nextAction:
+Implement the isolated FP4-B timing/queue evidence classifier with focused deterministic tests, then run exact-head UID504 acceptance without changing the frozen RDP11 runtime.
