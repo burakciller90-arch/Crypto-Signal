@@ -5132,3 +5132,34 @@ Bounded fix:
 Exact nextAction:
 Patch that one focused test and rerun exact-head UID504 acceptance; if pytest passes, inspect Ruff and strict mypy separately.
 
+
+
+## FP3-B ACCEPTANCE ATTEMPT 3 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_3_TYPING_ONLY
+acceptanceRun: 36595210948
+acceptanceJob: 109498426825
+attemptedHead: 68eecb2606ab8e38f4eb1eb79ffad2cde430d5ce
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy failed with 15 local typing errors in autopilot_forward_sizing.py only.
+
+Typing clusters:
+1. one str | None assignment narrowing around optional canonical sizing identity;
+2. two FP3SizingStageReceipt constructions pass heterogeneous dict[str, object] through **kwargs, producing 14 constructor arg-type errors.
+
+Bounded fix:
+- use explicitly typed local for optional sizing identity;
+- replace heterogeneous **kwargs receipt construction with explicit typed constructor arguments;
+- no sizing, chronology, risk, replay, persistence or Stream semantics change.
+
+Exact nextAction:
+Apply typing-only refactor, rerun exact-head UID504 acceptance, require all mechanical gates PASS, then restore temporary workflow and mark FP3-B review-ready.
+
