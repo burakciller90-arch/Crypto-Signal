@@ -1,12 +1,14 @@
 # Crypto Signal
 
+> **ACTIVE PROGRAM — 2026-09-29:** Start with [`ACTIVE_ROADMAP.md`](ACTIVE_ROADMAP.md). The canonical umbrella is `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`. The first mechanical gate is FP0/RDP11 real soak; accepted Stream/MI/R21/R22/R24 foundations are reuse inputs, not work to replay. **REAL_CAPITAL=0.**
+
 Crypto Signal is a Turkish-first, explainable, evidence-driven crypto market-intelligence platform. The repository preserves immutable historical signal/forecast evidence, point-in-time Decision Proof, Market Tape data, research/scientific rails, contextual education and a paper-capital program with explicit epoch separation.
 
 ## Current authority and state
 
 The immutable release baseline is `crypto-signal-full-version-v1.0.0`. Active development is the post-v1.0 / v1.1 world-class product + market-intelligence program.
 
-For exact current state, **do not treat this README as the authoritative HEAD/runtime snapshot**. Read `READ_FIRST_CRYPTO_SIGNAL.md`, then `CURRENT_STATUS.md`, the newest relevant `PROJECT_CHRONICLE.md` entry, and mechanically inspect Git/runtime state.
+For exact current state, **do not treat this README as the authoritative HEAD/runtime snapshot**. Read `AGENTS.md` → `ACTIVE_ROADMAP.md` → `docs/agent/CURRENT_FRONTIER.md` / `HANDOFF_LOG.md` → `READ_FIRST_CRYPTO_SIGNAL.md` → `CURRENT_STATUS.md`, then mechanically inspect Git/runtime state.
 
 Current program facts recorded by the canonical state documents:
 - **Intelligence Stream V1 is the deployed Product root**;
@@ -68,13 +70,20 @@ See `ENVIRONMENT_REGISTRY.md` for current environment authority.
 ## Read order
 
 Always start with:
-1. `READ_FIRST_CRYPTO_SIGNAL.md`
-2. `CURRENT_STATUS.md`
-3. newest relevant entry in `PROJECT_CHRONICLE.md`
-4. `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` for global v1.1 product/science/capital boundaries
+1. `AGENTS.md`
+2. `ACTIVE_ROADMAP.md`
+3. `docs/agent/CURRENT_FRONTIER.md` and tail of `docs/agent/HANDOFF_LOG.md`
+4. `READ_FIRST_CRYPTO_SIGNAL.md`
+5. `CURRENT_STATUS.md`
+6. newest relevant entry in `PROJECT_CHRONICLE.md`
+7. `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
+8. the mechanically active phase authority (currently the RDP11 Evidence Data Plane roadmap)
+9. relevant accepted contracts for the exact slice
 
-For **new frontend work**, then read:
-5. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`
+For accepted Stream/product history, consult:
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md`
 
 The older `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, M0 Constitution and M1 Capability/Gap Ledger are retained only as historical/discovery records and must not drive current scope or sequencing.
 
