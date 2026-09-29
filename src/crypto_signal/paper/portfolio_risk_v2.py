@@ -115,6 +115,14 @@ class PortfolioRiskSnapshotV2:
         cluster_ids = tuple(item.cluster_id for item in self.clusters)
         if cluster_ids != tuple(sorted(set(cluster_ids))):
             raise ValueError("clusters must be sorted unique by cluster_id")
+        for exposure in self.asset_exposures:
+            memberships = sum(
+                1 for cluster in self.clusters if exposure.asset in cluster.members
+            )
+            if memberships != 1:
+                raise ValueError(
+                    "each exposed asset must belong to exactly one correlation cluster"
+                )
         if not self.source_evidence_identities:
             raise ValueError("portfolio risk snapshot requires source evidence")
         if self.source_evidence_identities != tuple(
