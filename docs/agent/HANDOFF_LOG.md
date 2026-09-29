@@ -5822,3 +5822,17 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - Durdurulmaz untouched; Quantum Capital untouched
 - blocker: FP3-D genuine-forward liveness requires real post-activation evidence; fixture proof cannot close it
 - nextAction: start isolated FP3-D checkpoint from current main and audit activation/liveness/observer truth before implementation
+
+
+## 2026-09-29 — FP3-D source audit complete / snapshot harness implementation start
+
+- exact task-start main: \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`
+- active branch: \`fp3d/genuine-forward-liveness-v2\`; earlier \`fp3d/genuine-forward-liveness\` is stale-base and must not merge
+- source truth: live WC2 prepared + Decision Ledger + Epoch2 + Stream paths are taken from current \`ops/ssd_runtime_supervisor.sh\`, not guessed
+- recovery: exact genuine \`UnifiedDecisionIssuance\` can be reconstructed from immutable prepared receipt with no new market read
+- safety design: live SQLite sources query-only + hashed, SQLite backup to runner-temp, all FP3 mutations confined to temp copies/temp FP3 store
+- liveness semantics: HOLD/BLOCK/correct silence is healthy; no gate weakening; no fixture can close FP3-D
+- live non-mutation proof required before/after: DB hashes + Product/Development heads/clean state
+- safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- blocker: harness/workflow not implemented
+- nextAction: implement helper + focused tests + UID504 live snapshot probe
