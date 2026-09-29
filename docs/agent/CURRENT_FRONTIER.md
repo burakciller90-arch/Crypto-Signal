@@ -1705,3 +1705,70 @@ Current blocker:
 
 Exact nextAction:
 Recheck canonical main and duplicate PRs, open one PR from this isolated branch, require both dedicated observer PR acceptance and pre-soak fulltest on the final PR head, then merge with expected-head guard only if main has not advanced incompatibly.
+
+
+## RDP11 observer exact-head branch acceptance PASS — 2026-09-29
+
+Canonical main during acceptance:
+- `3d9f33db3f1189571d40566125fbeabd00c04930`
+
+Accepted branch/code head:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+- branch: `rdp11/observer-live-acceptance-b`
+- duplicate open observer PRs before PR creation: NONE
+
+Dedicated live observer acceptance:
+- workflow: RDP11 Soak Observer UID504
+- run: `36546432974`
+- job: `109333830960`
+- conclusion: SUCCESS
+- exact runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Development exact target + clean: PASS
+- Product exact target + clean: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health: HTTP 200 / 0.003638s
+  - messages: HTTP 200 / 4.223819s
+  - finite SSE: HTTP 200 / 2.106748s
+  - intelligence-center: HTTP 200 / 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Exact-head regression acceptance:
+- workflow: RDP11 Pre-Soak Fulltest UID504
+- run: `36546433066`
+- job: `109334016913`
+- conclusion: SUCCESS
+- pytest: PASS
+- Ruff: `All checks passed!`
+- mypy: `Success: no issues found in 267 source files`
+- JS/product freshness: PASS
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted repair semantics:
+- live collector freshness timestamps are compared to wall-clock sampled at the actual live-row read boundary;
+- strict no-future and freshness thresholds remain intact;
+- recurring whole-file `PRAGMA quick_check` on large live `market_tape.sqlite3` is replaced by bounded read/lock/schema verification;
+- smaller control/evidence SQLite stores retain quick-check coverage;
+- successful top-level observation timestamp is stamped at completion;
+- branch/PR runs remain dry-run and may not create soak anchor/sidecar state.
+
+Safety:
+- canonical runtime/evidence mutation: NONE
+- frozen/historical evidence mutation: NONE
+- soak clock: NOT STARTED
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Current blocker:
+- observer code/workflow has branch acceptance only; PR acceptance and merged-main anchor creation are still unproven.
+
+Exact nextAction:
+Open one PR from `rdp11/observer-live-acceptance-b` to main. Require dedicated observer PR dry-run PASS plus RDP11 pre-soak full-suite PASS on the exact PR head. Recheck main/head before merge. Only after merge may the main-push non-dry-run observer create the immutable 72-hour anchor.
