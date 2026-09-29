@@ -154,13 +154,15 @@ class FP3PreregisteredActionIntent:
         if self.reason is FP3ActionReason.OPEN:
             if self.quantity is not None:
                 raise ValueError("FP3-C BUY action quantity comes from canonical sizing")
-        elif self.reason is FP3ActionReason.PARTIAL_TAKE_PROFIT:
-            if (
+        elif (
+            self.reason is FP3ActionReason.PARTIAL_TAKE_PROFIT
+            and (
                 not isinstance(self.quantity, Decimal)
                 or not self.quantity.is_finite()
                 or self.quantity <= 0
-            ):
-                raise ValueError("FP3-C partial take profit requires positive quantity")
+            )
+        ):
+            raise ValueError("FP3-C partial take profit requires positive quantity")
         elif self.reason in {
             FP3ActionReason.TAKE_PROFIT,
             FP3ActionReason.STOP,
