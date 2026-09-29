@@ -2522,3 +2522,29 @@ Current blocker:
 
 Exact nextAction:
 Add a narrowly scoped branch-only FP1-A hosted acceptance workflow that runs the exact focused pytest/Ruff/mypy contract without Product/Development/runtime mutation; run it on the resulting exact branch head and repair only demonstrated FP1-A failures.
+
+
+## FP1-A ACCEPTANCE TOOLING REPAIR CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_TOOLING_REPAIR
+activeBranch: fp1/human-read-model-contract
+currentHeadBeforeRepair: ba0f9f79a9dada9a6bfaf6e09c4f0662a0d99c9c
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Observed:
+- a new branch-only workflow file was added for FP1-A acceptance;
+- its push did not produce a registered FP1-A workflow run;
+- only the unrelated legacy wc0 state-report executed and failed before FP1 validation;
+- therefore no FP1-A PASS is claimed from that push.
+
+Repair decision:
+- remove the unregistered temporary FP1-A workflow so it cannot become accidental product scope;
+- reuse the already-registered canonical Crypto Stage10 Hosted Gate by adding this isolated FP1 branch to its push allowlist on the branch only;
+- that gate already runs whole-repository pytest + Ruff + strict mypy and therefore covers the new FP1-A module/tests more strongly than the intended focused gate;
+- no runtime deployment or Product/Development mutation is involved.
+
+Exact nextAction:
+Delete the temporary workflow, add only fp1/human-read-model-contract to the existing Stage10 hosted branch trigger, run the registered gate on the resulting exact head, inspect any failure, and repair only demonstrated FP1-A defects.
