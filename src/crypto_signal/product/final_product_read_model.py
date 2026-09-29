@@ -615,6 +615,57 @@ class TradePassportView:
 
 
 @dataclass(frozen=True, slots=True)
+class TradeLifecycleEventAudit:
+    bundle_identity: str
+    intent_identity: str
+    fill_identity: str
+    forecast_identity: str
+    proof_identity: str
+    raw_action: str
+    lifecycle_kind: str
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class TradeLifecycleEventView:
+    sequence: int
+    lifecycle_label: str
+    event_at_ms: int
+    passport: TradePassportView
+    audit: TradeLifecycleEventAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TradeLifecycleAudit:
+    lifecycle_root_bundle_identity: str
+    requested_bundle_identity: str
+    bundle_identities: tuple[str, ...]
+    intent_identities: tuple[str, ...]
+    fill_identities: tuple[str, ...]
+    forecast_identities: tuple[str, ...]
+    proof_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class TradeLifecycleView:
+    availability_label: str
+    program_label: str
+    lifecycle_state_label: str | None
+    vault_label: str | None
+    symbol: str | None
+    opened_at_ms: int | None
+    closed_at_ms: int | None
+    final_outcome_label: str | None
+    event_count: int
+    events: tuple[TradeLifecycleEventView, ...]
+    unavailable_capabilities: tuple[str, ...]
+    audit: TradeLifecycleAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class ScreenerAudit:
     narrative_identity: str
 
