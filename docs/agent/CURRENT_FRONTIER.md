@@ -1,5 +1,41 @@
 # Crypto Signal Current Frontier
 
+## FINAL PRODUCT ROADMAP AUTHORITY LOCK — ACCEPTANCE / MERGE CHECKPOINT — 2026-09-29
+
+status: ROADMAP_AUTHORITY_ANTI_DRIFT_IMPLEMENTED
+verifiedMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+activeBranch: docs/final-roadmap-authority-lock-20260929
+branchVsMain: ahead 5 / behind 0
+changedFiles:
+- ACTIVE_ROADMAP.md
+- AGENTS.md
+- docs/agent/CURRENT_FRONTIER.md
+- docs/agent/HANDOFF_LOG.md
+runtimeMutation: NO
+productDevelopmentDeploy: NO
+rdp11ObserverMutation: NO
+historicalFrozenMutation: NO
+realCapital: 0
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical documentation acceptance:
+- ACTIVE_ROADMAP now states it is the sole roadmap selector;
+- the sole active umbrella roadmap remains docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md;
+- conflicting historical "active" labels are explicitly stale unless ACTIVE_ROADMAP itself changes on current main;
+- phase-specific authorities cannot replace the umbrella roadmap;
+- AGENTS has a roadmap anti-drift hard stop before implementation;
+- CURRENT_FRONTIER now opens with the Final Product authority checkpoint and quarantines old RDP10/F1 text under an explicit historical archive heading;
+- no duplicate open PR exists for this exact repair;
+- diff is documentation/agent-state only.
+
+Current blocker:
+- none inside this documentation repair; RDP11 remains independently ACTIVE / NOT PASS.
+
+Exact nextAction:
+Open one docs-only PR against current main, inspect its exact changed-file patch/mergeability, recheck main immediately before merge, then merge only if the four-file authority guard remains isolated.
+
+
 ## FINAL PRODUCT ROADMAP AUTHORITY LOCK — TASK START — 2026-09-29
 
 status: ROADMAP_AUTHORITY_ANTI_DRIFT_START
