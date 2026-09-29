@@ -316,6 +316,11 @@ def test_fp3_b_rejects_drawdown_that_disagrees_with_r21(
         autopilot_path=autopilot_path,
     )
 
+    selected_at_ms = _selected_at_ms(
+        epoch2_path=epoch2_path,
+        front=front,
+        risk=risk,
+    )
     with pytest.raises(ValueError, match="drawdown differs"):
         bridge.process(
             issuance,
@@ -324,8 +329,8 @@ def test_fp3_b_rejects_drawdown_that_disagrees_with_r21(
             vault_id=PaperVaultId.CORE,
             policy=_policy(),
             risk_inputs=risk,
-            selected_at_ms=risk.as_of_ms + 1,
-            processed_at_ms=risk.as_of_ms + 2,
+            selected_at_ms=selected_at_ms,
+            processed_at_ms=selected_at_ms + 1,
         )
 
 
