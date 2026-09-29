@@ -10,6 +10,12 @@ from crypto_signal.decision_ledger import (
     DecisionLedgerConflictError,
     ImmutableDecisionEvidenceLedger,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2MetricsStatus,
+    Epoch2VaultAccountingSnapshot,
+    read_epoch2_state_read_only,
+)
+from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
     EventSourceCalendarEventTruth,
@@ -32,6 +38,8 @@ from crypto_signal.product.intelligence_stream_system_view import (
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
 DEFAULT_EVENT_RAIL_FRESH_AFTER_MS = 30 * 60 * 1000
+DEFAULT_CAPITAL_MOVEMENTS_LIMIT = 50
+MAX_CAPITAL_MOVEMENTS_LIMIT = 200
 DEFAULT_ATTENTION_LIMIT = 5
 MAX_ATTENTION_LIMIT = 20
 _ATTENTION_SCAN_LIMIT = 200
@@ -137,6 +145,16 @@ _EVENT_COVERAGE_LABELS = {
     "INCOMPLETE": "Takvim kapsamı eksik",
     "UNAVAILABLE": "Takvim kapsamı kullanılamıyor",
     "SOURCE_SCOPED_ONLY": "Takvim kapsamı kaynak bazında",
+}
+_PORTFOLIO_VAULT_ORDER = {
+    PaperVaultId.CORE: 0,
+    PaperVaultId.TACTICAL: 1,
+    PaperVaultId.OPPORTUNITY_RESERVE: 2,
+}
+_PORTFOLIO_VAULT_LABELS = {
+    PaperVaultId.CORE: "Core",
+    PaperVaultId.TACTICAL: "Taktik",
+    PaperVaultId.OPPORTUNITY_RESERVE: "Fırsat Rezervi",
 }
 
 
@@ -386,6 +404,138 @@ class EventRailView:
 
 
 @dataclass(frozen=True, slots=True)
+class PortfolioPositionView:
+    symbol: str
+    quantity: str
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultAudit:
+    snapshot_identity: str
+    source_record_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultView:
+    vault_label: str
+    starting_budget_usdt: str
+    cash_usdt: str
+    used_capital_usdt: str
+    nav_usdt: str
+    realized_pnl_usdt: str
+    unrealized_pnl_usdt: str
+    total_pnl_usdt: str
+    current_drawdown_percent: str
+    fee_usdt: str
+    spread_usdt: str
+    slippage_usdt: str
+    turnover_percent: str
+    open_position_count: int
+    positions: tuple[PortfolioPositionView, ...]
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    audit: PortfolioVaultAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioAudit:
+    activation_identity: str
+    consolidated_snapshot_identity: str
+    vault_snapshot_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioSummaryView:
+    availability_label: str
+    program_label: str
+    snapshot_at_ms: int | None
+    starting_capital_usdt: str | None
+    current_equity_usdt: str | None
+    cash_usdt: str | None
+    used_capital_usdt: str | None
+    realized_pnl_usdt: str | None
+    unrealized_pnl_usdt: str | None
+    total_pnl_usdt: str | None
+    current_drawdown_percent: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    turnover_percent: str | None
+    open_position_count: int
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    vaults: tuple[PortfolioVaultView, ...]
+    audit: PortfolioAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalMovementAudit:
+    narrative_identity: str
+    story_identity: str
+    source_event_identity: str
+    stream_event_identity: str
+    lineage_identities: tuple[str, ...]
+    raw_subtype: str
+    raw_action: str | None
+    raw_disposition: str | None
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalMovementItem:
+    event_at_ms: int
+    source_as_of_ms: int | None
+    freshness_label: str
+    vault_label: str | None
+    symbol: str
+    timeframe: str
+    action_label: str
+    headline: str
+    detail: str
+    quantity: str | None
+    notional_usdt: str | None
+    fraction_of_vault_percent: str | None
+    current_cash_usdt: str | None
+    current_nav_usdt: str | None
+    cash_before_usdt: str | None
+    cash_after_usdt: str | None
+    vault_nav_before_usdt: str | None
+    vault_nav_after_usdt: str | None
+    consolidated_nav_before_usdt: str | None
+    consolidated_nav_after_usdt: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    realized_pnl_delta_usdt: str | None
+    outcome_label: str | None
+    audit: CapitalMovementAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalMovementsView:
+    availability_label: str
+    observed_at_ms: int
+    from_ms: int
+    to_ms: int
+    vault_label: str | None
+    items: tuple[CapitalMovementItem, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
@@ -404,11 +554,13 @@ class FinalProductReadModel:
         decision_evidence_path: Path | None = None,
         signal_ledger_path: Path | None = None,
         event_source_runtime_path: Path | None = None,
+        epoch2_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.decision_evidence_path = decision_evidence_path
         self.signal_ledger_path = signal_ledger_path
         self.event_source_runtime_path = event_source_runtime_path
+        self.epoch2_path = epoch2_path
 
     def market_pulse(
         self,
@@ -555,7 +707,13 @@ class FinalProductReadModel:
                     previous.narrative_identity,
                 ):
                     candidates[candidate.dedupe_key] = candidate
-        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+        except (
+            FileNotFoundError,
+            StreamReadModelError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
             if isinstance(exc, FinalProductReadError):
                 raise
             raise FinalProductReadError(
@@ -814,6 +972,175 @@ class FinalProductReadModel:
                 "event rail source cannot be projected safely"
             ) from exc
 
+    def portfolio_summary(
+        self,
+        *,
+        include_audit: bool = False,
+    ) -> PortfolioSummaryView:
+        if self.epoch2_path is None or not self.epoch2_path.is_file():
+            return _portfolio_unavailable("Epoch 2 portföy verisi kullanılamıyor")
+        try:
+            state = read_epoch2_state_read_only(self.epoch2_path)
+        except ValueError as exc:
+            raise FinalProductReadError(
+                "Epoch 2 portföy kaynağı güvenli okunamadı"
+            ) from exc
+        if state is None:
+            return _portfolio_unavailable("Epoch 2 henüz etkin değil")
+
+        consolidated = state.consolidated_snapshot
+        ordered_vaults = tuple(
+            sorted(
+                state.vault_snapshots,
+                key=lambda item: _PORTFOLIO_VAULT_ORDER[item.vault_id],
+            )
+        )
+        vaults = tuple(
+            _portfolio_vault_view(item, include_audit=include_audit)
+            for item in ordered_vaults
+        )
+        total_pnl = (
+            consolidated.realized_pnl_usdt
+            + consolidated.unrealized_pnl_usdt
+        )
+        audit = None
+        if include_audit:
+            audit = PortfolioAudit(
+                activation_identity=state.activation.activation_identity,
+                consolidated_snapshot_identity=consolidated.snapshot_identity,
+                vault_snapshot_identities=tuple(
+                    item.snapshot_identity
+                    for item in ordered_vaults
+                ),
+            )
+        return PortfolioSummaryView(
+            availability_label="Doğrulanmış veri",
+            program_label="Paper Capital · Epoch 2",
+            snapshot_at_ms=consolidated.snapshot_at_ms,
+            starting_capital_usdt=_money_text(
+                state.activation.starting_cash_usdt
+            ),
+            current_equity_usdt=_money_text(consolidated.nav_usdt),
+            cash_usdt=_money_text(consolidated.cash_usdt),
+            used_capital_usdt=_money_text(
+                consolidated.marked_exposure_usdt
+            ),
+            realized_pnl_usdt=_signed_money_text(
+                consolidated.realized_pnl_usdt
+            ),
+            unrealized_pnl_usdt=_signed_money_text(
+                consolidated.unrealized_pnl_usdt
+            ),
+            total_pnl_usdt=_signed_money_text(total_pnl),
+            current_drawdown_percent=_fraction_percent_text(
+                consolidated.drawdown_fraction
+            ),
+            fee_usdt=_money_text(consolidated.fee_usdt),
+            spread_usdt=_money_text(consolidated.spread_usdt),
+            slippage_usdt=_money_text(consolidated.slippage_usdt),
+            turnover_percent=_fraction_percent_text(
+                consolidated.turnover_fraction
+            ),
+            open_position_count=sum(
+                len(item.positions)
+                for item in ordered_vaults
+            ),
+            closed_trade_count=consolidated.closed_trade_count,
+            win_count=consolidated.win_count,
+            loss_count=consolidated.loss_count,
+            breakeven_count=consolidated.breakeven_count,
+            expectancy_label=_expectancy_label(
+                consolidated.metrics_status,
+                consolidated.expectancy_usdt_per_closed_trade,
+            ),
+            performance_status_label=_metrics_status_label(
+                consolidated.metrics_status
+            ),
+            vaults=vaults,
+            audit=audit,
+        )
+
+    def capital_movements(
+        self,
+        *,
+        observed_at_ms: int,
+        from_ms: int,
+        to_ms: int,
+        vault: str | None = None,
+        limit: int = DEFAULT_CAPITAL_MOVEMENTS_LIMIT,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> CapitalMovementsView:
+        if observed_at_ms < 0:
+            raise ValueError("capital movements observation time must be non-negative")
+        if from_ms < 0 or to_ms < 0 or from_ms > to_ms:
+            raise ValueError("capital movements time window is invalid")
+        if to_ms > observed_at_ms:
+            raise ValueError("capital movements cannot read future event time")
+        if stale_after_ms <= 0:
+            raise ValueError("capital movements stale_after_ms must be positive")
+        if limit < 1 or limit > MAX_CAPITAL_MOVEMENTS_LIMIT:
+            raise ValueError(
+                "capital movements limit must be inside "
+                f"1..{MAX_CAPITAL_MOVEMENTS_LIMIT}"
+            )
+        normalized_vault = None
+        if vault is not None:
+            try:
+                normalized_vault = PaperVaultId(vault.strip().upper()).value
+            except (ValueError, AttributeError) as exc:
+                raise ValueError("capital movements vault is invalid") from exc
+
+        if not self.stream_ledger_path.is_file():
+            return CapitalMovementsView(
+                availability_label="Sermaye hareketleri verisi kullanılamıyor",
+                observed_at_ms=observed_at_ms,
+                from_ms=from_ms,
+                to_ms=to_ms,
+                vault_label=_capital_vault_label(normalized_vault),
+                items=(),
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            page = reader.read_messages(
+                StreamMessageQuery(
+                    limit=limit,
+                    category="capital",
+                    vault=normalized_vault,
+                    from_ms=from_ms,
+                    to_ms=to_ms,
+                )
+            )
+            items = tuple(
+                _capital_movement_item(
+                    record,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                for record in page.items
+            )
+        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "capital movements source cannot be projected safely"
+            ) from exc
+
+        return CapitalMovementsView(
+            availability_label=(
+                "Doğrulanmış veri"
+                if items
+                else "Bu aralıkta sermaye hareketi yok"
+            ),
+            observed_at_ms=observed_at_ms,
+            from_ms=from_ms,
+            to_ms=to_ms,
+            vault_label=_capital_vault_label(normalized_vault),
+            items=items,
+        )
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -863,6 +1190,368 @@ class FinalProductReadModel:
                 "Decision Evidence proof lineage mismatch"
             )
         return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _portfolio_unavailable(reason: str) -> PortfolioSummaryView:
+    return PortfolioSummaryView(
+        availability_label=reason,
+        program_label="Paper Capital · Epoch 2",
+        snapshot_at_ms=None,
+        starting_capital_usdt=None,
+        current_equity_usdt=None,
+        cash_usdt=None,
+        used_capital_usdt=None,
+        realized_pnl_usdt=None,
+        unrealized_pnl_usdt=None,
+        total_pnl_usdt=None,
+        current_drawdown_percent=None,
+        fee_usdt=None,
+        spread_usdt=None,
+        slippage_usdt=None,
+        turnover_percent=None,
+        open_position_count=0,
+        closed_trade_count=0,
+        win_count=0,
+        loss_count=0,
+        breakeven_count=0,
+        expectancy_label="Henüz ölçülmedi",
+        performance_status_label="Henüz ölçülmedi",
+        vaults=(),
+    )
+
+
+def _portfolio_vault_view(
+    snapshot: Epoch2VaultAccountingSnapshot,
+    *,
+    include_audit: bool,
+) -> PortfolioVaultView:
+    positions = tuple(
+        PortfolioPositionView(
+            symbol=item.symbol.value,
+            quantity=_plain_decimal_text(item.quantity),
+        )
+        for item in snapshot.positions
+    )
+    total_pnl = snapshot.realized_pnl_usdt + snapshot.unrealized_pnl_usdt
+    audit = None
+    if include_audit:
+        audit = PortfolioVaultAudit(
+            snapshot_identity=snapshot.snapshot_identity,
+            source_record_identities=snapshot.source_record_identities,
+        )
+    return PortfolioVaultView(
+        vault_label=_PORTFOLIO_VAULT_LABELS[snapshot.vault_id],
+        starting_budget_usdt=_money_text(snapshot.starting_cash_usdt),
+        cash_usdt=_money_text(snapshot.cash_usdt),
+        used_capital_usdt=_money_text(snapshot.marked_exposure_usdt),
+        nav_usdt=_money_text(snapshot.nav_usdt),
+        realized_pnl_usdt=_signed_money_text(snapshot.realized_pnl_usdt),
+        unrealized_pnl_usdt=_signed_money_text(
+            snapshot.unrealized_pnl_usdt
+        ),
+        total_pnl_usdt=_signed_money_text(total_pnl),
+        current_drawdown_percent=_fraction_percent_text(
+            snapshot.drawdown_fraction
+        ),
+        fee_usdt=_money_text(snapshot.fee_usdt),
+        spread_usdt=_money_text(snapshot.spread_usdt),
+        slippage_usdt=_money_text(snapshot.slippage_usdt),
+        turnover_percent=_fraction_percent_text(snapshot.turnover_fraction),
+        open_position_count=len(snapshot.positions),
+        positions=positions,
+        closed_trade_count=snapshot.closed_trade_count,
+        win_count=snapshot.win_count,
+        loss_count=snapshot.loss_count,
+        breakeven_count=snapshot.breakeven_count,
+        expectancy_label=_expectancy_label(
+            snapshot.metrics_status,
+            snapshot.expectancy_usdt_per_closed_trade,
+        ),
+        performance_status_label=_metrics_status_label(
+            snapshot.metrics_status
+        ),
+        audit=audit,
+    )
+
+
+def _metrics_status_label(status: Epoch2MetricsStatus) -> str:
+    if status is Epoch2MetricsStatus.AVAILABLE:
+        return "Ölçülebilir"
+    return "Henüz ölçülmedi"
+
+
+def _expectancy_label(
+    status: Epoch2MetricsStatus,
+    value: Decimal | None,
+) -> str:
+    if status is not Epoch2MetricsStatus.AVAILABLE or value is None:
+        return "Henüz ölçülmedi"
+    return f"{_signed_money_text(value)} / kapalı işlem"
+
+
+def _fraction_percent_text(value: Decimal) -> str:
+    if not value.is_finite() or value < Decimal(0):
+        raise ValueError("portfolio fraction must be finite and non-negative")
+    percent = (value * Decimal(100)).quantize(Decimal("0.01"))
+    return f"{percent:.2f}%"
+
+
+def _money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio amount must be finite")
+    return f"{value.quantize(Decimal('0.01')):.2f}"
+
+
+def _signed_money_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio PnL must be finite")
+    return f"{value.quantize(Decimal('0.01')):+.2f}"
+
+
+def _plain_decimal_text(value: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError("portfolio quantity must be finite")
+    raw = format(value, "f")
+    if "." in raw:
+        raw = raw.rstrip("0").rstrip(".")
+    return raw or "0"
+
+
+def _capital_vault_label(vault_id: str | None) -> str | None:
+    if vault_id is None:
+        return None
+    try:
+        canonical = PaperVaultId(vault_id)
+    except ValueError as exc:
+        raise ValueError("capital movement vault is not canonical") from exc
+    return _PORTFOLIO_VAULT_LABELS[canonical]
+
+
+def _capital_movement_item(
+    record: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> CapitalMovementItem:
+    if _required_text(record, "category") != "capital":
+        raise ValueError("capital movement record is not capital category")
+
+    subtype = _required_text(record, "subtype")
+    event_at_ms = _required_int(record, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise ValueError("capital movement event cannot be in the future")
+
+    source_as_of_ms = _optional_non_negative_int_value(
+        record.get("source_as_of_ms")
+    )
+    if source_as_of_ms is not None and source_as_of_ms > event_at_ms:
+        raise ValueError("capital movement source time cannot follow event time")
+    freshness_label = _capital_movement_freshness_label(
+        observed_at_ms=observed_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        event_at_ms=event_at_ms,
+        stale_after_ms=stale_after_ms,
+    )
+
+    raw_vault = record.get("vault_id")
+    vault_id = None
+    if raw_vault is not None:
+        if not isinstance(raw_vault, str) or not raw_vault.strip():
+            raise TypeError("capital movement vault must be non-empty text")
+        vault_id = raw_vault
+
+    raw_action = _optional_text_value(record.get("action"))
+    raw_disposition = _optional_text_value(record.get("disposition"))
+    action_label = _capital_movement_action_label(
+        subtype=subtype,
+        action=raw_action,
+        disposition=raw_disposition,
+    )
+
+    text = _required_mapping(record, "text")
+    headline = _required_text(text, "collapsed_text")
+    detail = _required_text(text, "capital_text")
+
+    reason_codes_raw = record.get("reason_codes")
+    if reason_codes_raw is None:
+        reason_codes: tuple[str, ...] = ()
+    else:
+        reason_codes = _text_sequence(
+            reason_codes_raw,
+            "capital movement reason codes",
+        )
+
+    lineage_raw = _required_sequence(record, "capital_reference_identities")
+    lineage_identities = tuple(
+        _sha_text(value, "capital movement lineage identity")
+        for value in lineage_raw
+    )
+
+    audit = None
+    if include_audit:
+        audit = CapitalMovementAudit(
+            narrative_identity=_required_sha(record, "narrative_identity"),
+            story_identity=_required_sha(record, "story_identity"),
+            source_event_identity=_required_sha(record, "source_event_identity"),
+            stream_event_identity=_required_sha(record, "stream_event_identity"),
+            lineage_identities=lineage_identities,
+            raw_subtype=subtype,
+            raw_action=raw_action,
+            raw_disposition=raw_disposition,
+            reason_codes=reason_codes,
+        )
+
+    return CapitalMovementItem(
+        event_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=freshness_label,
+        vault_label=_capital_vault_label(vault_id),
+        symbol=_required_text(record, "symbol"),
+        timeframe=_required_text(record, "timeframe"),
+        action_label=action_label,
+        headline=headline,
+        detail=detail,
+        quantity=_optional_plain_decimal_text(record.get("quantity")),
+        notional_usdt=_optional_decimal_text(
+            record.get("notional_usdt")
+            if record.get("notional_usdt") is not None
+            else record.get("canonical_notional_usdt")
+        ),
+        fraction_of_vault_percent=_optional_fraction_percent_text(
+            record.get("fraction_of_vault")
+        ),
+        current_cash_usdt=_optional_decimal_text(record.get("current_cash_usdt")),
+        current_nav_usdt=_optional_decimal_text(record.get("current_nav_usdt")),
+        cash_before_usdt=_optional_decimal_text(record.get("cash_before_usdt")),
+        cash_after_usdt=_optional_decimal_text(record.get("cash_after_usdt")),
+        vault_nav_before_usdt=_optional_decimal_text(
+            record.get("vault_nav_before_usdt")
+        ),
+        vault_nav_after_usdt=_optional_decimal_text(
+            record.get("vault_nav_after_usdt")
+        ),
+        consolidated_nav_before_usdt=_optional_decimal_text(
+            record.get("consolidated_nav_before_usdt")
+        ),
+        consolidated_nav_after_usdt=_optional_decimal_text(
+            record.get("consolidated_nav_after_usdt")
+        ),
+        fee_usdt=_optional_decimal_text(record.get("fee_usdt")),
+        spread_usdt=_optional_decimal_text(record.get("spread_usdt")),
+        slippage_usdt=_optional_decimal_text(record.get("slippage_usdt")),
+        realized_pnl_delta_usdt=_optional_signed_decimal_text(
+            record.get("realized_pnl_delta_usdt")
+        ),
+        outcome_label=_capital_financial_outcome_label(
+            record.get("financial_outcome")
+        ),
+        audit=audit,
+    )
+
+
+def _capital_movement_action_label(
+    *,
+    subtype: str,
+    action: str | None,
+    disposition: str | None,
+) -> str:
+    decision_contract = {
+        "capital_eligible": ("eligible", "İşleme uygun bulundu"),
+        "capital_hold": ("hold", "Nakit korunuyor / işlem yapılmadı"),
+        "capital_blocked": ("blocked", "İşlem engellendi"),
+    }
+    if subtype in decision_contract:
+        expected, label = decision_contract[subtype]
+        if disposition != expected or action is not None:
+            raise ValueError("capital decision subtype/disposition mismatch")
+        return label
+
+    execution_contract = {
+        "capital_executed": ("BUY", "Pozisyon açıldı / artırıldı"),
+        "capital_reduced": ("REDUCE", "Pozisyon azaltıldı"),
+        "capital_exited": ("EXIT", "Pozisyon kapatıldı"),
+    }
+    if subtype in execution_contract:
+        expected, label = execution_contract[subtype]
+        if action != expected or disposition is not None:
+            raise ValueError("capital execution subtype/action mismatch")
+        return label
+
+    if subtype == "capital_sized":
+        if action is not None or disposition is not None:
+            raise ValueError("capital sizing cannot carry action/disposition")
+        return "Pozisyon boyutu belirlendi"
+    if subtype == "capital_candidate":
+        if action is not None or disposition is not None:
+            raise ValueError("capital candidate cannot carry action/disposition")
+        return "Aday sermaye değerlendirmesi"
+    if subtype == "capital_accounting_updated":
+        if action not in {"BUY", "REDUCE", "EXIT"} or disposition is not None:
+            raise ValueError("capital accounting action is invalid")
+        return "Portföy hesabı güncellendi"
+    if subtype == "capital_outcome":
+        if action not in {"REDUCE", "EXIT"} or disposition is not None:
+            raise ValueError("capital outcome action is invalid")
+        return "İşlem sonucu kaydedildi"
+    raise ValueError("unsupported capital movement subtype")
+
+
+def _capital_movement_freshness_label(
+    *,
+    observed_at_ms: int,
+    source_as_of_ms: int | None,
+    event_at_ms: int,
+    stale_after_ms: int,
+) -> str:
+    if source_as_of_ms is not None:
+        return _freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        )
+    if event_at_ms > observed_at_ms:
+        raise ValueError("capital event time cannot be in the future")
+    return (
+        "Olay zamanı güncel"
+        if observed_at_ms - event_at_ms <= stale_after_ms
+        else "Olay zamanı güncel değil"
+    )
+
+
+def _capital_financial_outcome_label(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("capital financial outcome must be non-empty text")
+    labels = {
+        "PARTIAL_REDUCTION": "Kısmi azaltma",
+        "CLOSED_WIN": "Kârla kapandı",
+        "CLOSED_LOSS": "Zararla kapandı",
+        "CLOSED_BREAKEVEN": "Başa baş kapandı",
+    }
+    try:
+        return labels[value]
+    except KeyError as exc:
+        raise ValueError("unsupported capital financial outcome") from exc
+
+
+def _optional_plain_decimal_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _plain_decimal_text(_decimal(value, "optional quantity"))
+
+
+def _optional_fraction_percent_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _fraction_percent_text(_decimal(value, "optional fraction"))
+
+
+def _optional_signed_decimal_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _signed_money_text(_decimal(value, "optional signed amount"))
 
 
 def _event_rail_view(

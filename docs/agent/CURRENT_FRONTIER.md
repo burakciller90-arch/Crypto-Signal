@@ -3597,3 +3597,322 @@ Cleanup verification:
 
 Exact nextAction:
 Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
+
+
+## FP1-D CURRENT-MAIN CONTINUATION TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D_CURRENT_MAIN_CONTINUATION_START
+taskStartMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+sourceAcceptanceBranch: fp1d/portfolio-capital-movements
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Why this continuation branch exists:
+- FP1-D1 was implemented and mechanically accepted on an isolated branch created from pre-authority-lock main;
+- parallel docs-only PRs #1674 and #1675 advanced main and hardened roadmap/agent authority;
+- direct merge of the old branch would risk replaying stale CURRENT_FRONTIER/HANDOFF content;
+- therefore accepted D1 product/test/matrix content will be transplanted onto this fresh current-main branch, while current authority-lock agent-state is preserved.
+
+Accepted D1 evidence to preserve:
+- accepted production head: f49ba2913654dd46b99c65842e9fa0603195c8df
+- UID504 run: 36571535907
+- UID504 job: 109416495617
+- run conclusion: SUCCESS
+- focused pytest PASS
+- Ruff: All checks passed!
+- strict mypy: Success: no issues found in 5 source files
+- Product/Development non-mutation PASS
+- project isolation PASS
+- REAL_CAPITAL=0
+- old acceptance branch workflow restored to exact main before continuation.
+
+Bounded transfer:
+- carry only accepted D1 content:
+  1. docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+  2. src/crypto_signal/product/final_product_read_model.py
+  3. tests/test_final_product_read_model.py
+- do not carry old branch CURRENT_FRONTIER/HANDOFF history wholesale;
+- do not carry temporary workflow edits;
+- do not alter ACTIVE_ROADMAP/AGENTS authority lock;
+- no runtime/deploy/frozen-evidence mutation.
+
+Exact nextAction:
+Copy the three accepted D1 files from the cleaned acceptance branch into this current-main branch, verify no other file changed, then append a D1-transferred / D2-task-start checkpoint before any D2 production code.
+
+
+## FP1-D1 TRANSFER COMPLETE / FP1-D2 TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_AUDIT_START
+activeBranch: fp1d/portfolio-capital-movements-current
+currentMainBase: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+branchVsMain: ahead 5 / behind 0
+acceptedD1SourceHead: f49ba2913654dd46b99c65842e9fa0603195c8df
+acceptedD1Uid504Run: 36571535907
+acceptedD1Uid504Job: 109416495617
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+D1 transfer verification:
+- accepted D1 content was transplanted onto current authority-lock main;
+- branch changed-file set is exactly:
+  - docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+  - docs/agent/CURRENT_FRONTIER.md
+  - docs/agent/HANDOFF_LOG.md
+  - src/crypto_signal/product/final_product_read_model.py
+  - tests/test_final_product_read_model.py
+- no workflow, runtime, deploy, frontend, ACTIVE_ROADMAP or AGENTS file changed;
+- branch is not behind current main at this checkpoint.
+
+D2 bounded goal:
+- add read-only Daily Capital Movements customer projection;
+- source only verified Stream Capital messages already merged by IntelligenceStreamReadModel;
+- query category=capital with exact from/to and optional vault filters;
+- do not create a second capital event ledger;
+- do not query/merge legacy Epoch 1 Mission Control;
+- do not reconstruct Trade Passport here; deep R22 history remains FP1-E;
+- expose amounts only when exact source message carries them;
+- exact identities/reason codes/subtypes remain audit-only;
+- no Product route/frontend/deploy/new DB/schema/writer.
+
+D2 message classes to audit before code:
+1. capital_decision
+2. capital_sizing
+3. capital execution/story
+4. capital_lifecycle candidate
+5. capital_lifecycle accounting_updated
+6. capital_lifecycle outcome
+
+D2 PASS:
+- missing Stream DB explicit and non-creating;
+- only category=capital messages admitted;
+- from/to and optional vault filters reuse accepted Stream query semantics;
+- deterministic newest-first ordering;
+- customer action labels derived from exact subtype/action only;
+- optional amounts remain unavailable rather than zero;
+- audit preserves narrative/story/R21/R22/allocator identities;
+- default customer payload hides SHA/raw subtype/reason/database vocabulary;
+- source DB bytes unchanged;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect verified capital record/detail payloads and existing capital tests, freeze the D2 field mapping in the existing FP1-D matrix if needed, then implement only CapitalMovements read models in final_product_read_model.py plus focused tests.
+
+
+## FP1-D1 TRANSFER VERIFIED / FP1-D2 TASK START — 2026-09-29
+
+status: FP1_D2_CAPITAL_MOVEMENTS_AUDIT_START
+taskStartMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE + EXTEND query/read-model only
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+D1 transfer verification:
+- source accepted head: f49ba2913654dd46b99c65842e9fa0603195c8df
+- UID504 acceptance: run 36571535907 / job 109416495617 — SUCCESS
+- transferred field-source matrix blob: 4d8ee70d8026ee975ef08d592eca5e5e976a6f9f — byte-identical
+- transferred final_product_read_model.py blob: 0fd61a2da371f3a74a9c85cd6acbe3baa14f57c4 — byte-identical
+- transferred test_final_product_read_model.py blob: fd854598c6d5458d36aa48d004a41260fd467143 — byte-identical
+- current continuation branch is ahead of current main and not behind
+- temporary acceptance workflow changes are absent
+- D1 Portfolio Summary must not be rebuilt.
+
+Duplicate/stale check for D2:
+- no open FP1-D / Capital Movements PR exists;
+- existing old fp1d branches are acceptance/history inputs, not new implementation targets;
+- no accepted customer Capital Movements projection exists yet;
+- canonical Stream Capital / R22 / R21 truth must be reused rather than duplicated.
+
+Bounded D2 goal:
+- build a compact customer daily/recent Capital Movements read model;
+- source only accepted immutable/read-only capital lifecycle truth;
+- prefer existing Stream Capital decision/sizing/execution/lifecycle records and exact R22/R21 lineage where present;
+- no duplicate capital event ledger;
+- no new accounting math;
+- no fake fills/sizing/trades;
+- no historical backfill;
+- no Product route/frontend/deploy in D2;
+- default customer view human-readable; exact identities audit-only;
+- missing/deferred natural capital activity remains explicit.
+
+Current blocker:
+- exact canonical source/query contract for Capital Movements has not yet been re-audited on current main; implementation is forbidden until source precedence, event classes, time/vault filtering and empty-state semantics are frozen.
+
+Exact nextAction:
+Audit Stream Capital message/query APIs, R22 transaction/decision tape read surfaces, R21 accounting lineage and existing capital lifecycle tests; update the FP1-D field-source matrix with an exact D2 source contract before production code changes.
+
+
+
+## FP1-D2 AUDIT-COMPLETE / IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_START
+activeBranch: fp1d/portfolio-capital-movements-current
+currentMainBase: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+auditDocument: docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+auditContractCommit: 1249e48bbd411637a085ea364b08fdb98459e3b3
+prerequisiteD1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen D2 source contract:
+- query authority is IntelligenceStreamReadModel.read_messages(StreamMessageQuery(category="capital", ...));
+- accepted read model already verifies and merges capital decision/sizing/execution/lifecycle tables;
+- deterministic newest-first order is reused; no new ranking score;
+- decision, sizing, execution, lifecycle candidate/accounting/outcome message classes have exact field maps frozen in the FP1-D matrix;
+- no R22/R21 duplicate timeline query is introduced;
+- deep trade reconstruction remains FP1-E.
+
+Bounded implementation:
+- add CapitalMovement customer/audit dataclasses;
+- add capital_movements(observed_at_ms, from_ms, to_ms, vault=None, limit=..., include_audit=False);
+- only exact persisted amounts may appear;
+- source_as_of may remain unavailable for execution messages that do not carry an exact separate source time;
+- missing Stream DB explicit/non-creating;
+- valid empty interval explicit;
+- audit-only identities/raw subtype/reason lineage;
+- no web.py/frontend/deploy/new DB/schema/writer.
+
+Exact nextAction:
+Implement Capital Movements projection in final_product_read_model.py plus focused immutable Stream Capital tests. Do not modify routes or frontend.
+
+
+## FP1-D2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_START
+baseMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+classification: REUSE verified Stream Capital truth + EXTEND customer projection
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audit result:
+- canonical timeline reader is IntelligenceStreamReadModel.read_messages;
+- exact query is StreamMessageQuery(category="capital", bounded limit, optional vault/from_ms/to_ms);
+- accepted reader already verifies payload digest/canonical identity/schema/engine/read-only/REAL_CAPITAL before returning records;
+- accepted Capital classes are decision, sizing, execution/story and lifecycle candidate/accounting/outcome;
+- default reader order is deterministic newest-first;
+- vault/time filtering stays delegated to accepted Stream query semantics;
+- R22 is lineage authority and R21 is accounting authority; D2 creates no second ledger and no direct R22/R21 timeline scan;
+- source_as_of and amounts are exposed only where persisted; absent optional values remain unavailable;
+- raw subtype/reason/identities are audit-only;
+- field/source matrix updated to freeze the exact mapping before code.
+
+Current blocker:
+- none for implementation; acceptance is still pending after code/tests.
+
+Exact nextAction:
+Implement CapitalMovementsView/Item/Audit plus FinalProductReadModel.capital_movements(...) over the frozen Stream query contract, then add focused tests for missing DB, filters/order, subtype/action mapping, exact optional amounts, audit provenance, customer vocabulary and source byte non-mutation.
+
+
+
+## FP1-D2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_D2_ACCEPTANCE_START
+verifiedMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+branchBehindMain: 0
+implementationHeadBeforeCheckpoint: 8f8fc5f23660143300dbe5471d4898db323762ef
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented D2 scope:
+- customer-safe CapitalMovementAudit / CapitalMovementItem / CapitalMovementsView;
+- FinalProductReadModel.capital_movements(...) over verified IntelligenceStreamReadModel only;
+- exact category=capital, bounded time, optional vault, deterministic accepted ordering;
+- exact subtype/disposition/action contract fails closed on mismatch;
+- execution source time remains unavailable when not persisted; freshness falls back explicitly to event-time wording rather than source-freshness invention;
+- optional amounts remain None; no zero fill;
+- canonical outcome labels only for PARTIAL_REDUCTION / CLOSED_WIN / CLOSED_LOSS / CLOSED_BREAKEVEN;
+- persisted Stream collapsed/capital text reused;
+- raw subtype/action/disposition/reasons/SHA lineage audit-only;
+- no direct R21/R22 timeline scan, new ledger, route, frontend, writer, runtime or deploy.
+
+Focused tests added:
+- missing Stream DB explicit/non-creating;
+- verified Capital decision/sizing/execution/lifecycle projection;
+- deterministic newest-first order;
+- accepted vault/time filtering;
+- exact optional amount semantics;
+- valid empty interval;
+- customer payload hides raw identities/subtypes/reasons;
+- audit preserves exact lineage;
+- source DB/file set remains byte-identical.
+
+Acceptance blocker:
+- UID504 exact-head pytest + Ruff + strict mypy + canonical non-mutation + project isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 acceptance workflow to this branch and add final_product_read_model.py/tests/test_final_product_read_model.py to the focused pytest/Ruff/mypy gate; run exact-head acceptance, inspect logs mechanically, then restore the workflow to exact current-main content before any PR.
+
+
+
+## FP1-D2 UID504 ACCEPTANCE PASS / FP1-D REVIEW READY — 2026-09-29
+
+status: FP1_D_REVIEW_READY
+activeBranch: fp1d/portfolio-capital-movements-current
+baseMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+acceptedD1Head: f49ba2913654dd46b99c65842e9fa0603195c8df
+acceptedD1Run: 36571535907
+acceptedD2Head: ec70ba3daa367c73f67d04c14cbeeb8ff797a276
+acceptedD2Run: 36574415360
+acceptedD2Job: 109426221692
+cleanupHead: 30cad29c4b30cfc664d33945d88d5ef8bdf4dd01
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical D2 PASS:
+- exact-source UID504 checkout PASS;
+- final-product/Stream regression pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0.
+
+Accepted FP1-D customer truth:
+- Portfolio Summary reads canonical Epoch 2 accounting only;
+- Capital Movements reads only verified Stream Capital messages;
+- deterministic newest-first order and accepted time/vault query semantics are reused;
+- missing/optional amounts remain unavailable rather than zero;
+- execution records without separate source-as-of do not invent one;
+- raw subtype/reason/R21/R22/SHA lineage is audit-only;
+- no second capital ledger, no new accounting math, no legacy Epoch 1 merge.
+
+Cleanup verification:
+- temporary MI1 acceptance wiring was restored after PASS;
+- branch workflow blob equals exact current-main workflow blob;
+- no Product/Development deploy or RDP11 soaked-runtime mutation occurred.
+
+Exact nextAction:
+Recheck current main and duplicate PR state, open one FP1-D PR, inspect the actual changed-file set and PR checks, then merge only if the diff remains isolated and main has not advanced with overlapping FP1-D work.
+
