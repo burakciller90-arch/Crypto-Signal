@@ -6061,3 +6061,32 @@ Current blocker:
 
 Exact nextAction:
 Open one isolated FP3-D PR from this branch, inspect the dedicated UID504 workflow's live status and mechanical markers; claim FP3-D PASS only if it reports a genuine post-activation candidate plus replay/activation/non-mutation PASS, otherwise record WAITING or the exact failure without inventing evidence.
+
+
+## FP3-D ACCEPTANCE ATTEMPT 1 FAIL / LINT-ONLY HARNESS REPAIR — 2026-09-29
+
+status: FP3_D_ACCEPTANCE_FIX_1_LINT
+pr: 1685
+testedHead: 5fc02afb5040bf64d2b37ef165efee7730050bdd
+fp3dRun: 36615647603
+fp3dJob: 109567828795
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Observed mechanical result:
+- exact PR source PASS;
+- Product + Development both exact frozen RDP11 target \`3d9f33db3f1189571d40566125fbeabd00c04930\`;
+- focused FP3-D pytest PASS;
+- focused gate stopped in Ruff before live probe;
+- Ruff only: EXE001 because Contents-API-created Python file carries a shebang without executable mode; SIM117 for nested context-manager syntax;
+- final Development/Product non-mutation PASS and frozen target unchanged PASS;
+- live genuine-forward probe was SKIPPED, so no liveness claim exists yet.
+
+Bounded repair:
+- remove shebang;
+- combine nested SQLite context managers;
+- no behavior/runtime/source contract change.
+
+Exact nextAction:
+Apply only the two Ruff cleanups and rerun the dedicated exact-head FP3-D UID504 gate to reach the live genuine-forward probe.
