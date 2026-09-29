@@ -1,5 +1,37 @@
 # Crypto Signal Current Frontier
 
+## FINAL PRODUCT ROADMAP AUTHORITY LOCK — TASK START — 2026-09-29
+
+status: ROADMAP_AUTHORITY_ANTI_DRIFT_START
+taskStartMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+activeBranch: docs/final-roadmap-authority-lock-20260929
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+parallelProductProgress: FP1-A / FP1-B / FP1-C are already merged on current main and must not be rebuilt
+classification: REUSE roadmap authority; EXTEND anti-drift guard only
+duplicateCheck: no open PR and no branch already implementing this exact authority-lock repair
+realCapital: 0
+historicalFrozenMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Bounded goal:
+- keep the 2026-09-29 Final Product Master Roadmap as the sole active product-program authority;
+- prevent stale RDP10/Stream/frontend roadmap text from being mistaken for current execution authority;
+- repair CURRENT_FRONTIER top-of-file drift so a fresh agent sees FP0/RDP11 + current FP1 progress first;
+- add an explicit precedence/anti-drift rule to ACTIVE_ROADMAP and AGENTS;
+- documentation/agent-state only; no runtime, Product/Development deploy, soak observer, frozen evidence or capital behavior change.
+
+Current blocker:
+- CURRENT_FRONTIER currently opens with stale RDP10-F1 text even though ACTIVE_ROADMAP and current main are already on the Final Product program.
+
+Exact nextAction:
+Update CURRENT_FRONTIER/HANDOFF with this durable start checkpoint, then add the explicit anti-drift authority rule to ACTIVE_ROADMAP.md and AGENTS.md and reconcile CURRENT_FRONTIER's leading state before opening a docs-only PR.
+
+
 ## LIVE RECONCILIATION CHECKPOINT — raw Options source / derived proof split
 
 This checkpoint is written before the next F1 code change.
