@@ -5815,3 +5815,33 @@ Bounded repair:
 
 Exact nextAction:
 Patch fixture price only, rerun exact-head full acceptance, then inspect next failure or PASS.
+
+
+## FP3-C2 PASS-CONTRACT AUDIT / REDUCE PROOF GAP — 2026-09-29
+
+status: FP3_C2_REDUCE_PROOF_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+pr: 1683
+auditedHead: d40c1d919890583271e2373db3aafee0db6f39a3
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Mechanical contract audit:
+- exact FP3-C2 PASS contract requires OPEN -> distinct SCALE_IN -> two BUY entries;
+- duplicate/replayed SCALE_IN must not create another mutation;
+- REDUCE after two entries must use exact weighted-average basis and remain replay-idempotent;
+- EXIT after the remaining multi-entry position must flatten deterministically;
+- current focused C2 test proves two BUYs, duplicate-lineage rejection and EXIT replay, but does not yet execute a REDUCE between SCALE_IN and EXIT;
+- therefore FP3-C2 cannot be claimed PASS even if generic/full workflows become green on the current proof set.
+
+Bounded goal:
+- extend only the focused multi-entry acceptance test;
+- execute PARTIAL_TAKE_PROFIT/REDUCE on half the accumulated position after two BUY entries;
+- prove REDUCE inserted once and exact replay leaves Epoch2 + Stream bytes unchanged;
+- prove remaining open basis/quantity still reconcile;
+- then EXIT the remaining position and verify final R22 action sequence BUY, BUY, REDUCE, EXIT.
+- no production/runtime behavior change.
+
+Exact nextAction:
+Patch the focused C2 test with multi-entry REDUCE + replay proof, then run exact-head UID504 acceptance and inspect mechanical output.
