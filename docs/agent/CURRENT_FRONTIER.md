@@ -3597,3 +3597,52 @@ Cleanup verification:
 
 Exact nextAction:
 Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
+
+
+## FP1-D CURRENT-MAIN CONTINUATION TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D_CURRENT_MAIN_CONTINUATION_START
+taskStartMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+sourceAcceptanceBranch: fp1d/portfolio-capital-movements
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Why this continuation branch exists:
+- FP1-D1 was implemented and mechanically accepted on an isolated branch created from pre-authority-lock main;
+- parallel docs-only PRs #1674 and #1675 advanced main and hardened roadmap/agent authority;
+- direct merge of the old branch would risk replaying stale CURRENT_FRONTIER/HANDOFF content;
+- therefore accepted D1 product/test/matrix content will be transplanted onto this fresh current-main branch, while current authority-lock agent-state is preserved.
+
+Accepted D1 evidence to preserve:
+- accepted production head: f49ba2913654dd46b99c65842e9fa0603195c8df
+- UID504 run: 36571535907
+- UID504 job: 109416495617
+- run conclusion: SUCCESS
+- focused pytest PASS
+- Ruff: All checks passed!
+- strict mypy: Success: no issues found in 5 source files
+- Product/Development non-mutation PASS
+- project isolation PASS
+- REAL_CAPITAL=0
+- old acceptance branch workflow restored to exact main before continuation.
+
+Bounded transfer:
+- carry only accepted D1 content:
+  1. docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+  2. src/crypto_signal/product/final_product_read_model.py
+  3. tests/test_final_product_read_model.py
+- do not carry old branch CURRENT_FRONTIER/HANDOFF history wholesale;
+- do not carry temporary workflow edits;
+- do not alter ACTIVE_ROADMAP/AGENTS authority lock;
+- no runtime/deploy/frozen-evidence mutation.
+
+Exact nextAction:
+Copy the three accepted D1 files from the cleaned acceptance branch into this current-main branch, verify no other file changed, then append a D1-transferred / D2-task-start checkpoint before any D2 production code.
