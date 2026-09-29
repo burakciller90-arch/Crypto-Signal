@@ -293,16 +293,19 @@ A feature is not rebuilt merely because an old UI is no longer the final design.
 
 ## FP0 — RDP11 Evidence Soak Guard
 
-Status: **ACTIVE / WAITING ON REAL TIME**
+Status: **ACTIVE / PRIOR EPOCH INVALIDATED / R2 ANCHOR PENDING**
 
-Frozen runtime subject:
+Frozen runtime subject remains:
 `3d9f33db3f1189571d40566125fbeabd00c04930`
 
-Soak start:
-`2026-09-29T09:13:21.134000Z`
+Prior epoch:
+`rdp11-3d9f33db-20260929` — **INVALIDATED** by immutable continuity evidence (`36622461578/109591020809`, `ConnectionResetError:[Errno 54] Connection reset by peer` on the observer intelligence-center read).
 
-Earliest 72h eligibility:
-`2026-10-02T09:13:21.134000Z`
+Replacement epoch candidate:
+`rdp11-3d9f33db-20260930-r2`
+
+Replacement soak start and earliest 72h eligibility:
+**NOT ASSERTED until the first successful merged-main non-dry-run observation creates the R2 immutable anchor.** The prior 2026-10-02 eligibility timestamp is void for PASS.
 
 PASS requires the RDP11 roadmap's real accumulated evidence, not elapsed time alone:
 - non-invalidated immutable anchor;
