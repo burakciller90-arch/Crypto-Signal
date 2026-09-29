@@ -3983,3 +3983,42 @@ Authority/rebase guard:
 
 Exact nextAction:
 Patch only tests/test_final_product_read_model.py import order and integer Decimal constructor style, rerun the identical UID504 harness on the resulting exact branch head, and require pytest + Ruff + mypy + non-mutation + project-isolation PASS before cleanup/rebase.
+
+
+## FP1-D1 THIRD UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_D1_ACCEPTANCE_IMPORT_STYLE_REPAIR
+activeBranch: fp1d/portfolio-capital-movements
+acceptanceHead: fb951727a7ce592fcb69f46b90675a3f119a449f
+uid504Run: 36571135223
+uid504Job: 109415463914
+artifactId: 11033614239
+currentParallelMainObserved: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+parallelMainChange: PR #1675 docs-only roadmap-authority handoff
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- D1 pytest suite PASS to 100%;
+- test fixture Ruff defects from the prior run are resolved;
+- Ruff found exactly one remaining error:
+  I001 import block unsorted in src/crypto_signal/product/final_product_read_model.py;
+- Ruff's exact guidance places crypto_signal.paper imports before crypto_signal.product imports;
+- strict mypy did not execute because Ruff is fail-fast;
+- Product/Development non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- no Product/Development deploy and no RDP11 runtime mutation.
+
+Repair classification:
+- PRODUCTION FILE STYLE ONLY;
+- do not change imports, symbols or Portfolio semantics; only reorder existing crypto_signal.paper imports before crypto_signal.product imports as Ruff specifies.
+
+Rebase guard:
+- main advanced only by docs-only roadmap-authority handoff; no FP1-D duplicate exists;
+- this old-base branch still must not be merged directly after acceptance.
+
+Exact nextAction:
+Reorder only final_product_read_model.py import statements according to Ruff I001 guidance, rerun the identical exact-head UID504 harness, and require pytest + Ruff + strict mypy + non-mutation + project-isolation PASS before D1 closeout.
