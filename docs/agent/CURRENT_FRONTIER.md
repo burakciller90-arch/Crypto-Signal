@@ -6852,3 +6852,51 @@ Patch existing FP5-A implementation/tests in place; do not create a second alloc
 - Development non-mutation PASS; whole-repo step skipped after mypy failure
 - bounded repair: variable names/narrowing only; allocation semantics unchanged
 - nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 acceptance; inspect any remaining failure mechanically before merge
+
+
+### FP5-A OWNER-BOUND REPAIR IMPLEMENTED / ACCEPTANCE READY — 2026-09-29
+
+status: FP5A_ACCEPTANCE_READY
+sourceRepairCommit: `1e7a2bc14d915e4411225804acf66ed9a4d62a89`
+focusedTestCommit: `919f91347166c6ab9280b023d915027187c3d884`
+activeBranch: `fp5a/portfolio-risk-envelope-v2`
+pr: #1698
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Semantic repair now implemented in-place:
+- one FP5-A owner only; no duplicate allocator/module;
+- FP5 portfolio policy owns only genuinely new controls: portfolio gross cap, cash reserve, per-cluster cap and new-trade loss cap;
+- accepted FP3 `FP3SizingRiskInputs` owns correlation/drawdown/volatility/liquidity/transaction-cost inputs;
+- accepted `PositionSizingPolicy` owns fixed-fractional and corresponding risk thresholds;
+- accepted `CircuitBreakerAnalysis` identity/state owns Event Risk gate;
+- accepted `ConfluenceMatrixSnapshot` identity/resolution owns conflict/partial/not-evaluable gate;
+- current portfolio snapshot binds source portfolio identity, exact cash/NAV and asset/cluster exposures;
+- long-only/no-borrowing invariant requires cash + gross exposure = NAV;
+- every unclassified existing exposure is preserved explicitly and makes assessment NOT_PROVEN;
+- candidate must resolve to a policy cluster;
+- same-cluster exposure consumes the same cap regardless of symbol;
+- baseline notional is current NAV × existing fixed-fractional fraction, then bounded downward by gross, cluster, cash and stop+transaction-cost risk caps;
+- Kelly/leverage/borrowing/forced deployment/production authority remain hard disabled;
+- missing snapshot/cluster truth => NOT_PROVEN; ordinary risk/evidence/cap breach => HOLD_CASH; both expose zero capacity.
+
+Focused proof set rewritten against real accepted owners:
+- genuine 100% cash means cash == NAV and zero gross exposure; eligible evidence can expose positive fixed-fractional capacity;
+- same 100% cash state may HOLD_CASH cleanly under Event Risk;
+- BTC exposure constrains ETH inside CRYPTO_BETA;
+- exhausted cluster cap => HOLD_CASH;
+- unclassified existing exposure => NOT_PROVEN;
+- missing candidate cluster => NOT_PROVEN;
+- overlapping cluster policy rejected;
+- FP3 correlation/drawdown/volatility/liquidity/transaction-cost gates fail closed;
+- Event Risk non-CLEAR and M6 CONFLICT/PARTIAL fail closed with bound evidence identities;
+- cash + gross != NAV rejected;
+- exact replay identity stable;
+- as-of/market lineage mismatch rejected;
+- Kelly/leverage/borrowing/forced deployment remain disabled.
+
+Important acceptance rule:
+- all runs on earlier heads, including `62239a6808bccda8c741aa12cb21ab6b7d47326c`, are stale for merge evidence;
+- require fresh dedicated FP5-A + WC6 + RDP11 + F10 on the final exact PR head after this checkpoint.
