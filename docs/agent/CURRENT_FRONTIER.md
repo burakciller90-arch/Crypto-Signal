@@ -2578,3 +2578,57 @@ B1 PASS:
 
 Exact nextAction:
 Inspect current final_product_read_model.py and its focused test fixture one last time, then implement the smallest FP1-B1 extension plus deterministic temp-ledger tests without changing web.py or frontend files.
+
+
+## FP1-B1 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_START
+activeBranch: fp1b/attention-workspace-family-summary
+implementationHead: aee71dfbcf4ea960c620738ab87c35984ec19b79
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented production scope:
+- extended src/crypto_signal/product/final_product_read_model.py only;
+- AttentionSituations customer/audit contracts;
+- deterministic attention_situations read model;
+- FiveFamilySummary customer/audit contracts;
+- exact five_family_summary enrichment from verified family source narratives;
+- no Product route;
+- no frontend;
+- no new DB/schema/writer;
+- no deploy/runtime config.
+
+Implemented test scope:
+- extended tests/test_final_product_read_model.py;
+- missing Stream DB explicit/non-creating for B1;
+- real accepted FamilyRuntime/SystemViewRuntime fixture;
+- material canonical family message admitted to Attention;
+- important System View admitted as separate presentation source;
+- routine/watch System View excluded;
+- deterministic newest/importance ordering;
+- exact family source_as_of/evidence domains/uncertainty enrichment;
+- unavailable On-chain remains explicit;
+- default customer payload hides SHA/raw materiality/state/uncertainty codes;
+- read-side byte non-mutation.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- focused tests/test_final_product_read_model.py plus relevant Stream family/system-view/read-model regressions;
+- Ruff on changed module/test;
+- strict mypy on final_product_read_model.py;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak runtime mutation.
+
+Acceptance harness rule:
+- any temporary workflow trigger/test wiring is branch-only acceptance infrastructure;
+- it must be restored to exact current-main content before any FP1-B1 PR;
+- it is not product scope.
+
+Exact nextAction:
+Temporarily wire the already-registered MI1 UID504 acceptance harness to fp1b/attention-workspace-family-summary and include the B1 module/test in pytest/Ruff/mypy; run against the exact resulting head, record exact failures before repair, and do not claim PASS until all mechanical markers are green.
