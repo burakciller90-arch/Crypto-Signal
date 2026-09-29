@@ -5851,3 +5851,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen Product/Development target protected; Durdurulmaz/Quantum untouched
 - blocker: live UID504 result not yet observed
 - nextAction: open isolated PR and inspect exact live workflow markers
+
+
+## 2026-09-29 — FP3-D acceptance attempt 1 lint-only failure
+
+- PR #1685; run/job \`36615647603\` / \`109567828795\`; tested head \`5fc02afb5040bf64d2b37ef165efee7730050bdd\`
+- exact source + frozen RDP11 target PASS
+- focused pytest PASS
+- Ruff blockers only: EXE001 shebang/non-executable mismatch and SIM117 nested with
+- live probe skipped; no FP3-D liveness claim
+- Development/Product non-mutation + target unchanged PASS; REAL_CAPITAL=0
+- nextAction: two lint-only harness cleanups, then rerun dedicated live gate
