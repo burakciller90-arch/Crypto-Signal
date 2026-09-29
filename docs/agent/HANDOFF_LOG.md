@@ -3846,3 +3846,56 @@ D1 PASS:
 
 Exact nextAction:
 Inspect accepted Epoch2 builders/test fixtures, implement PortfolioSummary in final_product_read_model.py plus focused temporary R21 ledger tests, then start UID504 acceptance only after implementation-complete checkpoint.
+
+
+## FP1-D1 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_D1_ACCEPTANCE_START
+activeBranch: fp1d/portfolio-capital-movements
+implementationHead: c34e319f22e590e80ad74a3b77995227b3ea19c8
+baseMain: e7fc9044f18b9a5c5006e498c4b68e6c15828758
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented D1 production scope:
+- FinalProductReadModel optional epoch2_path;
+- customer-safe PortfolioSummaryView;
+- consolidated Epoch 2 NAV/cash/marked exposure/PnL/current drawdown/cost/turnover/trade-count projection;
+- Core / Taktik / Fırsat Rezervi deterministic presentation order;
+- exact R21 symbol/quantity positions only;
+- audit-only activation/consolidated/vault/source identities;
+- missing Epoch 2 explicit/non-creating;
+- no R24 recomputation;
+- no legacy Mission Control fallback;
+- no historical max-drawdown claim;
+- no route/frontend/new DB/writer/deploy.
+
+Implemented D1 tests:
+- missing Epoch 2 explicit/non-creating;
+- initial unmeasured Epoch 2 preserves unavailable expectancy;
+- measured Epoch 2 exact consolidated/vault values;
+- corrupt partial R21 schema fails closed;
+- default customer payload hides SHA/raw metrics enum/database/vault enum vocabulary;
+- R21 source bytes and pre-existing WAL remain unchanged by reads.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- tests/test_final_product_read_model.py;
+- tests/test_epoch2_accounting.py;
+- tests/test_epoch2_read_only_product.py;
+- relevant existing Stream final-product regressions in the harness;
+- Ruff changed module/test;
+- strict mypy final_product_read_model.py;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 mutation.
+
+Acceptance harness rule:
+- any temporary workflow trigger/test wiring is branch-only acceptance infrastructure;
+- restore it to exact current-main content before any FP1-D PR.
+
+Exact nextAction:
+Temporarily wire the already-registered MI1 UID504 harness to fp1d/portfolio-capital-movements and include D1 module/tests plus Epoch2 regressions. Run exact-head acceptance and record the exact first mechanical failure before any repair.
