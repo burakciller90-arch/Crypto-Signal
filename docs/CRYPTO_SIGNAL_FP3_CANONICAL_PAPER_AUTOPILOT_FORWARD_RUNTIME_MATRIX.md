@@ -573,3 +573,33 @@ PASS:
 
 Exact next action:
 Implement the minimal C2 validator/action changes and focused tests; no FP3-D work before C2 PASS.
+
+
+## 15. FP3-C2 implementation / acceptance
+
+Status: **IMPLEMENTED / ACCEPTANCE PENDING**
+
+Base main:
+\`1260d6096900107eeb9839ea9a094bb5ce9f028e\`
+
+Implemented contract:
+- active open position is represented by the immutable verified R22 BUY entry set, not a single collapsed forecast/sizing identity;
+- canonical sell validates every active BUY entry and binds its action forecast/proof/sizing object to the latest active entry;
+- canonical sell evidence carries all active entry intent/fill/forecast/proof/sizing/allocator/decision identities;
+- the accepted weighted-average cost-basis replay remains the sole cost-basis policy;
+- current FP3 action policy v2 supports \`SCALE_IN -> BUY\` only for a positive current position and a distinct accepted FP3-A/B forecast/proof/sizing lineage;
+- duplicate reuse of an existing active entry lineage fails closed before canonical mutation;
+- action policy/engine v1 remains readable for prior immutable C1 receipts;
+- \`STOP_UPDATE\` remains \`UNAVAILABLE_EXPLICIT\`.
+
+Focused mechanical proof added:
+- distinct second unified-decision issuance;
+- second FP3-A/B accepted sizing lineage;
+- OPEN -> SCALE_IN -> two verified active BUY entries;
+- duplicate SCALE_IN lineage rejection;
+- weighted-average open cost basis over both entries;
+- EXIT over the latest active entry lineage;
+- action replay leaves Epoch2 and Stream bytes unchanged;
+- flattened position leaves no active BUY entry set.
+
+PASS is not claimed until exact PR/full UID504 acceptance succeeds.
