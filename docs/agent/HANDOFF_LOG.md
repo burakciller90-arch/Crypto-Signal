@@ -2394,3 +2394,381 @@ Current blocker:
 
 Exact nextAction:
 While the installed RDP11 observer continues, start **FP1 — Final Product Contract & Human Read-Model Layer** on a new isolated branch/worktree. First perform the mandatory per-slice duplicate audit over existing Product/Stream/GALACTECH APIs/read models and record each FP1 requirement as REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE before any implementation. Do not deploy or mutate the soaked Product/Development runtime.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — FP1 Final Product Human Read-Model Contract
+
+status: FP1_ACTIVE_DUPLICATE_AUDIT
+taskStartMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+activeBranch: fp1/human-read-model-contract
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+soakEpoch: rdp11-3d9f33db-20260929
+soakRuntimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate/stale check before branch creation:
+- exact main verified at 4df55fdf85b34ded60f23a3d3e3e346dd7505160;
+- no open PR matching FP1 Final Product Human Read Model;
+- no related fp1/final-product/read-model/command-center branch was present;
+- merged Final Product authority #1669/#1670 is already canonical and must not be replayed;
+- accepted Stream/GALACTECH/R21/R22/R24 infrastructure is presumed REUSE only where code audit proves the exact contract exists.
+
+Bounded FP1 goal:
+- audit the current Product/Stream/GALACTECH API and read-model surface before implementation;
+- classify every FP1 requirement as REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE;
+- freeze one customer-facing read-model contract for Market Pulse, Attention Situations, signal/workspace summary, five-family summaries, Event Rail, portfolio summary, daily capital movements, Trade Passport, screener rows and global search index;
+- preserve exact internal identity/provenance while removing SHA/internal-enum/database vocabulary from normal customer payloads;
+- do not create a second evidence engine or divergent product truth store;
+- do not deploy or mutate Product/Development or the RDP11 observer/soak target.
+
+Current blocker:
+- no implementation blocker yet; FP1 code changes are forbidden until the duplicate audit/classification is durably recorded.
+
+Exact nextAction:
+Audit existing product modules, APIs, Stream read models, GALACTECH projections, capital/performance/archive/event/alert/search surfaces and tests; produce a durable FP1 capability matrix with exact code references and REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE classification before changing production code.
+
+
+## FP1-A IMPLEMENTATION CHECKPOINT — 2026-09-29
+
+status: FP1_A_IMPLEMENTATION_START
+taskStartMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+activeBranch: fp1/human-read-model-contract
+sessionLocalWorktree: NONE
+soakEpoch: rdp11-3d9f33db-20260929
+soakRuntimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Durable duplicate audit:
+- docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+- Market Pulse = EXTEND existing Dashboard/Stream truth; not a new market/evidence engine.
+- Five-family system-view truth = REUSE.
+- Event Rail = later BUILD over existing append-only event source.
+- canonical Portfolio = later EXTEND Epoch2/R22/R24; legacy Mission Control is not the final portfolio source.
+- Trade Passport = later EXTEND existing R22 read_trade_history/read_bundle_story_context.
+- Stream search/history/SSE = REUSE.
+
+FP1-A bounded goal:
+- add a product-only read model contract for customer availability/freshness plus Market Pulse;
+- consume only accepted Intelligence Stream system-view messages;
+- return human-facing Turkish state labels and source/as-of/freshness information;
+- retain exact immutable identities only under nested audit provenance;
+- default customer projection must not expose SHA256/internal state-machine vocabulary;
+- explicit stale/unavailable state; no fabricated zero/neutral;
+- no web route;
+- no frontend change;
+- no Product/Development deployment;
+- no database writes or initialization.
+
+FP1-A PASS:
+- deterministic read-only projection;
+- missing Stream DB returns unavailable without creating it;
+- latest system view per requested asset selected point-in-time from accepted Stream ledger;
+- customer payload contains no 64-hex identity outside audit provenance;
+- audit provenance preserves exact narrative/source identities;
+- tests prove no canonical DB mutation;
+- REAL_CAPITAL=0.
+
+Current blocker:
+- exact persisted system-view payload shape must be consumed without copying its generation logic.
+
+Exact nextAction:
+Inspect verified system-view schema/payload, then implement the smallest final_product_read_model.py + focused tests using a temporary accepted Stream ledger fixture. Do not add a Product API route in FP1-A.
+
+
+## FP1-A ACCEPTANCE CHECKPOINT — 2026-09-29
+
+status: FP1_A_IMPLEMENTATION_COMPLETE_ACCEPTANCE_START
+activeBranch: fp1/human-read-model-contract
+implementationHeadBeforeAcceptance: b24a16a3ace4287b2dbfc17c71f519728249ab1c
+sessionLocalWorktree: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- src/crypto_signal/product/final_product_read_model.py
+- tests/test_final_product_read_model.py
+- no Product route, frontend file, canonical DB writer, runtime config or deployment change.
+
+Contract:
+- latest persisted system-view message is selected point-in-time with event_at_ms <= observed_at_ms;
+- existing verified_system_view_record validates persisted identity/digest/schema;
+- customer layer translates stance/freshness/family state into Turkish human labels;
+- normal customer projection omits exact identities/internal state-machine vocabulary;
+- include_audit=true retains exact narrative/semantic/evidence provenance;
+- missing Stream DB/table returns explicit unavailable without read-side initialization;
+- all SQLite reads use mode=ro + query_only;
+- REAL_CAPITAL=0.
+
+Acceptance requirement:
+- focused pytest tests/test_final_product_read_model.py;
+- Ruff on module + test;
+- strict mypy on the new production module at minimum;
+- read-side non-mutation;
+- exact branch-head source;
+- no Product/Development deployment and no RDP11 observer/epoch mutation.
+
+Current blocker:
+- no dedicated FP1 CI existed on this branch; the only automatic legacy wc0 state-report run is unrelated and failed before FP1 validation.
+
+Exact nextAction:
+Add a narrowly scoped branch-only FP1-A hosted acceptance workflow that runs the exact focused pytest/Ruff/mypy contract without Product/Development/runtime mutation; run it on the resulting exact branch head and repair only demonstrated FP1-A failures.
+
+
+## FP1-A ACCEPTANCE TOOLING REPAIR CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_TOOLING_REPAIR
+activeBranch: fp1/human-read-model-contract
+currentHeadBeforeRepair: ba0f9f79a9dada9a6bfaf6e09c4f0662a0d99c9c
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Observed:
+- a new branch-only workflow file was added for FP1-A acceptance;
+- its push did not produce a registered FP1-A workflow run;
+- only the unrelated legacy wc0 state-report executed and failed before FP1 validation;
+- therefore no FP1-A PASS is claimed from that push.
+
+Repair decision:
+- remove the unregistered temporary FP1-A workflow so it cannot become accidental product scope;
+- reuse the already-registered canonical Crypto Stage10 Hosted Gate by adding this isolated FP1 branch to its push allowlist on the branch only;
+- that gate already runs whole-repository pytest + Ruff + strict mypy and therefore covers the new FP1-A module/tests more strongly than the intended focused gate;
+- no runtime deployment or Product/Development mutation is involved.
+
+Exact nextAction:
+Delete the temporary workflow, add only fp1/human-read-model-contract to the existing Stage10 hosted branch trigger, run the registered gate on the resulting exact head, inspect any failure, and repair only demonstrated FP1-A defects.
+
+
+## FP1-A HOSTED-GATE INFRA FAILURE / UID504 FALLBACK CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_HOSTED_INFRA_FAILURE
+activeBranch: fp1/human-read-model-contract
+hostedGateHead: 755f6d71313c0836e37949e55c777fd4cb8e7b7f
+hostedGateRun: 36553831765
+hostedGateJob: 109358113946
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Observed:
+- registered Crypto Stage10 Hosted Gate triggered on the exact FP1 branch head;
+- run conclusion = FAILURE;
+- job step payload is null and downloadable job log returns BlobNotFound;
+- therefore the gate failed before any auditable FP1 pytest/Ruff/mypy execution;
+- this is not evidence that FP1-A code failed and no FP1-A PASS is claimed.
+
+Next acceptance path:
+- reuse the already-registered self-hosted Crypto Message Intelligence MI1 UID504 workflow as a temporary branch acceptance harness;
+- branch-only edits will add fp1/human-read-model-contract to its push trigger and add the new FP1-A test/module to its existing exact-source pytest/Ruff/mypy checks;
+- its accepted harness already proves UID504, isolated test venv, Product/Development checkout non-mutation and project isolation;
+- after acceptance, temporary workflow trigger/test wiring will be reverted before the implementation PR; the accepted production code/test content will remain unchanged.
+
+Exact nextAction:
+Modify the registered MI1 UID504 workflow on this branch only, run it on the exact resulting head, and inspect focused pytest/Ruff/mypy plus Product/Development non-mutation markers.
+
+
+## FP1-A FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_REPAIR_REQUIRED
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: 057178ece31c997ce20050d0295c39369421feff
+uid504Run: 36554022688
+uid504Job: 109358745742
+artifactId: 11027380075
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source isolated UID504 environment PASS;
+- focused existing Stream + new FP1-A pytest suite PASS to 100%;
+- first failing command was Ruff;
+- exact Ruff defect: F401 unused json import at tests/test_final_product_read_model.py:3;
+- mypy did not execute because the shell is fail-fast after Ruff;
+- Product and Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- no runtime deploy, Product mutation or RDP11 epoch mutation occurred.
+
+Repair scope:
+- remove only the demonstrated unused json import;
+- do not alter Market Pulse semantics or acceptance criteria.
+
+Exact nextAction:
+Delete the unused test import, rerun the same UID504 exact-source pytest/Ruff/mypy harness, and require all focused + non-mutation/project-isolation markers before advancing.
+
+
+## FP1-A SECOND UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_TYPE_REPAIR_REQUIRED
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: be2383435f0a7e14e853ed27b3ce9a5d4df0165c
+uid504Run: 36554189472
+uid504Job: 109359474913
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 environment PASS;
+- focused pytest including new FP1-A tests PASS;
+- Ruff PASS;
+- mypy reached the new production module and found exactly one error:
+  src/crypto_signal/product/final_product_read_model.py:184
+  No overload variant of int matches argument type object;
+- Product/Development non-mutation PASS;
+- no deploy or RDP11 mutation.
+
+Repair scope:
+- replace the direct int(row[1]) conversion with an explicit verified non-negative integer helper;
+- preserve point-in-time selection and all customer semantics unchanged.
+
+Exact nextAction:
+Implement only the typed integer validation repair, rerun the same UID504 harness, and require pytest + Ruff + mypy + non-mutation/project-isolation PASS.
+
+
+## FP1-A THIRD UID504 ACCEPTANCE START CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_RERUN_START
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+previousFailure: strict mypy rejected direct int(object) conversion for persisted system-view event_at_ms
+repairApplied:
+- added explicit _row_non_negative_int validation
+- preserved point-in-time selection and customer semantics
+- no route/frontend/deploy/runtime mutation
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Required mechanical PASS:
+- exact-source UID504 checkout;
+- focused pytest including tests/test_final_product_read_model.py;
+- Ruff PASS;
+- strict mypy PASS for final_product_read_model.py;
+- Product and Development checkout non-mutation PASS;
+- project isolation PASS;
+- no RDP11 soak runtime mutation.
+
+Exact nextAction:
+Inspect the automatically triggered Crypto Message Intelligence MI1 UID504 run for exact head ae5b1f4ed13f57f783cd36963116bd3324210deb. If any step fails, record the exact failure before changing code; otherwise record FP1-A acceptance PASS and revert temporary acceptance-harness workflow edits before preparing the implementation PR.
+
+
+## FP1-A UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_PASS
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+uid504Run: 36554409727
+uid504Job: 109360124852
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS evidence:
+- run conclusion SUCCESS on exact implementation head ae5b1f4ed13f57f783cd36963116bd3324210deb;
+- exact-source isolated UID504 checkout PASS;
+- focused existing Stream + FP1-A pytest step PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no canonical Product/Development checkout mutation;
+- no RDP11 soak runtime/epoch mutation.
+
+Accepted FP1-A production scope:
+- docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md;
+- src/crypto_signal/product/final_product_read_model.py;
+- tests/test_final_product_read_model.py;
+- agent checkpoint documentation.
+
+Temporary acceptance harness changes are NOT product scope and must be removed before PR:
+- fp1 branch trigger added to crypto-stage10-hosted-branch-gate.yml;
+- fp1 trigger + FP1 test/module checks added to crypto-message-intelligence-mi1-hosted.yml.
+
+Exact nextAction:
+Re-read current main and restore both temporarily modified workflow files on this FP1 branch to their exact current-main contents. Then verify the branch diff contains only FP1-A production/test/docs/handoff changes before opening the implementation PR.
+
+
+## FP1-A PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_A_REVIEW_READY
+activeBranch: fp1/human-read-model-contract
+currentBranchHead: aa98e9bc54554adabf3f791d636376c4c391b909
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+acceptedUid504Run: 36554409727
+baseMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup completed:
+- temporary FP1 trigger was removed from .github/workflows/crypto-stage10-hosted-branch-gate.yml by restoring exact current-main content;
+- temporary FP1 trigger/test wiring was removed from .github/workflows/crypto-message-intelligence-mi1-hosted.yml by restoring exact current-main content;
+- acceptance harness commits remain only in branch history; their final tree content equals main and must not appear in the PR diff.
+
+Accepted implementation:
+- FP1 duplicate/capability matrix;
+- customer-safe final_product_read_model.py;
+- focused Market Pulse tests;
+- durable CURRENT_FRONTIER/HANDOFF checkpoints;
+- no Product API route;
+- no frontend;
+- no deploy;
+- no canonical runtime writer;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Open an FP1-A implementation PR against main, inspect its actual changed-file diff, and fail closed if either temporary workflow file appears or any unrelated project/runtime file is present.
+
+
+## FP1-A PR DIFF VERIFIED CHECKPOINT — 2026-09-29
+
+status: FP1_A_PR_OPEN_DIFF_CLEAN
+pullRequest: 1671
+pullRequestUrl: https://github.com/burakciller90-arch/Crypto-Signal/pull/1671
+baseMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+prHeadAtOpen: 3e7b16e6128b8fd83a42e8f536e999d18a55312d
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+acceptedUid504Run: 36554409727
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Verified PR changed-file set is exactly:
+1. docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+2. docs/agent/CURRENT_FRONTIER.md
+3. docs/agent/HANDOFF_LOG.md
+4. src/crypto_signal/product/final_product_read_model.py
+5. tests/test_final_product_read_model.py
+
+Guard result:
+- temporary Stage10 workflow edit is absent from PR diff;
+- temporary MI1 acceptance-harness edit is absent from PR diff;
+- no frontend file;
+- no Product API route;
+- no runtime/deploy/config file;
+- no Durdurulmaz or Quantum Capital file;
+- no canonical DB writer.
+
+Exact nextAction:
+Read PR #1671 mergeability/check state and current main. If the PR remains based on the verified main with no mechanical blocker, merge FP1-A without deploying Product/Development, then bootstrap from the new main and checkpoint FP1-B before changing any further production code.
