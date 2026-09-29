@@ -3797,3 +3797,34 @@ Bounded implementation:
 
 Exact nextAction:
 Implement Capital Movements projection in final_product_read_model.py plus focused immutable Stream Capital tests. Do not modify routes or frontend.
+
+
+## FP1-D2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_START
+baseMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+classification: REUSE verified Stream Capital truth + EXTEND customer projection
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Audit result:
+- canonical timeline reader is IntelligenceStreamReadModel.read_messages;
+- exact query is StreamMessageQuery(category="capital", bounded limit, optional vault/from_ms/to_ms);
+- accepted reader already verifies payload digest/canonical identity/schema/engine/read-only/REAL_CAPITAL before returning records;
+- accepted Capital classes are decision, sizing, execution/story and lifecycle candidate/accounting/outcome;
+- default reader order is deterministic newest-first;
+- vault/time filtering stays delegated to accepted Stream query semantics;
+- R22 is lineage authority and R21 is accounting authority; D2 creates no second ledger and no direct R22/R21 timeline scan;
+- source_as_of and amounts are exposed only where persisted; absent optional values remain unavailable;
+- raw subtype/reason/identities are audit-only;
+- field/source matrix updated to freeze the exact mapping before code.
+
+Current blocker:
+- none for implementation; acceptance is still pending after code/tests.
+
+Exact nextAction:
+Implement CapitalMovementsView/Item/Audit plus FinalProductReadModel.capital_movements(...) over the frozen Stream query contract, then add focused tests for missing DB, filters/order, subtype/action mapping, exact optional amounts, audit provenance, customer vocabulary and source byte non-mutation.
+
