@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import asdict
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from test_event_source_product import _seed_successes as _seed_event_source_successes
 from test_intelligence_stream_read_model import _create_read_fixture
+from test_epoch2_accounting import _activate as _activate_epoch2
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import (
@@ -37,6 +39,13 @@ from crypto_signal.product.intelligence_stream_system_view import (
     STREAM_SYSTEM_VIEW_SCHEMA_VERSION,
     IntelligenceStreamSystemViewRuntime,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2CanonicalLedger,
+    build_consolidated_epoch2_snapshot,
+    build_epoch2_vault_accounting_snapshot,
+)
+from crypto_signal.paper.epochs import EPOCH_2_SPEC, PaperVaultId
+from crypto_signal.paper.models import PaperPosition, PaperSymbol
 
 
 def _sha(label: str) -> str:
@@ -1066,5 +1075,236 @@ def test_event_rail_customer_payload_hides_sha_raw_enums_and_database_vocabulary
         "inflation",
         "structured_event_observations",
         "event_source_runtime",
+    }
+    assert forbidden.isdisjoint(texts)
+
+
+def _seed_measured_epoch2(tmp_path: Path) -> Path:
+    _, _, _, initial = _activate_epoch2(tmp_path)
+    epoch2_path = tmp_path / EPOCH_2_SPEC.ledger_filename
+    ledger = Epoch2CanonicalLedger(epoch2_path)
+    activation = initial.activation
+    previous = {item.vault_id: item for item in initial.vault_snapshots}
+
+    core = build_epoch2_vault_accounting_snapshot(
+        activation,
+        vault_id=PaperVaultId.CORE,
+        snapshot_at_ms=2_000,
+        cash_usdt=Decimal("500"),
+        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal("1.25")),),
+        marked_exposure_usdt=Decimal("110"),
+        realized_pnl_usdt=Decimal("5"),
+        unrealized_pnl_usdt=Decimal("5"),
+        fee_usdt=Decimal("1"),
+        spread_usdt=Decimal("0.5"),
+        slippage_usdt=Decimal("0.5"),
+        turnover_notional_usdt=Decimal("200"),
+        closed_trade_count=1,
+        win_count=1,
+        loss_count=0,
+        breakeven_count=0,
+        outcome_distribution=(("WIN", 1),),
+        source_record_identities=(_sha("fp1d-core"),),
+        previous=previous[PaperVaultId.CORE],
+    )
+    tactical = build_epoch2_vault_accounting_snapshot(
+        activation,
+        vault_id=PaperVaultId.TACTICAL,
+        snapshot_at_ms=2_000,
+        cash_usdt=Decimal("250"),
+        positions=(PaperPosition(PaperSymbol.ETHUSDT, Decimal("0.5")),),
+        marked_exposure_usdt=Decimal("45"),
+        realized_pnl_usdt=Decimal("-3"),
+        unrealized_pnl_usdt=Decimal("-2"),
+        fee_usdt=Decimal("0.4"),
+        spread_usdt=Decimal("0.3"),
+        slippage_usdt=Decimal("0.3"),
+        turnover_notional_usdt=Decimal("100"),
+        closed_trade_count=1,
+        win_count=0,
+        loss_count=1,
+        breakeven_count=0,
+        outcome_distribution=(("LOSS", 1),),
+        source_record_identities=(_sha("fp1d-tactical"),),
+        previous=previous[PaperVaultId.TACTICAL],
+    )
+    reserve = build_epoch2_vault_accounting_snapshot(
+        activation,
+        vault_id=PaperVaultId.OPPORTUNITY_RESERVE,
+        snapshot_at_ms=2_000,
+        cash_usdt=Decimal("100"),
+        positions=(),
+        marked_exposure_usdt=Decimal("0"),
+        realized_pnl_usdt=Decimal("0"),
+        unrealized_pnl_usdt=Decimal("0"),
+        fee_usdt=Decimal("0"),
+        spread_usdt=Decimal("0"),
+        slippage_usdt=Decimal("0"),
+        turnover_notional_usdt=Decimal("0"),
+        closed_trade_count=0,
+        win_count=0,
+        loss_count=0,
+        breakeven_count=0,
+        outcome_distribution=(),
+        source_record_identities=(_sha("fp1d-reserve"),),
+        previous=previous[PaperVaultId.OPPORTUNITY_RESERVE],
+    )
+    for item in (core, tactical, reserve):
+        assert ledger.append_vault_snapshot(item) is True
+    consolidated = build_consolidated_epoch2_snapshot(
+        (core, tactical, reserve),
+        previous=initial.consolidated_snapshot,
+    )
+    assert ledger.append_consolidated_snapshot(consolidated) is True
+    return epoch2_path
+
+
+def test_portfolio_summary_missing_epoch2_is_explicit_and_noncreating(
+    tmp_path: Path,
+) -> None:
+    epoch2_path = tmp_path / "missing-epoch2.sqlite3"
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).portfolio_summary()
+
+    assert view.availability_label == "Epoch 2 portföy verisi kullanılamıyor"
+    assert view.program_label == "Paper Capital · Epoch 2"
+    assert view.current_equity_usdt is None
+    assert view.vaults == ()
+    assert view.real_capital == 0
+    assert not epoch2_path.exists()
+
+
+def test_portfolio_summary_preserves_unmeasured_initial_epoch2_and_read_only_bytes(
+    tmp_path: Path,
+) -> None:
+    _, _, _, _ = _activate_epoch2(tmp_path)
+    epoch2_path = tmp_path / EPOCH_2_SPEC.ledger_filename
+    before = epoch2_path.read_bytes()
+    wal_path = Path(f"{epoch2_path}-wal")
+    wal_before = wal_path.read_bytes() if wal_path.exists() else None
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).portfolio_summary()
+
+    assert view.availability_label == "Doğrulanmış veri"
+    assert view.starting_capital_usdt == "1000.00"
+    assert view.current_equity_usdt == "1000.00"
+    assert view.cash_usdt == "1000.00"
+    assert view.used_capital_usdt == "0.00"
+    assert view.total_pnl_usdt == "+0.00"
+    assert view.current_drawdown_percent == "0.00%"
+    assert view.open_position_count == 0
+    assert view.closed_trade_count == 0
+    assert view.expectancy_label == "Henüz ölçülmedi"
+    assert view.performance_status_label == "Henüz ölçülmedi"
+    assert tuple(item.vault_label for item in view.vaults) == (
+        "Core",
+        "Taktik",
+        "Fırsat Rezervi",
+    )
+    assert epoch2_path.read_bytes() == before
+    assert (wal_path.read_bytes() if wal_path.exists() else None) == wal_before
+
+
+def test_portfolio_summary_projects_measured_epoch2_exactly(
+    tmp_path: Path,
+) -> None:
+    epoch2_path = _seed_measured_epoch2(tmp_path)
+    before = epoch2_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).portfolio_summary(include_audit=True)
+
+    assert view.snapshot_at_ms == 2_000
+    assert view.current_equity_usdt == "1005.00"
+    assert view.cash_usdt == "850.00"
+    assert view.used_capital_usdt == "155.00"
+    assert view.realized_pnl_usdt == "+2.00"
+    assert view.unrealized_pnl_usdt == "+3.00"
+    assert view.total_pnl_usdt == "+5.00"
+    assert view.current_drawdown_percent == "0.00%"
+    assert view.fee_usdt == "1.40"
+    assert view.spread_usdt == "0.80"
+    assert view.slippage_usdt == "0.80"
+    assert view.turnover_percent == "30.00%"
+    assert view.open_position_count == 2
+    assert view.closed_trade_count == 2
+    assert view.win_count == 1
+    assert view.loss_count == 1
+    assert view.breakeven_count == 0
+    assert view.expectancy_label == "+1.00 / kapalı işlem"
+    assert view.performance_status_label == "Ölçülebilir"
+
+    core = view.vaults[0]
+    assert core.vault_label == "Core"
+    assert core.nav_usdt == "610.00"
+    assert core.total_pnl_usdt == "+10.00"
+    assert core.open_position_count == 1
+    assert core.positions == (
+        type(core.positions[0])(symbol="BTCUSDT", quantity="1.25"),
+    )
+    assert core.audit is not None
+    assert len(core.audit.snapshot_identity) == 64
+
+    tactical = view.vaults[2]
+    assert tactical.vault_label == "Taktik"
+    assert tactical.total_pnl_usdt == "-5.00"
+    assert tactical.positions[0].symbol == "ETHUSDT"
+    assert tactical.positions[0].quantity == "0.5"
+
+    assert view.audit is not None
+    assert len(view.audit.activation_identity) == 64
+    assert len(view.audit.consolidated_snapshot_identity) == 64
+    assert len(view.audit.vault_snapshot_identities) == 3
+    assert epoch2_path.read_bytes() == before
+
+
+def test_portfolio_summary_corrupt_partial_epoch2_fails_closed(
+    tmp_path: Path,
+) -> None:
+    epoch2_path = tmp_path / "partial-epoch2.sqlite3"
+    with sqlite3.connect(epoch2_path) as connection:
+        connection.execute(
+            "CREATE TABLE r21_epoch2_activation (singleton INTEGER PRIMARY KEY, payload_json TEXT)"
+        )
+
+    with pytest.raises(
+        FinalProductReadError,
+        match="Epoch 2 portföy kaynağı güvenli okunamadı",
+    ):
+        FinalProductReadModel(
+            stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+            epoch2_path=epoch2_path,
+        ).portfolio_summary()
+
+
+def test_portfolio_summary_customer_payload_hides_identities_and_raw_metric_enum(
+    tmp_path: Path,
+) -> None:
+    epoch2_path = _seed_measured_epoch2(tmp_path)
+    payload = asdict(
+        FinalProductReadModel(
+            stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+            epoch2_path=epoch2_path,
+        ).portfolio_summary(include_audit=False)
+    )
+    texts = _all_text(payload)
+
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "available",
+        "not_yet_measured",
+        "r21_vault_snapshots",
+        "r21_consolidated_snapshots",
+        "paper_fund_epoch2.sqlite3",
+        "CORE",
+        "TACTICAL",
+        "OPPORTUNITY_RESERVE",
     }
     assert forbidden.isdisjoint(texts)
