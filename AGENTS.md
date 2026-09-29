@@ -46,13 +46,15 @@ Runtime owner:
 
 Read these as current project authority before implementation:
 
-1. `READ_FIRST_CRYPTO_SIGNAL.md`
-2. `CURRENT_STATUS.md`
-3. `PROJECT_CHRONICLE.md`
-4. `ENVIRONMENT_REGISTRY.md`
-5. `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`
-6. `docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md`
-7. `docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md`
+1. **`ACTIVE_ROADMAP.md`** — canonical active-program pointer and mandatory read order.
+2. `READ_FIRST_CRYPTO_SIGNAL.md`
+3. `CURRENT_STATUS.md`
+4. newest `PROJECT_CHRONICLE.md` entry
+5. `ENVIRONMENT_REGISTRY.md`
+6. **`docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`** — canonical final-product umbrella roadmap.
+7. the mechanically active phase authority — currently `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md` for FP0/RDP11.
+8. relevant accepted contracts/acceptance records for the exact slice.
+9. `docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md` when work touches the SSD504 workbench/runtime.
 
 Historical roadmaps/acceptance documents remain useful evidence, but they do not override the current active frontier.
 
@@ -60,18 +62,20 @@ When documents conflict:
 
 1. current machine-readable/live evidence wins for current runtime state;
 2. current Git/GitHub state wins for current code/merge state;
-3. `CURRENT_STATUS.md` + active RDP roadmap define execution priority;
-4. historical acceptance/roadmap files are context only.
+3. `ACTIVE_ROADMAP.md` + `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md` define product-program priority;
+4. the current mechanically active phase authority defines the acceptance gate inside that program;
+5. historical acceptance/roadmap files are context only.
 
 ## Mandatory bootstrap on every new prompt/session
 
 Before changing code or telling the user where the project is:
 
 1. Read this `AGENTS.md`.
-2. Read `docs/agent/CURRENT_FRONTIER.md`.
-3. Read the tail of `docs/agent/HANDOFF_LOG.md`.
-4. If working on the Mac/runner, read `/Volumes/Crypto-504/Crypto-Signal-Workbench/WORKSPACE_READ_FIRST.md`.
-5. Read the canonical authority files above.
+2. Read **`ACTIVE_ROADMAP.md`**.
+3. Read `docs/agent/CURRENT_FRONTIER.md`.
+4. Read the tail of `docs/agent/HANDOFF_LOG.md`.
+5. If working on the Mac/runner, read `/Volumes/Crypto-504/Crypto-Signal-Workbench/WORKSPACE_READ_FIRST.md`.
+6. Read the canonical authority files above.
 6. Verify actual Git/GitHub state:
    - current `main` SHA;
    - recent relevant commits;
@@ -126,24 +130,29 @@ If another agent advanced `main` after your task began, refresh/rebase/reconcile
 - Keep `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo` as the clean canonical `main` inspection/sync point whenever possible.
 - Before PR/merge, compare against the latest current `main`.
 
-## Active Evidence Data Plane closure discipline
+## Final Product program discipline
 
-Current phase must be read from the active roadmap, not remembered.
+The active product program must be read from `ACTIVE_ROADMAP.md`, never remembered from chat.
 
-At the baseline that created this contract, RDP0–RDP8 were PASS and RDP9 was ACTIVE.
+Current mechanically unclosed gate at the time this authority was opened:
 
-RDP9 only closes when its roadmap PASS conditions are mechanically demonstrated:
+- RDP0–RDP10: PASS;
+- **FP0 / RDP11: ACTIVE — real continuous soak**;
+- earliest 72-hour eligibility: `2026-10-02T09:13:21.134000Z`.
 
-- the same raw truth cannot silently create duplicate confidence;
-- material venue disagreement is visible to the decision layer.
+RDP11 closes only when its roadmap PASS conditions are mechanically demonstrated. Elapsed time alone is never sufficient.
 
-Do not skip to RDP10 simply because RDP9 implementation commits exist. First verify exact-main acceptance and update canonical status/roadmap evidence.
+After FP0/RDP11 PASS, continue through the first mechanically unclosed phase of `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`.
 
-RDP10 only closes when every family exposes the strongest exact frozen customer-proof actually available, with stale/unavailable truth preserved and no current-data substitution.
+Before every FP phase/sub-slice, classify the target as:
+- `REUSE`;
+- `EXTEND`;
+- `BUILD`;
+- `EXPLICITLY_UNAVAILABLE`.
 
-RDP11 requires its real continuous soak; elapsed acceptance evidence must never be fabricated.
+Record that classification in CURRENT_FRONTIER before coding. Intelligence Stream S0-S16/F0-F10/MI1-MI6, R21, R22, R24 and other accepted foundations must not be rebuilt merely because their presentation is being redesigned.
 
-Portfolio/frontend integration must not treat an evidence rail as trusted before its RDP gate is actually closed.
+While the RDP11 soak is active, do not mutate the frozen soaked runtime/observer contract or historical/frozen evidence merely to advance a later final-product phase. FP1+ engineering may proceed in isolated branches/worktrees using fixtures, temporary databases and read-only canonical inputs; do not deploy or merge behavior-changing runtime work into the soak target unless the epoch consequence is explicitly handled.
 
 ## End-of-turn handoff is mandatory
 
