@@ -6,6 +6,14 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from crypto_signal.decision_ledger import (
+    DecisionLedgerConflictError,
+    ImmutableDecisionEvidenceLedger,
+)
+from crypto_signal.product.intelligence_stream_exact_evidence import (
+    IntelligenceStreamExactEvidenceReadModel,
+    StreamExactEvidenceError,
+)
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
@@ -244,6 +252,49 @@ class FiveFamilySummaryView:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkspaceAudit:
+    narrative_identity: str
+    detail_kind: str
+    story_identity: str | None
+    fact_bundle_identity: str | None
+    analytical_view_identity: str | None
+    forecast_identity: str | None
+    proof_identity: str | None
+    signal_freeze_identity: str | None
+    evidence_resolution_counts: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
+class WorkspaceSummaryView:
+    availability_label: str
+    message_kind_label: str
+    symbol: str | None
+    timeframe: str | None
+    updated_at_ms: int | None
+    source_as_of_ms: int | None
+    freshness_label: str
+    headline: str | None
+    detail: str | None
+    state_label: str | None
+    direction_label: str | None
+    trigger_zone: dict[str, Any] | None
+    target_zone: dict[str, Any] | None
+    invalidation_price: str | None
+    main_contradiction_label: str | None
+    event_risk_label: str | None
+    uncertainty_label: str
+    probability_label: str
+    evidence_label: str
+    decision_proof_label: str
+    capital_consequence_label: str | None
+    resolution_label: str | None
+    audit: WorkspaceAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
@@ -255,8 +306,16 @@ class _AttentionCandidate:
 class FinalProductReadModel:
     """Customer-safe, read-only projections over already accepted Product truth."""
 
-    def __init__(self, *, stream_ledger_path: Path) -> None:
+    def __init__(
+        self,
+        *,
+        stream_ledger_path: Path,
+        decision_evidence_path: Path | None = None,
+        signal_ledger_path: Path | None = None,
+    ) -> None:
         self.stream_ledger_path = stream_ledger_path
+        self.decision_evidence_path = decision_evidence_path
+        self.signal_ledger_path = signal_ledger_path
 
     def market_pulse(
         self,
