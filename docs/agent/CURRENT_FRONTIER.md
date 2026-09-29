@@ -5462,3 +5462,53 @@ Current blocker:
 Exact nextAction:
 Open one FP3-C1 PR, verify exact seven-file diff and PR gates, merge if isolated, then start FP3-C2 on fresh main with a new task-start checkpoint. Do not claim SCALE_IN support before FP3-C2 acceptance PASS.
 
+
+
+## FP3-C2 MULTI-ENTRY LINEAGE TASK START — 2026-09-29
+
+status: FP3_C2_MULTI_ENTRY_LINEAGE_AUDIT_START
+taskStartMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+workbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchVerificationRun: 36602456827
+workbenchVerificationJob: 109522957589
+workbenchVerifiedHead: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+workbenchVerifiedBranch: main
+workbenchDirtyCount: 0
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md#13
+mechanicalGate: FP0 / RDP11 remains ACTIVE / NOT PASS
+classification: REUSE canonical S11/R21/R22 + EXTEND FP3-C action/sell lineage only
+duplicateCheck: no fp3c2 branch and no FP3-C2 PR existed at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Verified predecessor closure:
+- FP3-C1 merged via PR #1682 -> main 1260d6096900107eeb9839ea9a094bb5ce9f028e;
+- FP3-C1 UID504 run 36600881901 / job 109517801922 PASS;
+- PR RDP11 pre-soak run 36601813835 / job 109520818391 PASS;
+- PR F10 closeout run 36601813700 PASS;
+- PR WC6 recovery run 36601813730 PASS;
+- latest RDP11 observer run 36601534398 / job 109519874167 keeps target 3d9f33db3f1189571d40566125fbeabd00c04930 exact, side-car only, canonical runtime unmutated, 72h eligible=NO.
+
+Bounded FP3-C2 goal:
+- represent multiple accepted BUY entry lineages without collapsing forecast/proof/sizing identities;
+- validate the full active-entry set before REDUCE/EXIT;
+- preserve accepted R22 weighted-average cost basis and exact evidence per entry;
+- enable SCALE_IN -> BUY only with positive existing position plus a distinct accepted FP3-B sizing/forecast lineage;
+- prove REDUCE/EXIT after multiple entries deterministic and replay-idempotent;
+- keep STOP_UPDATE explicitly unavailable;
+- do not add a second accounting, execution, sizing or order engine.
+
+Known soak evidence:
+- RDP11 observer failures 36571824625 and 36589525017 occurred during Product HTTP probes while frozen runtime SHA still matched target; they remain evidence for final continuity acceptance and are not erased by later success.
+
+Current blocker:
+- exact active-entry representation and sell-lineage validation changes have not yet been source-audited against merged FP3-C1.
+
+Exact nextAction:
+Audit canonical R22 BUY history, weighted-average cost-basis reconstruction, canonical sell lineage validation and FP3-C1 BUY preconditions; freeze the minimal C2 lineage contract before code.
