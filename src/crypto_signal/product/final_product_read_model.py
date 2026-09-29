@@ -277,6 +277,7 @@ class WorkspaceSummaryView:
     detail: str | None
     state_label: str | None
     direction_label: str | None
+    support_balance_label: str | None
     trigger_zone: dict[str, Any] | None
     target_zone: dict[str, Any] | None
     invalidation_price: str | None
@@ -720,6 +721,498 @@ class FinalProductReadModel:
                 "Decision Evidence proof lineage mismatch"
             )
         return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _workspace_unavailable(
+    *,
+    availability_label: str,
+    message_kind_label: str,
+) -> WorkspaceSummaryView:
+    return WorkspaceSummaryView(
+        availability_label=availability_label,
+        message_kind_label=message_kind_label,
+        symbol=None,
+        timeframe=None,
+        updated_at_ms=None,
+        source_as_of_ms=None,
+        freshness_label="Veri yok",
+        headline=None,
+        detail=None,
+        state_label=None,
+        direction_label=None,
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label="Belirsizlik değerlendirilemedi",
+        probability_label="Olasılık verisi yok",
+        evidence_label="Kanıt ayrıntısı kullanılamıyor",
+        decision_evidence_label="Ek karar kanıtı yok",
+        capital_consequence_label=None,
+        resolution_label=None,
+    )
+
+
+def _capital_detail_kind(detail: dict[str, Any]) -> str | None:
+    for key in (
+        "capital_story",
+        "capital_decision",
+        "capital_sizing",
+        "capital_lifecycle",
+    ):
+        if key in detail:
+            return key
+    return None
+
+
+def _workspace_capital_deferred(
+    detail: dict[str, Any],
+    *,
+    capital_kind: str,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    narrative_identity = _required_sha(narrative, "narrative_identity")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _optional_non_negative_int_value(
+        narrative.get("source_as_of_ms")
+    )
+    if source_as_of_ms is None:
+        source_as_of_ms = event_at_ms
+    headline, simple = _workspace_text(narrative)
+    kind_labels = {
+        "capital_story": "Sermaye hikâyesi",
+        "capital_decision": "Sermaye kararı",
+        "capital_sizing": "Pozisyon boyutlandırma",
+        "capital_lifecycle": "Sermaye yaşam döngüsü",
+    }
+    audit = (
+        WorkspaceAudit(
+            narrative_identity=narrative_identity,
+            detail_kind=capital_kind,
+            story_identity=_optional_sha(narrative.get("story_identity")),
+            fact_bundle_identity=None,
+            analytical_view_identity=None,
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts={},
+        )
+        if include_audit
+        else None
+    )
+    return WorkspaceSummaryView(
+        availability_label="Bu mesaj türü bu çalışma alanında desteklenmiyor",
+        message_kind_label=kind_labels[capital_kind],
+        symbol=_optional_text_value(narrative.get("symbol")),
+        timeframe=_optional_text_value(narrative.get("timeframe")),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=None,
+        direction_label=None,
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label="Bu çalışma alanında değerlendirilmedi",
+        probability_label="Bu mesaj türü için uygulanmaz",
+        evidence_label="Sermaye ayrıntıları Portföy görünümüne ayrıldı",
+        decision_evidence_label="Bu mesaj türü için uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_system_view(
+    detail: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    stance = _required_mapping(analytical, "stance")
+    uncertainty = _required_mapping(analytical, "uncertainty")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise FinalProductReadError("workspace System View is from the future")
+    raw_stance = _required_text(stance, "effective_stance")
+    headline, simple = _workspace_text(narrative)
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="system_view",
+            story_identity=None,
+            fact_bundle_identity=None,
+            analytical_view_identity=None,
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts={},
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label="Sistem görünümü",
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=event_at_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=event_at_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+        direction_label=_direction_label(raw_stance),
+        support_balance_label=_support_balance_label(
+            stance.get("support_score_0_100"),
+            stance.get("opposition_score_0_100"),
+        ),
+        trigger_zone=_optional_mapping(fact.get("trigger_zone")),
+        target_zone=_optional_mapping(fact.get("target_zone")),
+        invalidation_price=_optional_decimal_text(fact.get("invalidation_price")),
+        main_contradiction_label=_contradiction_label(
+            analytical.get("main_contradiction")
+        ),
+        event_risk_label=_event_risk_label(
+            uncertainty.get("event_risk_state")
+        ),
+        uncertainty_label=_system_uncertainty_label(uncertainty),
+        probability_label=_probability_label(
+            uncertainty.get("probability_status"),
+            uncertainty.get("calibrated_probability_0_1"),
+        ),
+        evidence_label="Beş kanıt ailesinin doğrulanmış özeti mevcut",
+        decision_evidence_label="Bu görünüm için ayrı karar kanıtı uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_family(
+    detail: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if max(event_at_ms, source_as_of_ms) > observed_at_ms:
+        raise FinalProductReadError("family workspace source is from the future")
+    headline, simple = _workspace_text(narrative)
+    family = _required_text(fact, "family")
+    direction = _optional_text_value(fact.get("direction"))
+    source_quality = _required_text(fact, "source_quality")
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "workspace family uncertainty flags",
+    )
+    counts = _evidence_resolution_counts(evidence)
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="family",
+            story_identity=_required_sha(narrative, "story_identity"),
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            forecast_identity=None,
+            proof_identity=None,
+            signal_freeze_identity=None,
+            evidence_resolution_counts=counts,
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label=f"{_FAMILY_LABELS.get(family, 'Kanıt ailesi')} görünümü",
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=(
+            "Veri eksik"
+            if source_quality.lower() in {"unavailable", "missing"}
+            else "Aile durumu doğrulandı"
+        ),
+        direction_label=_direction_label(direction),
+        support_balance_label=None,
+        trigger_zone=None,
+        target_zone=None,
+        invalidation_price=None,
+        main_contradiction_label=None,
+        event_risk_label=None,
+        uncertainty_label=_uncertainty_count_label(uncertainty_flags),
+        probability_label="Bu kanıt ailesi için uygulanmaz",
+        evidence_label=_evidence_resolution_label(counts),
+        decision_evidence_label="Bu kanıt ailesi için uygulanmaz",
+        capital_consequence_label=None,
+        resolution_label=None,
+        audit=audit,
+    )
+
+
+def _workspace_decision(
+    detail: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None,
+    decision_proof: dict[str, Any] | None,
+    decision_evidence_label: str,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> WorkspaceSummaryView:
+    narrative = _required_mapping(detail, "narrative")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    stance = _required_mapping(analytical, "stance")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if max(event_at_ms, source_as_of_ms) > observed_at_ms:
+        raise FinalProductReadError("decision workspace source is from the future")
+    headline, simple = _workspace_text(narrative)
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "workspace decision uncertainty flags",
+    )
+    counts = _evidence_resolution_counts(evidence)
+    raw_stance = _required_text(stance, "effective_stance")
+    signal_identity = (
+        None
+        if decision_proof is None
+        else _optional_sha(decision_proof.get("signal_freeze_identity"))
+    )
+    audit = None
+    if include_audit:
+        audit = WorkspaceAudit(
+            narrative_identity=_required_sha(narrative, "narrative_identity"),
+            detail_kind="decision",
+            story_identity=_required_sha(narrative, "story_identity"),
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            forecast_identity=_required_sha(fact, "forecast_identity"),
+            proof_identity=_required_sha(fact, "proof_identity"),
+            signal_freeze_identity=signal_identity,
+            evidence_resolution_counts=counts,
+        )
+    return WorkspaceSummaryView(
+        availability_label="Doğrulanmış veri",
+        message_kind_label=(
+            "Sonuç görünümü"
+            if fact.get("resolution_identity") is not None
+            else "Karar görünümü"
+        ),
+        symbol=_required_text(narrative, "symbol"),
+        timeframe=_required_text(narrative, "timeframe"),
+        updated_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        headline=headline,
+        detail=simple,
+        state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+        direction_label=_direction_label(fact.get("direction")),
+        support_balance_label=_support_balance_label(
+            fact.get("confluence_support_score_0_100"),
+            fact.get("confluence_opposition_score_0_100"),
+        ),
+        trigger_zone=_optional_mapping(fact.get("trigger_zone")),
+        target_zone=_optional_mapping(fact.get("target_zone")),
+        invalidation_price=_optional_decimal_text(fact.get("invalidation_price")),
+        main_contradiction_label=_contradiction_label(
+            analytical.get("main_contradiction")
+        ),
+        event_risk_label=_event_risk_label(fact.get("event_context_state")),
+        uncertainty_label=_uncertainty_count_label(uncertainty_flags),
+        probability_label=_probability_label(
+            fact.get("probability_status"),
+            fact.get("calibrated_probability_0_1"),
+        ),
+        evidence_label=_evidence_resolution_label(counts),
+        decision_evidence_label=decision_evidence_label,
+        capital_consequence_label=_capital_consequence_label(
+            analytical.get("capital_consequence")
+        ),
+        resolution_label=(
+            "Sonuç kaydı mevcut"
+            if fact.get("resolution_identity") is not None
+            else "Karar henüz sonuç kaydına dönüşmedi"
+        ),
+        audit=audit,
+    )
+
+
+def _workspace_text(
+    narrative: dict[str, Any],
+) -> tuple[str | None, str | None]:
+    text = narrative.get("text")
+    if isinstance(text, dict):
+        return (
+            _optional_text_value(text.get("collapsed_text")),
+            _optional_text_value(text.get("simple_text")),
+        )
+    return (
+        _optional_text_value(narrative.get("collapsed_text")),
+        _optional_text_value(narrative.get("simple_text")),
+    )
+
+
+def _support_balance_label(
+    support: object,
+    opposition: object,
+) -> str | None:
+    if support is None or opposition is None:
+        return None
+    support_value = _decimal(support, "workspace support")
+    opposition_value = _decimal(opposition, "workspace opposition")
+    if support_value > opposition_value:
+        return "Destek tarafı daha güçlü"
+    if opposition_value > support_value:
+        return "Çelişki tarafı daha güçlü"
+    return "Destek ve çelişki dengeli"
+
+
+def _direction_label(value: object) -> str | None:
+    if value is None:
+        return None
+    raw = str(value).strip().lower()
+    if raw in {"bullish", "long", "up", "buy", "buy_pressure"}:
+        return "Yükseliş"
+    if raw in {"bearish", "short", "down", "sell", "sell_pressure"}:
+        return "Düşüş"
+    return "Yön karışık"
+
+
+def _system_uncertainty_label(uncertainty: dict[str, Any]) -> str:
+    conflict = uncertainty.get("material_conflict_count")
+    if isinstance(conflict, int) and not isinstance(conflict, bool) and conflict > 0:
+        return f"{conflict} maddi çelişki mevcut"
+    return "Belirsizlik bilgisi kaynakta mevcut"
+
+
+def _uncertainty_count_label(values: tuple[str, ...]) -> str:
+    if not values:
+        return "Belirgin belirsizlik işareti yok"
+    return f"{len(values)} belirsizlik işareti"
+
+
+def _probability_label(
+    status: object,
+    calibrated_probability: object,
+) -> str:
+    if calibrated_probability is not None:
+        value = _decimal(calibrated_probability, "workspace calibrated probability")
+        if value < Decimal(0) or value > Decimal(1):
+            raise ValueError("workspace calibrated probability outside [0,1]")
+        percent = (value * Decimal(100)).quantize(Decimal("0.01"))
+        return f"Kalibre edilmiş olasılık: {percent:.2f}%"
+    if str(status).strip().lower() == "not_calibrated":
+        return "Kalibre edilmiş olasılık değil"
+    return "Olasılık verisi doğrulanmadı"
+
+
+def _evidence_resolution_counts(
+    evidence: dict[str, Any] | None,
+) -> dict[str, int]:
+    if evidence is None:
+        return {}
+    raw = evidence.get("resolution_counts")
+    if not isinstance(raw, dict):
+        raise TypeError("workspace evidence resolution counts must be an object")
+    result: dict[str, int] = {}
+    for key in (
+        "READY_EXACT",
+        "IDENTITY_ONLY_EXACT",
+        "UNAVAILABLE_EXPLICIT",
+    ):
+        value = raw.get(key, 0)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise TypeError("workspace evidence resolution count must be non-negative")
+        result[key] = value
+    return result
+
+
+def _evidence_resolution_label(counts: dict[str, int]) -> str:
+    if counts.get("READY_EXACT", 0) > 0:
+        return "Doğrulanmış kanıt mevcut"
+    if counts.get("IDENTITY_ONLY_EXACT", 0) > 0:
+        return "Kanıt kimliği doğrulandı; ayrıntı sınırlı"
+    return "Kanıt ayrıntısı kullanılamıyor"
+
+
+def _capital_consequence_label(value: object) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    raw = str(value.get("state", "")).strip().lower()
+    labels = {
+        "not_bound": "Sanal sermayeye bağlı yeni referans yok",
+        "bound_unchanged": "Sanal sermaye bağlantısı değişmedi",
+        "references_added": "Yeni sanal sermaye referansı eklendi",
+        "references_removed": "Sanal sermaye referansı kaldırıldı",
+        "references_changed": "Sanal sermaye referansları değişti",
+    }
+    return labels.get(raw, "Sanal sermaye bağlantısı mevcut")
+
+
+def _optional_text_value(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("optional workspace text must be non-empty text")
+    return value
+
+
+def _optional_non_negative_int_value(value: object) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise TypeError("optional workspace time must be non-negative integer")
+    return value
+
+
+def _optional_sha(value: object) -> str | None:
+    if value is None:
+        return None
+    return _sha_text(value, "optional workspace identity")
 
 
 def _attention_candidate(
