@@ -13,6 +13,18 @@ Every agent must treat this as the current product-program authority:
 
 Do not infer the active product roadmap from old chat memory, old roadmap filenames, or historical acceptance records.
 
+### Roadmap authority lock / anti-drift rule
+
+This pointer is the **only file allowed to select the active product-program roadmap**.
+
+- The sole active product-program roadmap is `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`.
+- If any older roadmap, status file, handoff entry, branch name, commit message or historical document says that a different roadmap is "active", treat that statement as **STALE / HISTORICAL** unless this `ACTIVE_ROADMAP.md` file on current `main` has been explicitly changed to point elsewhere.
+- Phase-specific authorities may define acceptance mechanics for the phase selected by this roadmap; they do **not** replace the umbrella roadmap.
+- `CURRENT_FRONTIER.md` and `HANDOFF_LOG.md` record execution state only; they cannot redefine roadmap authority.
+- Never choose a roadmap because its file timestamp is newer, its filename looks more specific, or a previous agent mentioned it.
+- A roadmap-authority change must be an explicit, dedicated repository change that updates this pointer and the agent bootstrap contract together. Otherwise NOOP the conflicting claim.
+
+
 ## 2. First mechanically unclosed gate
 
 **FP0 / RDP11 — Continuous soak + final Evidence PASS**
