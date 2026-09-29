@@ -132,13 +132,13 @@ class FP3AutopilotReceipt:
         )
         if self.hold_or_block_count != derived_hold:
             raise ValueError("FP3 receipt HOLD/BLOCK count mismatch")
-        for value, label in (
+        for timestamp_value, label in (
             (self.source_as_of_ms, "FP3 source as-of"),
             (self.issued_at_ms, "FP3 issued time"),
             (self.assessed_at_ms, "FP3 assessed time"),
             (self.processed_at_ms, "FP3 processed time"),
         ):
-            _require_non_negative_int(value, label)
+            _require_non_negative_int(timestamp_value, label)
         if self.source_as_of_ms > self.issued_at_ms:
             raise ValueError("FP3 source as-of cannot follow forecast issuance")
         if self.assessed_at_ms <= self.issued_at_ms:
@@ -547,12 +547,14 @@ def _build_receipt(
             raise ValueError("FP3 canonical vault decision is duplicated")
         by_vault[vault] = raw
     for vault_id in sorted(PaperVaultId, key=lambda item: item.value):
-        raw = by_vault.get(vault_id.value)
-        if raw is None:
+        decision_raw = by_vault.get(vault_id.value)
+        if decision_raw is None:
             raise ValueError("FP3 canonical vault decision is missing")
-        decision_identity = _required_sha(raw, "decision_identity")
+        decision_identity = _required_sha(decision_raw, "decision_identity")
         decision_ids.append(decision_identity)
-        states.append((vault_id.value, _required_text(raw, "disposition")))
+        states.append(
+            (vault_id.value, _required_text(decision_raw, "disposition"))
+        )
 
     canonical_decision_ids = tuple(sorted(decision_ids))
     if canonical_decision_ids != tuple(sorted(front_decision_identities)):
@@ -560,7 +562,10 @@ def _build_receipt(
 
     forecast = issuance.forecast
     proof = issuance.proof
-    provisional = {
+    hold_or_block_count = sum(
+        1 for _, state in states if state in {"hold", "blocked"}
+    )
+    provisional: dict[str, object] = {
         "activation_identity": activation.activation_identity,
         "allocator_assessment_identity": allocator_assessment_identity,
         "allocator_candidate_identity": allocator_candidate_identity,
@@ -568,9 +573,7 @@ def _build_receipt(
         "decision_identities": canonical_decision_ids,
         "decision_states": tuple(states),
         "forecast_identity": forecast.forecast_identity,
-        "hold_or_block_count": sum(
-            1 for _, state in states if state in {"hold", "blocked"}
-        ),
+        "hold_or_block_count": hold_or_block_count,
         "issued_at_ms": forecast.issued_at_ms,
         "production_authority": False,
         "proof_identity": proof.proof_identity,
@@ -593,7 +596,7 @@ def _build_receipt(
         allocator_assessment_identity=allocator_assessment_identity,
         decision_identities=canonical_decision_ids,
         decision_states=tuple(states),
-        hold_or_block_count=provisional["hold_or_block_count"],
+        hold_or_block_count=hold_or_block_count,
     )
 
 
