@@ -6228,3 +6228,60 @@ Current blocker:
 
 Exact nextAction:
 Implement the isolated FP4-A frozen depth execution adapter and focused tests, then run exact-head UID504 acceptance without touching the frozen RDP11 runtime.
+
+
+## FP4-A DEPTH-AWARE EXECUTION V2 PASS / READY TO MERGE — 2026-09-29
+
+status: FP4A_PASS_READY_TO_MERGE
+taskStartMain: 07c813cb7128e4748ca48aaf6a7e1ca584d1c7b2
+activeBranch: fp4a/depth-aware-execution-v2
+pr: 1688
+acceptedHead: cd8e6af5f0e25d6f104268e684b63d25d9e9aabb
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+fp4aRun: 36618938401
+fp4aJob: 109579075252
+wc6Run: 36618938375
+wc6Job: 109579064102
+rdp11PreSoakRun: 36618938277
+rdp11PreSoakJob: 109579069996
+f10Run: 36618938385
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical acceptance:
+- first WC6 attempt on pre-fix head reached all functional tests PASS and failed only Ruff SIM102 in the new adapter; Development non-mutation PASS;
+- lint-only repair combined the nested condition; no execution behavior changed;
+- dedicated FP4-A exact-source verification PASS;
+- focused FP4-A tests PASS;
+- legacy v1 paper execution compatibility PASS;
+- Ruff PASS;
+- strict mypy PASS for the V2 adapter;
+- whole-repository pytest/Ruff/mypy/JS regression PASS with `FP4A_FULL_REGRESSION_PASS=YES`;
+- WC6 focused + full paper subsystem + whole-repository regression PASS;
+- RDP11 pre-soak fulltest PASS;
+- F10 closeout PASS;
+- Product and Development remained clean at frozen RDP11 target `3d9f33db3f1189571d40566125fbeabd00c04930`.
+
+Accepted FP4-A behavior:
+- existing v1 full-fill execution remains unchanged;
+- accepted immutable Market Tape `OrderBookSnapshot` is the only depth input;
+- BUY consumes asks best-price-first; REDUCE/EXIT consume bids best-price-first;
+- FULL and PARTIAL outcomes reconcile exactly to consumed level quantity/notional;
+- PARTIAL requires explicit versioned partial-fill enablement;
+- insufficient depth with partial fills disabled becomes NOT_FILLED with no invented fill;
+- unprovable execution becomes FILL_NOT_PROVEN with no consumed depth;
+- order-book data ingested after the execution cutoff is rejected fail-closed;
+- deterministic outcome identity makes exact replay identical;
+- this slice does not mutate R21/R22 and does not claim full FP4 completion.
+
+Current blocker:
+- FP4-A has no remaining mechanical blocker.
+- FP4-B/C remain: latency/queue uncertainty contract, funding/perpetual costs, instrument fee/precision integration and canonical action/tape bridge.
+
+Exact nextAction:
+Before merge, recheck current main and open FP4 branches for parallel-agent drift. If unchanged/mergeable, merge PR #1688 as the isolated FP4-A slice, verify post-merge SSD504 Workbench exact-main sync, then start FP4-B from the new main without changing the frozen RDP11 runtime.
