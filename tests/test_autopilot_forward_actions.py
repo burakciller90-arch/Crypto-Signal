@@ -415,38 +415,25 @@ def test_fp3_c_wait_and_stop_update_never_mutate_r21_r22(
     assert epoch2_path.read_bytes() == before_epoch
 
 
-def test_fp3_c_scale_in_is_explicitly_unavailable_in_c1(
+def test_fp3_c_scale_in_requires_accepted_sizing_lineage_in_c2(
     tmp_path: Path,
 ) -> None:
-    epoch2_path, stream_path, autopilot_path, issuance, front = _front(tmp_path)
-    bridge = _action_bridge(
-        epoch2_path=epoch2_path,
-        stream_path=stream_path,
-        autopilot_path=autopilot_path,
-    )
-    before = epoch2_path.read_bytes()
-    intent = build_fp3_action_intent(
-        front_receipt_identity=front.receipt_identity,
-        sizing_receipt_identity=None,
-        forecast_identity=issuance.forecast.forecast_identity,
-        proof_identity=issuance.proof.proof_identity,
-        vault_id=PaperVaultId.CORE,
-        symbol=PaperSymbol.BTCUSDT,
-        reason=FP3ActionReason.SCALE_IN,
-        action_evidence_identity=_sha("fp3c-scale-in-unavailable"),
-        requested_at_ms=front.processed_at_ms + 1,
-    )
-
-    result = bridge.process_no_trade(
-        intent,
-        processed_at_ms=intent.requested_at_ms + 1,
-    )
-
-    assert result.disposition is FP3ActionProcessDisposition.UNAVAILABLE
-    assert result.receipt.stage_status is FP3ActionStageStatus.UNAVAILABLE
-    assert result.receipt.canonical_action is None
-    assert epoch2_path.read_bytes() == before
-
+    _, _, _, issuance, front = _front(tmp_path)
+    with pytest.raises(
+        ValueError,
+        match="trade intent requires accepted FP3-B receipt",
+    ):
+        build_fp3_action_intent(
+            front_receipt_identity=front.receipt_identity,
+            sizing_receipt_identity=None,
+            forecast_identity=issuance.forecast.forecast_identity,
+            proof_identity=issuance.proof.proof_identity,
+            vault_id=PaperVaultId.CORE,
+            symbol=PaperSymbol.BTCUSDT,
+            reason=FP3ActionReason.SCALE_IN,
+            action_evidence_identity=_sha("fp3c2-scale-in-missing-sizing"),
+            requested_at_ms=front.processed_at_ms + 1,
+        )
 
 def test_fp3_c_partial_take_profit_then_close_uses_canonical_sell_lineage(
     tmp_path: Path,
