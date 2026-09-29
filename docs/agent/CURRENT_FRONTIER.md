@@ -5177,3 +5177,24 @@ Current blocker:
 Exact nextAction:
 Implement FP3-C policy/action-stage receipt/replay adapter and focused tests on isolated temp ledgers; do not begin genuine-forward FP3-D.
 
+
+
+## FP3-C CONTRACT CORRECTION / C1 IMPLEMENTATION BOUNDARY — 2026-09-29
+
+status: FP3_C1_IMPLEMENTATION_BOUNDARY
+activeBranch: fp3c/preregistered-action-bridge
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Correction:
+- previous SCALE_IN allowance conflicts with accepted single-lineage SELL validation;
+- FP3-C1 will not open a second BUY while a position exists;
+- SCALE_IN is EXPLICITLY_UNAVAILABLE_MULTI_ENTRY_LINEAGE in C1;
+- STOP_UPDATE remains EXPLICITLY_UNAVAILABLE;
+- OPEN / PARTIAL_TAKE_PROFIT / TAKE_PROFIT / STOP / CLOSE / WAIT remain C1 scope;
+- FP3-C2 will separately extend and accept multi-entry R22/R21 sell lineage before SCALE_IN is supported.
+
+Exact nextAction:
+Implement FP3-C1 versioned action policy/request, immutable action-stage receipt, exact R22 replay/bundle recovery and canonical Stream lifecycle projection; no multi-entry SCALE_IN code in C1.
+
