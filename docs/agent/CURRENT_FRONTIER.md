@@ -4774,3 +4774,46 @@ Bounded fix:
 Exact nextAction:
 Apply only the typing/narrowing fixes, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
 
+
+
+## FP3-A UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_A_REVIEW_READY
+verifiedMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+acceptedHead: 5bcad4b766f41bcdf6c3b2deb2432a404f317087
+acceptedRun: 36590509829
+acceptedJob: 109482068773
+cleanupHead: 08fc8491bd3dd32ee21f8ff550755a7dba3a01dd
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-A semantics:
+- future-bound immutable FP3 activation;
+- separate append-only processing receipt store;
+- accepted Capital forward front-half remains canonical owner for candidate + three vault decisions + HOLD/BLOCK intents;
+- first process / replay / crash-recovery semantics are deterministic;
+- replay cannot duplicate canonical decisions/HOLD intents;
+- no eligible sizing/trade commit in FP3-A;
+- no unsupported STOP_UPDATE invention.
+
+Current blocker:
+- none inside FP3-A; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-A PR, verify the exact docs/module/tests-only diff and PR checks, merge if isolated, then start FP3-B on fresh main with a new task-start checkpoint.
+
