@@ -6106,3 +6106,20 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; frozen RDP11 target untouched; Durdurulmaz/Quantum untouched
 - blocker: exact-head acceptance not run yet
 - nextAction: open isolated PR and require dedicated FP4-E + WC6 + RDP11 + F10 PASS before merge; then post-merge Workbench proof and FP4 closeout
+
+
+## 2026-09-29 — FP4 final closeout started
+
+- exact task-start main: `2de42a57b6d8e1d3e222c45a51a53ced0db8375c`
+- closeout branch: `handoff/fp4-final-pass-20260929`
+- FP4-E PR #1696 merged as `2de42a57b6d8e1d3e222c45a51a53ced0db8375c`
+- accepted FP4-E head: `f9eba84df23765571cd0800ae866a4ee38731cd6`
+- dedicated `36627549969/109608319498` PASS
+- WC6 `36627549985/109608509804` PASS
+- RDP11 pre-soak `36627549934/109608320536` PASS
+- F10 `36627550022/109608316313` PASS
+- A/B/C/D/E jointly own every FP4 roadmap add/pass item; existing venue rules own precision/min-notional/tick-size
+- post-merge Workbench run `36628287272` pending at checkpoint
+- global FP3-D remains WAITING; global RDP11 remains ACTIVE / NOT PASS
+- REAL_CAPITAL=0; no runtime deploy/backfill; Durdurulmaz/Quantum untouched
+- nextAction: close Workbench proof, mark FP4 PASS, F10 docs closeout, merge, then FP5
