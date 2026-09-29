@@ -24,6 +24,7 @@ from crypto_signal.data.event_source_runtime import (
 from crypto_signal.data.models import DataSource
 from crypto_signal.data.news_events import build_news_event_observation
 from crypto_signal.product.event_source_runtime import (
+    read_event_source_calendar_rail,
     read_event_source_runtime_truth,
 )
 from crypto_signal.product.web import create_app
@@ -394,3 +395,389 @@ def test_event_source_product_reader_preserves_existing_empty_sidecars(
     }
     assert snapshot.read_only_verified is True
     assert after == before
+
+
+def _append_calendar_snapshot(
+    path: Path,
+    *,
+    provider: str,
+    fetched_at_ms: int,
+    coverage_start_ms: int,
+    coverage_end_ms: int,
+    coverage_categories: tuple[EventCategory, ...],
+    events: tuple[object, ...],
+    suffix: str,
+) -> None:
+    store = EventSourceRuntimeStore(path)
+    raw = build_event_source_raw_payload(
+        payload_bytes=f"calendar-{provider}-{suffix}".encode(),
+        content_type="text/calendar; charset=utf-8",
+        text_encoding="utf-8",
+    )
+    coverage = build_event_calendar_coverage(
+        coverage_start_ms=coverage_start_ms,
+        coverage_end_ms=coverage_end_ms,
+        categories=coverage_categories,
+        source_provider=provider,
+        source_quality=EventSourceQuality.OFFICIAL,
+        source=DataSource.REST,
+        observed_at_ms=fetched_at_ms,
+        adapter_version=f"calendar-{suffix}/1",
+    )
+    identities = tuple(
+        sorted(str(getattr(item, "event_identity")) for item in events)
+    )
+    fetch = build_event_source_fetch_observation(
+        source_provider=provider,
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url=f"https://{provider}/calendar",
+        fetched_at_ms=fetched_at_ms,
+        source_timestamp_ms=max(0, fetched_at_ms - 10),
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_DATE,
+        http_status=200,
+        outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=raw.payload_sha256,
+        raw_payload_bytes=raw.content_bytes,
+        item_identities=identities,
+        coverage_identity=coverage.coverage_identity,
+        adapter_version=f"calendar-{suffix}/1",
+    )
+    store.append_calendar_snapshot(
+        raw_payload=raw,
+        coverage=coverage,
+        events=events,
+        fetch=fetch,
+    )
+
+
+def _rail_event(
+    event_id: str,
+    *,
+    scheduled_at_ms: int,
+    ingested_at_ms: int,
+    assets: tuple[str, ...] = (),
+    category: EventCategory = EventCategory.INFLATION,
+    provider: str = "calendar-provider",
+):
+    return build_structured_event_observation(
+        provider_event_id=event_id,
+        title=f"Event {event_id}",
+        category=category,
+        scheduled_at_ms=scheduled_at_ms,
+        affected_assets=assets,
+        source_provider=provider,
+        source_quality=EventSourceQuality.OFFICIAL,
+        source=DataSource.REST,
+        source_timestamp_ms=max(0, ingested_at_ms - 10),
+        ingested_at_ms=ingested_at_ms,
+        adapter_version="rail-test/1",
+    )
+
+
+def test_calendar_rail_reads_verified_scheduled_events_and_excludes_news(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed_successes(path)
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+        limit=10,
+    )
+
+    assert rail.coverage_status == "COMPLETE"
+    assert rail.total_matching_events == 1
+    assert len(rail.events) == 1
+    event = rail.events[0]
+    assert event.title == "Consumer Price Index"
+    assert event.category == "inflation"
+    assert event.scheduled_at_ms == 2_000
+    assert event.source_provider == "bls.gov"
+    assert event.source_quality == "official"
+    assert all(item.source_kind == "calendar" for item in rail.latest_calendar_fetches)
+    assert rail.coverages[0].categories == ("employment", "inflation")
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert after == before
+
+
+def test_calendar_rail_asset_filter_includes_global_and_exact_asset_only(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "asset-rail.sqlite3"
+    global_event = _rail_event(
+        "global",
+        scheduled_at_ms=2_000,
+        ingested_at_ms=900,
+    )
+    btc_event = _rail_event(
+        "btc",
+        scheduled_at_ms=2_100,
+        ingested_at_ms=900,
+        assets=("BTC",),
+    )
+    eth_event = _rail_event(
+        "eth",
+        scheduled_at_ms=2_200,
+        ingested_at_ms=900,
+        assets=("ETH",),
+    )
+    _append_calendar_snapshot(
+        path,
+        provider="calendar-provider",
+        fetched_at_ms=950,
+        coverage_start_ms=1_000,
+        coverage_end_ms=5_000,
+        coverage_categories=(EventCategory.INFLATION,),
+        events=(global_event, btc_event, eth_event),
+        suffix="assets",
+    )
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        asset="btc",
+        categories=("inflation",),
+    )
+
+    assert rail.asset == "BTC"
+    assert [item.provider_event_id for item in rail.events] == [
+        "global",
+        "btc",
+    ]
+
+
+def test_calendar_rail_excludes_orphan_and_late_ingested_events(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "pit-rail.sqlite3"
+    accepted = _rail_event(
+        "accepted",
+        scheduled_at_ms=2_000,
+        ingested_at_ms=900,
+    )
+    late = _rail_event(
+        "late",
+        scheduled_at_ms=2_100,
+        ingested_at_ms=1_100,
+    )
+    _append_calendar_snapshot(
+        path,
+        provider="calendar-provider",
+        fetched_at_ms=950,
+        coverage_start_ms=1_000,
+        coverage_end_ms=5_000,
+        coverage_categories=(EventCategory.INFLATION,),
+        events=(accepted, late),
+        suffix="pit",
+    )
+    orphan = _rail_event(
+        "orphan",
+        scheduled_at_ms=2_200,
+        ingested_at_ms=900,
+    )
+    EventSourceRuntimeStore(path).append_structured_event(orphan)
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+    )
+
+    assert [item.provider_event_id for item in rail.events] == ["accepted"]
+
+
+def test_calendar_rail_latest_failed_fetch_removes_current_coverage_claim(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "failure-rail.sqlite3"
+    _seed_successes(path, fetched_at_ms=900)
+    failed = build_event_source_fetch_observation(
+        source_provider="bls.gov",
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
+        fetched_at_ms=1_200,
+        source_timestamp_ms=None,
+        source_timestamp_basis=None,
+        http_status=503,
+        outcome=EventSourceFetchOutcome.FAILURE,
+        reason_code="http_status_503",
+        adapter_version="bls-calendar-ics-v1/1",
+    )
+    EventSourceRuntimeStore(path).append_failed_fetch(fetch=failed)
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_500,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+    )
+
+    assert rail.coverage_status == "UNAVAILABLE"
+    assert rail.coverages == ()
+    assert rail.events
+    assert rail.latest_calendar_fetches[0].outcome == "failure"
+
+
+def test_calendar_rail_distinguishes_complete_incomplete_and_source_scoped_coverage(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "coverage-rail.sqlite3"
+    _seed_successes(path)
+
+    complete = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+    )
+    incomplete = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("central_bank",),
+    )
+    unscoped = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+    )
+
+    assert complete.coverage_status == "COMPLETE"
+    assert incomplete.coverage_status == "INCOMPLETE"
+    assert incomplete.events == ()
+    assert unscoped.coverage_status == "SOURCE_SCOPED_ONLY"
+
+
+def test_calendar_rail_ignores_future_fetch_and_coverage_at_point_in_time(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "future-coverage-rail.sqlite3"
+    first = _rail_event(
+        "first",
+        scheduled_at_ms=2_000,
+        ingested_at_ms=900,
+    )
+    _append_calendar_snapshot(
+        path,
+        provider="calendar-provider",
+        fetched_at_ms=950,
+        coverage_start_ms=1_000,
+        coverage_end_ms=3_000,
+        coverage_categories=(EventCategory.INFLATION,),
+        events=(first,),
+        suffix="first",
+    )
+    future = _rail_event(
+        "future",
+        scheduled_at_ms=4_000,
+        ingested_at_ms=1_900,
+    )
+    _append_calendar_snapshot(
+        path,
+        provider="calendar-provider",
+        fetched_at_ms=2_000,
+        coverage_start_ms=1_000,
+        coverage_end_ms=5_000,
+        coverage_categories=(EventCategory.INFLATION,),
+        events=(first, future),
+        suffix="future",
+    )
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_500,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+    )
+
+    assert rail.coverage_status == "INCOMPLETE"
+    assert [item.provider_event_id for item in rail.events] == ["first"]
+    assert rail.latest_calendar_fetches[0].fetched_at_ms == 950
+
+
+def test_calendar_rail_is_deterministic_and_bounded(tmp_path: Path) -> None:
+    path = tmp_path / "bounded-rail.sqlite3"
+    events = tuple(
+        _rail_event(
+            f"event-{index}",
+            scheduled_at_ms=2_000,
+            ingested_at_ms=900,
+        )
+        for index in range(3)
+    )
+    _append_calendar_snapshot(
+        path,
+        provider="calendar-provider",
+        fetched_at_ms=950,
+        coverage_start_ms=1_000,
+        coverage_end_ms=5_000,
+        coverage_categories=(EventCategory.INFLATION,),
+        events=events,
+        suffix="bounded",
+    )
+
+    rail = read_event_source_calendar_rail(
+        path,
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+        limit=2,
+    )
+
+    assert rail.total_matching_events == 3
+    assert len(rail.events) == 2
+    assert tuple(item.event_identity for item in rail.events) == tuple(
+        sorted(item.event_identity for item in events)[:2]
+    )
+
+
+def test_calendar_rail_fails_closed_on_nonempty_wal_and_creates_nothing(
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "missing-rail.sqlite3"
+    with pytest.raises(ValueError, match="database missing"):
+        read_event_source_calendar_rail(
+            missing,
+            observed_at_ms=1_000,
+            window_start_ms=1_000,
+            window_end_ms=2_000,
+            categories=("inflation",),
+        )
+    assert not missing.exists()
+
+    path = tmp_path / "wal-rail.sqlite3"
+    _seed_successes(path)
+    wal = Path(f"{path}-wal")
+    wal.write_bytes(b"uncheckpointed")
+    with pytest.raises(ValueError, match="uncheckpointed WAL"):
+        read_event_source_calendar_rail(
+            path,
+            observed_at_ms=1_000,
+            window_start_ms=1_000,
+            window_end_ms=5_000,
+            categories=("inflation",),
+        )
+    assert wal.read_bytes() == b"uncheckpointed"
