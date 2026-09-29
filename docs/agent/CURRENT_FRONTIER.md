@@ -5724,3 +5724,31 @@ Current blocker:
 
 Exact nextAction:
 Inspect retry-4 UID504 WC6 + RDP11 fulltest outputs; if both mechanically pass pytest/Ruff/mypy/non-mutation, recheck main/PR duplicate state immediately before merge. Otherwise record and repair only the exact next failure.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 4 FAIL / EVENT-CONTEXT FIXTURE REPAIR — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_FIX_4_EVENT_CONTEXT
+pr: 1683
+testedHead: 4124c5d5017fd74474fe31c8db1a8b3fab28600c
+wc6Run: 36605732421
+wc6Job: 109534138077
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- actions/checkout explicitly fetched and checked out exact PR head 4124c5d5017fd74474fe31c8db1a8b3fab28600c;
+- WC6 exact-source PASS;
+- focused execution-lab PASS;
+- paper subsystem regression PASS;
+- whole-repository regression reached only the new FP3-C2 test and failed with \`ValueError: capital forward Event Risk/forecast identity mismatch\`;
+- root cause is local test-helper state: \`_size_existing_issuance\` still supplied the original fixed \`_event_context()\` after the second issuance was correctly moved to a later market as_of;
+- Development non-mutating PASS; REAL_CAPITAL=0.
+
+Bounded repair:
+- derive the fixture Event Risk context from \`issuance.forecast.source_as_of_ms\` and reuse that exact context for Stream projection, FP3 front processing and capital auxiliary evidence;
+- no production/runtime/identity contract change.
+
+Exact nextAction:
+Patch the test helper only, rerun exact-head acceptance, then inspect the next mechanical failure or complete PASS.
