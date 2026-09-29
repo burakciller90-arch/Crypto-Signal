@@ -5512,3 +5512,45 @@ Current blocker:
 
 Exact nextAction:
 Audit canonical R22 BUY history, weighted-average cost-basis reconstruction, canonical sell lineage validation and FP3-C1 BUY preconditions; freeze the minimal C2 lineage contract before code.
+
+
+## FP3-C2 SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_C2_IMPLEMENTATION_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+classification: REUSE weighted-average R22 fill truth + EXTEND active-entry lineage validation only
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Audit result:
+- reconstruct_open_cost_basis already supports multiple BUY fills and weighted-average basis exactly;
+- R21 position state already accumulates multiple BUY quantities;
+- canonical BUY commit already supports adding to an existing position at accounting level;
+- blocker is only _validate_sell_lineage requiring every active BUY to share one forecast/proof/sizing-assessment and one sizing result;
+- each accepted R22 BUY intent already immutably stores its own forecast/proof/sizing-assessment/sizing-result/decision lineage;
+- CanonicalCapitalOutcomeEvidence already persists all prior fill identities and weighted-average basis;
+- no R22 schema version bump is required for C2.
+
+Frozen minimal C2 contract:
+- OPEN remains BUY only when current quantity == 0;
+- SCALE_IN becomes BUY only when current quantity > 0;
+- SCALE_IN must use a distinct forecast identity and distinct accepted FP3-B sizing receipt/selection from every currently active BUY entry;
+- exact existing-trade replay preflight remains before mutation;
+- sell caller continues to provide the original/open anchor forecast+proof+sizing assessment used by C1;
+- sell validation must require exactly one active BUY matching that anchor lineage;
+- all other active BUY entries are trusted only as verified immutable R22 BUY intents/fills previously accepted by canonical BUY commits;
+- collect full active entry intent + fill identities and include them in sell intent/source evidence;
+- weighted-average cost basis remains reconstruct_open_cost_basis; do not recalculate elsewhere;
+- REDUCE/EXIT remains deterministic against full current holdings;
+- after partial REDUCE, remaining entry set stays the same until quantity reaches zero; after EXIT it resets naturally with R22 history replay;
+- STOP_UPDATE remains unavailable.
+
+Current blocker:
+- none for implementation; focused multi-entry regression and acceptance are pending.
+
+Exact nextAction:
+Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only, then add focused SCALE_IN -> REDUCE/EXIT weighted-average/replay tests. Do not begin FP3-D before C2 mechanical PASS.
+
