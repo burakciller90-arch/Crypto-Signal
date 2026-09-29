@@ -6387,3 +6387,14 @@ QuantumCapitalTouched: NO
 - repair is dependency-only: make FP5 assessment type-only in canonical_sizing; preserve all V2 formulas/identity gates and V1 semantics
 - REAL_CAPITAL=0; no deploy/backfill; RDP11 R2 untouched
 - nextAction: apply bounded import-cycle repair and rerun dedicated/WC6/RDP11/F10 on the new exact head
+
+
+
+## 2026-09-30 — FP5-B bounded import-cycle repair applied
+
+- repair commit `7afbee135c89a897888636699d2799f0bdc6c6f1`
+- removed only the new runtime FP5 import from canonical sizing; FP5 assessment remains type-only
+- runtime dispatch uses immutable FP5 status enum value; notional/identity/lineage formulas unchanged
+- V1 canonical sizing semantics unchanged
+- all acceptance from `fecdeb9d...` stale; new exact-head dedicated/WC6/RDP11/F10 required
+- REAL_CAPITAL=0; no runtime deployment/backfill; RDP11 R2 untouched
