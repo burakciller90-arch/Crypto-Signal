@@ -2189,3 +2189,44 @@ Current blocker:
 
 Exact nextAction:
 Inspect verified system-view schema/payload, then implement the smallest final_product_read_model.py + focused tests using a temporary accepted Stream ledger fixture. Do not add a Product API route in FP1-A.
+
+
+## FP1-A ACCEPTANCE CHECKPOINT — 2026-09-29
+
+status: FP1_A_IMPLEMENTATION_COMPLETE_ACCEPTANCE_START
+activeBranch: fp1/human-read-model-contract
+implementationHeadBeforeAcceptance: b24a16a3ace4287b2dbfc17c71f519728249ab1c
+sessionLocalWorktree: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- src/crypto_signal/product/final_product_read_model.py
+- tests/test_final_product_read_model.py
+- no Product route, frontend file, canonical DB writer, runtime config or deployment change.
+
+Contract:
+- latest persisted system-view message is selected point-in-time with event_at_ms <= observed_at_ms;
+- existing verified_system_view_record validates persisted identity/digest/schema;
+- customer layer translates stance/freshness/family state into Turkish human labels;
+- normal customer projection omits exact identities/internal state-machine vocabulary;
+- include_audit=true retains exact narrative/semantic/evidence provenance;
+- missing Stream DB/table returns explicit unavailable without read-side initialization;
+- all SQLite reads use mode=ro + query_only;
+- REAL_CAPITAL=0.
+
+Acceptance requirement:
+- focused pytest tests/test_final_product_read_model.py;
+- Ruff on module + test;
+- strict mypy on the new production module at minimum;
+- read-side non-mutation;
+- exact branch-head source;
+- no Product/Development deployment and no RDP11 observer/epoch mutation.
+
+Current blocker:
+- no dedicated FP1 CI existed on this branch; the only automatic legacy wc0 state-report run is unrelated and failed before FP1 validation.
+
+Exact nextAction:
+Add a narrowly scoped branch-only FP1-A hosted acceptance workflow that runs the exact focused pytest/Ruff/mypy contract without Product/Development/runtime mutation; run it on the resulting exact branch head and repair only demonstrated FP1-A failures.
