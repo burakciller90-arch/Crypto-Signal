@@ -10,6 +10,12 @@ from crypto_signal.decision_ledger import (
     DecisionLedgerConflictError,
     ImmutableDecisionEvidenceLedger,
 )
+from crypto_signal.product.event_source_runtime import (
+    EventSourceCalendarCoverageTruth,
+    EventSourceCalendarEventTruth,
+    EventSourceCalendarRailTruth,
+    read_event_source_calendar_rail,
+)
 from crypto_signal.product.intelligence_stream_exact_evidence import (
     IntelligenceStreamExactEvidenceReadModel,
     StreamExactEvidenceError,
@@ -25,6 +31,7 @@ from crypto_signal.product.intelligence_stream_system_view import (
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
+DEFAULT_EVENT_RAIL_FRESH_AFTER_MS = 30 * 60 * 1000
 DEFAULT_ATTENTION_LIMIT = 5
 MAX_ATTENTION_LIMIT = 20
 _ATTENTION_SCAN_LIMIT = 200
@@ -108,6 +115,28 @@ _PROVIDER_QUALITY_LABELS = {
     "degraded": "Kaynak kalitesi düştü",
     "unavailable": "Kaynak verisi eksik",
     "unresolved": "Kaynak durumu kararsız",
+}
+_EVENT_CATEGORY_LABELS = {
+    "inflation": "Enflasyon",
+    "central_bank": "Merkez bankası",
+    "employment": "İstihdam",
+    "regulatory": "Düzenleme",
+    "exchange_security": "Borsa güvenliği",
+    "listing": "Listeleme",
+    "delisting": "Listeden çıkarma",
+    "other": "Diğer",
+}
+_EVENT_SOURCE_QUALITY_LABELS = {
+    "official": "Resmî kaynak",
+    "primary_provider": "Birincil sağlayıcı",
+    "secondary_aggregator": "İkincil toplayıcı",
+    "unverified": "Doğrulanmamış kaynak",
+}
+_EVENT_COVERAGE_LABELS = {
+    "COMPLETE": "Takvim kapsamı doğrulandı",
+    "INCOMPLETE": "Takvim kapsamı eksik",
+    "UNAVAILABLE": "Takvim kapsamı kullanılamıyor",
+    "SOURCE_SCOPED_ONLY": "Takvim kapsamı kaynak bazında",
 }
 
 
@@ -296,6 +325,67 @@ class WorkspaceSummaryView:
 
 
 @dataclass(frozen=True, slots=True)
+class EventRailItemAudit:
+    event_identity: str
+
+
+@dataclass(frozen=True, slots=True)
+class EventRailCoverageAudit:
+    coverage_identity: str
+
+
+@dataclass(frozen=True, slots=True)
+class EventRailAudit:
+    raw_coverage_status: str
+    latest_calendar_fetch_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class EventRailItem:
+    title: str
+    category_label: str
+    scheduled_at_ms: int
+    temporal_label: str
+    affected_assets: tuple[str, ...]
+    scope_label: str
+    source_provider: str
+    source_quality_label: str
+    source_timestamp_ms: int
+    freshness_label: str
+    audit: EventRailItemAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EventRailCoverageView:
+    source_provider: str
+    window_start_ms: int
+    window_end_ms: int
+    category_labels: tuple[str, ...]
+    source_quality_label: str
+    observed_at_ms: int
+    freshness_label: str
+    audit: EventRailCoverageAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EventRailView:
+    availability_label: str
+    observed_at_ms: int
+    window_start_ms: int
+    window_end_ms: int
+    asset: str | None
+    coverage_label: str
+    summary_label: str
+    total_matching_events: int
+    items: tuple[EventRailItem, ...]
+    coverages: tuple[EventRailCoverageView, ...]
+    audit: EventRailAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
@@ -313,10 +403,12 @@ class FinalProductReadModel:
         stream_ledger_path: Path,
         decision_evidence_path: Path | None = None,
         signal_ledger_path: Path | None = None,
+        event_source_runtime_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.decision_evidence_path = decision_evidence_path
         self.signal_ledger_path = signal_ledger_path
+        self.event_source_runtime_path = event_source_runtime_path
 
     def market_pulse(
         self,
@@ -672,6 +764,56 @@ class FinalProductReadModel:
                 "workspace source cannot be projected safely"
             ) from exc
 
+    def event_rail(
+        self,
+        *,
+        observed_at_ms: int,
+        window_start_ms: int,
+        window_end_ms: int,
+        asset: str | None = None,
+        categories: tuple[str, ...] = (),
+        limit: int = 50,
+        fresh_after_ms: int = DEFAULT_EVENT_RAIL_FRESH_AFTER_MS,
+        include_audit: bool = False,
+    ) -> EventRailView:
+        if fresh_after_ms <= 0:
+            raise ValueError("event rail fresh_after_ms must be positive")
+        if (
+            self.event_source_runtime_path is None
+            or not self.event_source_runtime_path.is_file()
+        ):
+            return EventRailView(
+                availability_label="Veri eksik",
+                observed_at_ms=observed_at_ms,
+                window_start_ms=window_start_ms,
+                window_end_ms=window_end_ms,
+                asset=None if asset is None else asset.strip().upper(),
+                coverage_label="Takvim kapsamı kullanılamıyor",
+                summary_label="Planlı olay verisi doğrulanamadı",
+                total_matching_events=0,
+                items=(),
+                coverages=(),
+            )
+        try:
+            truth = read_event_source_calendar_rail(
+                self.event_source_runtime_path,
+                observed_at_ms=observed_at_ms,
+                window_start_ms=window_start_ms,
+                window_end_ms=window_end_ms,
+                asset=asset,
+                categories=categories,
+                limit=limit,
+            )
+            return _event_rail_view(
+                truth,
+                fresh_after_ms=fresh_after_ms,
+                include_audit=include_audit,
+            )
+        except (TypeError, ValueError) as exc:
+            raise FinalProductReadError(
+                "event rail source cannot be projected safely"
+            ) from exc
+
     def _workspace_exact_evidence(
         self,
         *,
@@ -721,6 +863,154 @@ class FinalProductReadModel:
                 "Decision Evidence proof lineage mismatch"
             )
         return proof, "Ek karar kanıtı doğrulandı"
+
+
+def _event_rail_view(
+    truth: EventSourceCalendarRailTruth,
+    *,
+    fresh_after_ms: int,
+    include_audit: bool,
+) -> EventRailView:
+    items = tuple(
+        _event_rail_item(
+            item,
+            observed_at_ms=truth.observed_at_ms,
+            fresh_after_ms=fresh_after_ms,
+            include_audit=include_audit,
+        )
+        for item in truth.events
+    )
+    coverages = tuple(
+        _event_rail_coverage(
+            item,
+            observed_at_ms=truth.observed_at_ms,
+            fresh_after_ms=fresh_after_ms,
+            include_audit=include_audit,
+        )
+        for item in truth.coverages
+    )
+    if truth.total_matching_events > 0:
+        summary = f"{truth.total_matching_events} planlı olay bulundu"
+    elif truth.coverage_status == "COMPLETE":
+        summary = "Bu kapsamda planlı olay yok"
+    else:
+        summary = "Planlı olay verisi doğrulanamadı"
+
+    audit = None
+    if include_audit:
+        audit = EventRailAudit(
+            raw_coverage_status=truth.coverage_status,
+            latest_calendar_fetch_identities=tuple(
+                item.fetch_identity
+                for item in truth.latest_calendar_fetches
+            ),
+        )
+
+    return EventRailView(
+        availability_label="Doğrulanmış veri",
+        observed_at_ms=truth.observed_at_ms,
+        window_start_ms=truth.window_start_ms,
+        window_end_ms=truth.window_end_ms,
+        asset=truth.asset,
+        coverage_label=_EVENT_COVERAGE_LABELS.get(
+            truth.coverage_status,
+            "Takvim kapsamı kullanılamıyor",
+        ),
+        summary_label=summary,
+        total_matching_events=truth.total_matching_events,
+        items=items,
+        coverages=coverages,
+        audit=audit,
+    )
+
+
+def _event_rail_item(
+    item: EventSourceCalendarEventTruth,
+    *,
+    observed_at_ms: int,
+    fresh_after_ms: int,
+    include_audit: bool,
+) -> EventRailItem:
+    if item.scheduled_at_ms > observed_at_ms:
+        temporal = "Yaklaşan olay"
+    elif item.scheduled_at_ms == observed_at_ms:
+        temporal = "Şimdi"
+    else:
+        temporal = "Yakın geçmiş olayı"
+    audit = (
+        EventRailItemAudit(event_identity=item.event_identity)
+        if include_audit
+        else None
+    )
+    return EventRailItem(
+        title=item.title,
+        category_label=_EVENT_CATEGORY_LABELS.get(item.category, "Diğer"),
+        scheduled_at_ms=item.scheduled_at_ms,
+        temporal_label=temporal,
+        affected_assets=item.affected_assets,
+        scope_label="Global" if not item.affected_assets else "Varlık odaklı",
+        source_provider=item.source_provider,
+        source_quality_label=_EVENT_SOURCE_QUALITY_LABELS.get(
+            item.source_quality,
+            "Kaynak kalitesi doğrulanmadı",
+        ),
+        source_timestamp_ms=item.source_timestamp_ms,
+        freshness_label=_event_source_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=item.source_timestamp_ms,
+            fresh_after_ms=fresh_after_ms,
+        ),
+        audit=audit,
+    )
+
+
+def _event_rail_coverage(
+    item: EventSourceCalendarCoverageTruth,
+    *,
+    observed_at_ms: int,
+    fresh_after_ms: int,
+    include_audit: bool,
+) -> EventRailCoverageView:
+    audit = (
+        EventRailCoverageAudit(coverage_identity=item.coverage_identity)
+        if include_audit
+        else None
+    )
+    return EventRailCoverageView(
+        source_provider=item.source_provider,
+        window_start_ms=item.coverage_start_ms,
+        window_end_ms=item.coverage_end_ms,
+        category_labels=tuple(
+            _EVENT_CATEGORY_LABELS.get(value, "Diğer")
+            for value in item.categories
+        ),
+        source_quality_label=_EVENT_SOURCE_QUALITY_LABELS.get(
+            item.source_quality,
+            "Kaynak kalitesi doğrulanmadı",
+        ),
+        observed_at_ms=item.observed_at_ms,
+        freshness_label=_event_source_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=item.observed_at_ms,
+            fresh_after_ms=fresh_after_ms,
+        ),
+        audit=audit,
+    )
+
+
+def _event_source_freshness_label(
+    *,
+    observed_at_ms: int,
+    source_as_of_ms: int,
+    fresh_after_ms: int,
+) -> str:
+    if source_as_of_ms > observed_at_ms:
+        raise ValueError("event source as-of cannot be in the future")
+    return (
+        "Güncel kaynak"
+        if observed_at_ms - source_as_of_ms <= fresh_after_ms
+        else "Kaynak güncel değil"
+    )
 
 
 def _workspace_unavailable(

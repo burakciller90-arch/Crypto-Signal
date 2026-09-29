@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
+from test_event_source_product import _seed_successes as _seed_event_source_successes
 from test_intelligence_stream_read_model import _create_read_fixture
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
@@ -926,5 +927,144 @@ def test_workspace_customer_projection_hides_sha_and_raw_state_vocabulary(
         "probability_not_calibrated",
         "not_bound",
         "geometry_material_change",
+    }
+    assert forbidden.isdisjoint(texts)
+
+
+def test_event_rail_missing_source_is_explicit_and_noncreating(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "missing-events.sqlite3"
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        event_source_runtime_path=event_path,
+    ).event_rail(
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=5_000,
+        categories=("inflation",),
+    )
+
+    assert view.availability_label == "Veri eksik"
+    assert view.coverage_label == "Takvim kapsamı kullanılamıyor"
+    assert view.summary_label == "Planlı olay verisi doğrulanamadı"
+    assert view.items == ()
+    assert view.coverages == ()
+    assert not event_path.exists()
+
+
+def test_event_rail_projects_verified_calendar_truth_without_risk_inference(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "events.sqlite3"
+    _seed_event_source_successes(event_path, fetched_at_ms=900)
+    before = event_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        event_source_runtime_path=event_path,
+    ).event_rail(
+        observed_at_ms=1_000,
+        window_start_ms=1_000,
+        window_end_ms=3_000,
+        categories=("inflation",),
+        include_audit=True,
+    )
+
+    assert view.availability_label == "Doğrulanmış veri"
+    assert view.coverage_label == "Takvim kapsamı doğrulandı"
+    assert view.summary_label == "1 planlı olay bulundu"
+    assert view.total_matching_events == 1
+    assert len(view.items) == 1
+    item = view.items[0]
+    assert item.title == "Consumer Price Index"
+    assert item.category_label == "Enflasyon"
+    assert item.temporal_label == "Yaklaşan olay"
+    assert item.scope_label == "Global"
+    assert item.source_provider == "bls.gov"
+    assert item.source_quality_label == "Resmî kaynak"
+    assert item.freshness_label == "Güncel kaynak"
+    assert item.audit is not None
+    assert len(item.audit.event_identity) == 64
+
+    assert len(view.coverages) == 1
+    coverage = view.coverages[0]
+    assert coverage.category_labels == ("İstihdam", "Enflasyon")
+    assert coverage.source_quality_label == "Resmî kaynak"
+    assert coverage.freshness_label == "Güncel kaynak"
+    assert coverage.audit is not None
+    assert len(coverage.audit.coverage_identity) == 64
+
+    assert view.audit is not None
+    assert view.audit.raw_coverage_status == "COMPLETE"
+    assert view.audit.latest_calendar_fetch_identities
+    assert event_path.read_bytes() == before
+
+
+def test_event_rail_distinguishes_covered_empty_from_uncovered_empty(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "events-empty.sqlite3"
+    _seed_event_source_successes(event_path, fetched_at_ms=900)
+    model = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        event_source_runtime_path=event_path,
+    )
+
+    covered = model.event_rail(
+        observed_at_ms=1_000,
+        window_start_ms=3_000,
+        window_end_ms=4_000,
+        categories=("inflation",),
+    )
+    uncovered = model.event_rail(
+        observed_at_ms=1_000,
+        window_start_ms=6_000,
+        window_end_ms=7_000,
+        categories=("inflation",),
+    )
+
+    assert covered.items == ()
+    assert covered.coverage_label == "Takvim kapsamı doğrulandı"
+    assert covered.summary_label == "Bu kapsamda planlı olay yok"
+
+    assert uncovered.items == ()
+    assert uncovered.coverage_label == "Takvim kapsamı eksik"
+    assert uncovered.summary_label == "Planlı olay verisi doğrulanamadı"
+
+
+def test_event_rail_customer_payload_hides_sha_raw_enums_and_database_vocabulary(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "events-customer.sqlite3"
+    _seed_event_source_successes(event_path, fetched_at_ms=900)
+
+    payload = asdict(
+        FinalProductReadModel(
+            stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+            event_source_runtime_path=event_path,
+        ).event_rail(
+            observed_at_ms=1_000,
+            window_start_ms=1_000,
+            window_end_ms=3_000,
+            categories=("inflation",),
+            include_audit=False,
+        )
+    )
+    texts = _all_text(payload)
+
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "COMPLETE",
+        "INCOMPLETE",
+        "UNAVAILABLE",
+        "SOURCE_SCOPED_ONLY",
+        "official",
+        "primary_provider",
+        "secondary_aggregator",
+        "unverified",
+        "inflation",
+        "structured_event_observations",
+        "event_source_runtime",
     }
     assert forbidden.isdisjoint(texts)

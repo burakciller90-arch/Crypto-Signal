@@ -36,6 +36,30 @@ _REQUIRED_FETCH_COLUMNS = frozenset(
     }
 )
 
+_STRUCTURED_EVENT_SCHEMA = "structured-event-v1/1"
+_EVENT_CALENDAR_COVERAGE_SCHEMA = "event-calendar-coverage-v1/1"
+_EVENT_CATEGORIES = frozenset(
+    {
+        "inflation",
+        "central_bank",
+        "employment",
+        "regulatory",
+        "exchange_security",
+        "listing",
+        "delisting",
+        "other",
+    }
+)
+_EVENT_SOURCE_QUALITIES = frozenset(
+    {
+        "official",
+        "primary_provider",
+        "secondary_aggregator",
+        "unverified",
+    }
+)
+_MAX_EVENT_RAIL_LIMIT = 200
+
 
 @dataclass(frozen=True, slots=True)
 class EventSourceProviderRuntimeTruth:
@@ -183,6 +207,139 @@ class EventSourceRuntimeTruth:
             raise ValueError("event source Product Truth cannot grant authority")
 
 
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarCoverageTruth:
+    coverage_identity: str
+    source_provider: str
+    coverage_start_ms: int
+    coverage_end_ms: int
+    categories: tuple[str, ...]
+    source_quality: str
+    source: str
+    observed_at_ms: int
+    adapter_version: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.coverage_identity, "calendar coverage identity")
+        if not self.source_provider.strip() or not self.adapter_version.strip():
+            raise ValueError("calendar coverage provider/adapter missing")
+        if min(
+            self.coverage_start_ms,
+            self.coverage_end_ms,
+            self.observed_at_ms,
+        ) < 0:
+            raise ValueError("calendar coverage time invalid")
+        if self.coverage_end_ms < self.coverage_start_ms:
+            raise ValueError("calendar coverage window invalid")
+        if self.categories != tuple(sorted(set(self.categories))):
+            raise ValueError("calendar coverage categories not canonical")
+        if not self.categories or not set(self.categories).issubset(
+            _EVENT_CATEGORIES
+        ):
+            raise ValueError("calendar coverage categories invalid")
+        if self.source_quality not in _EVENT_SOURCE_QUALITIES:
+            raise ValueError("calendar coverage source quality invalid")
+        if not self.source.strip():
+            raise ValueError("calendar coverage source missing")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarEventTruth:
+    event_identity: str
+    provider_event_id: str
+    title: str
+    category: str
+    scheduled_at_ms: int
+    affected_assets: tuple[str, ...]
+    source_provider: str
+    source_quality: str
+    source: str
+    source_timestamp_ms: int
+    ingested_at_ms: int
+    adapter_version: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.event_identity, "calendar event identity")
+        for value, label in (
+            (self.provider_event_id, "calendar provider event id"),
+            (self.title, "calendar event title"),
+            (self.source_provider, "calendar event provider"),
+            (self.source, "calendar event source"),
+            (self.adapter_version, "calendar event adapter"),
+        ):
+            if not value.strip():
+                raise ValueError(f"{label} missing")
+        if self.category not in _EVENT_CATEGORIES:
+            raise ValueError("calendar event category invalid")
+        if self.source_quality not in _EVENT_SOURCE_QUALITIES:
+            raise ValueError("calendar event source quality invalid")
+        if min(
+            self.scheduled_at_ms,
+            self.source_timestamp_ms,
+            self.ingested_at_ms,
+        ) < 0:
+            raise ValueError("calendar event time invalid")
+        if self.ingested_at_ms < self.source_timestamp_ms:
+            raise ValueError("calendar event ingestion precedes source")
+        if self.affected_assets != tuple(sorted(set(self.affected_assets))):
+            raise ValueError("calendar event assets not canonical")
+        if any(not value or value != value.upper() for value in self.affected_assets):
+            raise ValueError("calendar event asset invalid")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarRailTruth:
+    observed_at_ms: int
+    window_start_ms: int
+    window_end_ms: int
+    asset: str | None
+    categories: tuple[str, ...]
+    events: tuple[EventSourceCalendarEventTruth, ...]
+    total_matching_events: int
+    coverages: tuple[EventSourceCalendarCoverageTruth, ...]
+    coverage_status: str
+    latest_calendar_fetches: tuple[EventSourceProviderRuntimeTruth, ...]
+    read_only_verified: bool = True
+    production_authority: bool = False
+    real_capital: int = 0
+
+    def __post_init__(self) -> None:
+        if min(
+            self.observed_at_ms,
+            self.window_start_ms,
+            self.window_end_ms,
+        ) < 0:
+            raise ValueError("calendar rail time invalid")
+        if self.window_end_ms < self.window_start_ms:
+            raise ValueError("calendar rail window invalid")
+        if self.asset is not None and (
+            not self.asset or self.asset != self.asset.upper()
+        ):
+            raise ValueError("calendar rail asset invalid")
+        if self.categories != tuple(sorted(set(self.categories))):
+            raise ValueError("calendar rail categories not canonical")
+        if not set(self.categories).issubset(_EVENT_CATEGORIES):
+            raise ValueError("calendar rail category invalid")
+        if self.total_matching_events < len(self.events):
+            raise ValueError("calendar rail total count invalid")
+        if self.coverage_status not in {
+            "COMPLETE",
+            "INCOMPLETE",
+            "UNAVAILABLE",
+            "SOURCE_SCOPED_ONLY",
+        }:
+            raise ValueError("calendar rail coverage status invalid")
+        event_keys = tuple(
+            (item.scheduled_at_ms, item.event_identity) for item in self.events
+        )
+        if event_keys != tuple(sorted(event_keys)):
+            raise ValueError("calendar rail events not canonical")
+        if not self.read_only_verified:
+            raise ValueError("calendar rail must be read-only verified")
+        if self.production_authority or self.real_capital != 0:
+            raise ValueError("calendar rail cannot grant authority")
+
+
 def read_event_source_runtime_truth(
     path: Path,
     *,
@@ -293,6 +450,213 @@ def read_event_source_runtime_truth(
             else observed_at_ms - latest_success
         ),
         latest_fetches=latest_fetches,
+    )
+
+
+def read_event_source_calendar_rail(
+    path: Path,
+    *,
+    observed_at_ms: int,
+    window_start_ms: int,
+    window_end_ms: int,
+    asset: str | None = None,
+    categories: tuple[str, ...] = (),
+    limit: int = 50,
+) -> EventSourceCalendarRailTruth:
+    if min(observed_at_ms, window_start_ms, window_end_ms) < 0:
+        raise ValueError("event rail times cannot be negative")
+    if window_end_ms < window_start_ms:
+        raise ValueError("event rail window end precedes start")
+    if limit < 1 or limit > _MAX_EVENT_RAIL_LIMIT:
+        raise ValueError(
+            f"event rail limit must be inside 1..{_MAX_EVENT_RAIL_LIMIT}"
+        )
+    normalized_asset = None if asset is None else asset.strip().upper()
+    if normalized_asset == "":
+        raise ValueError("event rail asset cannot be blank")
+    normalized_categories = tuple(
+        sorted({value.strip().lower() for value in categories})
+    )
+    if any(not value for value in normalized_categories):
+        raise ValueError("event rail category cannot be blank")
+    if not set(normalized_categories).issubset(_EVENT_CATEGORIES):
+        raise ValueError("event rail category invalid")
+    if not path.is_file():
+        raise ValueError("event source runtime database missing")
+
+    wal_path = Path(f"{path}-wal")
+    if wal_path.exists() and wal_path.stat().st_size > 0:
+        raise ValueError(
+            "event source runtime has uncheckpointed WAL evidence"
+        )
+    database_bytes = _detached_sqlite_bytes(path)
+
+    with closing(sqlite3.connect(":memory:")) as connection:
+        connection.deserialize(database_bytes)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
+            raise ValueError("event source SQLite quick_check failed")
+        _verify_schema(connection)
+
+        successful_rows = connection.execute(
+            """
+            SELECT
+                sequence_id,
+                fetch_identity,
+                source_provider,
+                source_kind,
+                fetched_at_ms,
+                outcome,
+                payload_json
+            FROM event_source_fetches
+            WHERE source_kind='calendar'
+              AND outcome='success'
+              AND fetched_at_ms <= ?
+            ORDER BY fetched_at_ms, sequence_id
+            """,
+            (observed_at_ms,),
+        ).fetchall()
+        trusted_event_ids: set[str] = set()
+        for row in successful_rows:
+            _provider_truth_from_row(
+                connection,
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            payload = json.loads(str(row["payload_json"]))
+            if not isinstance(payload, dict):
+                raise TypeError("event source fetch payload must be object")
+            trusted_event_ids.update(
+                _identity_list(payload.get("item_identities"))
+            )
+
+        latest_rows = connection.execute(
+            """
+            SELECT
+                f.sequence_id,
+                f.fetch_identity,
+                f.source_provider,
+                f.source_kind,
+                f.fetched_at_ms,
+                f.outcome,
+                f.payload_json
+            FROM event_source_fetches AS f
+            WHERE f.source_kind='calendar'
+              AND f.fetched_at_ms <= ?
+              AND f.sequence_id = (
+                SELECT candidate.sequence_id
+                FROM event_source_fetches AS candidate
+                WHERE candidate.source_provider = f.source_provider
+                  AND candidate.source_kind='calendar'
+                  AND candidate.fetched_at_ms <= ?
+                ORDER BY
+                    candidate.fetched_at_ms DESC,
+                    candidate.sequence_id DESC
+                LIMIT 1
+              )
+            ORDER BY f.source_provider
+            """,
+            (observed_at_ms, observed_at_ms),
+        ).fetchall()
+        latest_fetches = tuple(
+            _provider_truth_from_row(
+                connection,
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            for row in latest_rows
+        )
+
+        coverage_truths: list[EventSourceCalendarCoverageTruth] = []
+        for row, fetch_truth in zip(latest_rows, latest_fetches, strict=True):
+            if fetch_truth.outcome != "success":
+                continue
+            payload = json.loads(str(row["payload_json"]))
+            if not isinstance(payload, dict):
+                raise TypeError("event source fetch payload must be object")
+            coverage_identity = _optional_text(payload.get("coverage_identity"))
+            if coverage_identity is None:
+                raise ValueError("calendar fetch coverage identity missing")
+            coverage_truths.append(
+                _calendar_coverage_truth(
+                    connection,
+                    coverage_identity=coverage_identity,
+                    source_provider=fetch_truth.source_provider,
+                    observed_at_ms=observed_at_ms,
+                )
+            )
+
+        event_rows = connection.execute(
+            """
+            SELECT
+                event_identity,
+                provider_event_id,
+                source_provider,
+                scheduled_at_ms,
+                ingested_at_ms,
+                payload_json
+            FROM structured_event_observations
+            WHERE scheduled_at_ms >= ?
+              AND scheduled_at_ms <= ?
+              AND ingested_at_ms <= ?
+            ORDER BY scheduled_at_ms, event_identity
+            """,
+            (window_start_ms, window_end_ms, observed_at_ms),
+        ).fetchall()
+        matched: list[EventSourceCalendarEventTruth] = []
+        for row in event_rows:
+            identity = str(row["event_identity"])
+            if identity not in trusted_event_ids:
+                continue
+            event = _calendar_event_truth(
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            if normalized_categories and event.category not in normalized_categories:
+                continue
+            if (
+                normalized_asset is not None
+                and event.affected_assets
+                and normalized_asset not in event.affected_assets
+            ):
+                continue
+            matched.append(event)
+
+    ordered = tuple(
+        sorted(
+            matched,
+            key=lambda item: (item.scheduled_at_ms, item.event_identity),
+        )
+    )
+    coverage_tuple = tuple(
+        sorted(
+            coverage_truths,
+            key=lambda item: (
+                item.source_provider,
+                item.coverage_start_ms,
+                item.coverage_end_ms,
+                item.coverage_identity,
+            ),
+        )
+    )
+    return EventSourceCalendarRailTruth(
+        observed_at_ms=observed_at_ms,
+        window_start_ms=window_start_ms,
+        window_end_ms=window_end_ms,
+        asset=normalized_asset,
+        categories=normalized_categories,
+        events=ordered[:limit],
+        total_matching_events=len(ordered),
+        coverages=coverage_tuple,
+        coverage_status=_calendar_coverage_status(
+            coverage_tuple,
+            window_start_ms=window_start_ms,
+            window_end_ms=window_end_ms,
+            categories=normalized_categories,
+        ),
+        latest_calendar_fetches=latest_fetches,
     )
 
 
@@ -456,6 +820,140 @@ def _provider_truth_from_row(
     )
 
 
+def _calendar_coverage_truth(
+    connection: sqlite3.Connection,
+    *,
+    coverage_identity: str,
+    source_provider: str,
+    observed_at_ms: int,
+) -> EventSourceCalendarCoverageTruth:
+    _require_sha256(coverage_identity, "calendar coverage identity")
+    row = connection.execute(
+        """
+        SELECT source_provider, observed_at_ms, payload_json
+        FROM event_calendar_coverages
+        WHERE coverage_identity=?
+        """,
+        (coverage_identity,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("event source calendar coverage missing")
+    if str(row["source_provider"]) != source_provider:
+        raise ValueError("event source calendar coverage provider mismatch")
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(
+        coverage_identity,
+        payload_json,
+        "event source calendar coverage",
+    )
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source coverage payload must be object")
+    if str(payload.get("schema_version")) != _EVENT_CALENDAR_COVERAGE_SCHEMA:
+        raise ValueError("event source calendar coverage schema mismatch")
+    if str(payload.get("source_provider")) != source_provider:
+        raise ValueError("event source calendar coverage payload provider mismatch")
+    payload_observed = int(payload.get("observed_at_ms", -1))
+    if payload_observed != int(row["observed_at_ms"]):
+        raise ValueError("event source calendar coverage observed-time mismatch")
+    if payload_observed > observed_at_ms:
+        raise ValueError("event source contains future calendar coverage")
+    categories_raw = payload.get("categories")
+    if not isinstance(categories_raw, list):
+        raise TypeError("event source coverage categories must be array")
+    categories = tuple(str(value) for value in categories_raw)
+    if categories != tuple(sorted(set(categories))):
+        raise ValueError("event source coverage categories not canonical")
+    return EventSourceCalendarCoverageTruth(
+        coverage_identity=coverage_identity,
+        source_provider=source_provider,
+        coverage_start_ms=int(payload.get("coverage_start_ms", -1)),
+        coverage_end_ms=int(payload.get("coverage_end_ms", -1)),
+        categories=categories,
+        source_quality=str(payload.get("source_quality", "")),
+        source=str(payload.get("source", "")),
+        observed_at_ms=payload_observed,
+        adapter_version=str(payload.get("adapter_version", "")),
+    )
+
+
+def _calendar_event_truth(
+    row: sqlite3.Row,
+    *,
+    observed_at_ms: int,
+) -> EventSourceCalendarEventTruth:
+    identity = str(row["event_identity"])
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(identity, payload_json, "event source calendar event")
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source calendar event payload must be object")
+    if str(payload.get("schema_version")) != _STRUCTURED_EVENT_SCHEMA:
+        raise ValueError("event source calendar event schema mismatch")
+    row_pairs = (
+        ("provider_event_id", str(row["provider_event_id"])),
+        ("source_provider", str(row["source_provider"])),
+        ("scheduled_at_ms", int(row["scheduled_at_ms"])),
+        ("ingested_at_ms", int(row["ingested_at_ms"])),
+    )
+    for key, expected in row_pairs:
+        actual = payload.get(key)
+        if isinstance(expected, int):
+            if _required_non_negative_int(actual, key) != expected:
+                raise ValueError(f"event source calendar event row mismatch: {key}")
+        elif str(actual) != expected:
+            raise ValueError(f"event source calendar event row mismatch: {key}")
+
+    source_timestamp_ms = int(payload.get("source_timestamp_ms", -1))
+    ingested_at_ms = int(payload.get("ingested_at_ms", -1))
+    if ingested_at_ms > observed_at_ms:
+        raise ValueError("event source contains future-ingested calendar event")
+    assets_raw = payload.get("affected_assets")
+    if not isinstance(assets_raw, list):
+        raise TypeError("event source calendar event assets must be array")
+    assets = tuple(str(value) for value in assets_raw)
+    if assets != tuple(sorted(set(assets))):
+        raise ValueError("event source calendar event assets not canonical")
+    return EventSourceCalendarEventTruth(
+        event_identity=identity,
+        provider_event_id=str(payload.get("provider_event_id", "")),
+        title=str(payload.get("title", "")),
+        category=str(payload.get("category", "")),
+        scheduled_at_ms=int(payload.get("scheduled_at_ms", -1)),
+        affected_assets=assets,
+        source_provider=str(payload.get("source_provider", "")),
+        source_quality=str(payload.get("source_quality", "")),
+        source=str(payload.get("source", "")),
+        source_timestamp_ms=source_timestamp_ms,
+        ingested_at_ms=ingested_at_ms,
+        adapter_version=str(payload.get("adapter_version", "")),
+    )
+
+
+def _calendar_coverage_status(
+    coverages: tuple[EventSourceCalendarCoverageTruth, ...],
+    *,
+    window_start_ms: int,
+    window_end_ms: int,
+    categories: tuple[str, ...],
+) -> str:
+    if not coverages:
+        return "UNAVAILABLE"
+    if not categories:
+        return "SOURCE_SCOPED_ONLY"
+    covered = {
+        category
+        for category in categories
+        if any(
+            item.coverage_start_ms <= window_start_ms
+            and item.coverage_end_ms >= window_end_ms
+            and category in item.categories
+            for item in coverages
+        )
+    }
+    return "COMPLETE" if covered == set(categories) else "INCOMPLETE"
+
+
 def _verify_raw_payload(
     connection: sqlite3.Connection,
     *,
@@ -592,6 +1090,20 @@ def _optional_text(value: Any) -> str | None:
 
 def _optional_int(value: Any) -> int | None:
     return None if value is None else int(value)
+
+
+def _required_non_negative_int(value: object, label: str) -> int:
+    if isinstance(value, bool):
+        raise TypeError(f"{label} must be a non-negative integer")
+    if isinstance(value, int):
+        result = value
+    elif isinstance(value, str) and value.isdigit():
+        result = int(value)
+    else:
+        raise TypeError(f"{label} must be a non-negative integer")
+    if result < 0:
+        raise ValueError(f"{label} must be non-negative")
+    return result
 
 
 def _require_sha256(value: str, label: str) -> None:

@@ -3295,3 +3295,451 @@ FP1-B accepted product scope:
 
 Exact nextAction:
 Open FP1-B implementation PR against current main, inspect its actual changed-file set, fail closed if any workflow/runtime/deploy/unrelated project file appears, then run PR-triggered repository gates before merge.
+
+
+## FP1-C TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_C_EVENT_RAIL_AUDIT_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+prerequisiteFP1A: PASS
+prerequisiteFP1B: PASS
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Completed prerequisite:
+- FP1-B merged via PR #1672 at main commit bb083c062154dd804e087777310c43d4710d29c0;
+- customer-safe Market Pulse, Attention, Five-Family and Workspace read models are now canonical main;
+- no Product/Development deploy or soak runtime mutation.
+
+Duplicate/stale check before branch creation:
+- current main verified at bb083c062154dd804e087777310c43d4710d29c0;
+- no open PR matching FP1-C Event Rail;
+- no related fp1c/event-rail/event-center branch found;
+- EventSourceRuntimeStore is the canonical persistence source and must be REUSE, never duplicated;
+- existing Product endpoint exposes event-source runtime health only, not customer Event Rail.
+
+Bounded FP1-C goal:
+- audit exact immutable event-source runtime schema/read APIs;
+- build a read-only Event Rail query/projection over existing structured event observations and accepted coverage/source metadata;
+- upcoming/recent customer events only;
+- deterministic point-in-time ordering and symbol/category filtering;
+- source/provider/source-quality/source-time/scheduled-time/freshness semantics;
+- explicit unavailable/missing coverage;
+- no new event persistence;
+- no historical backfill;
+- no event prediction/scoring;
+- no Product route/frontend/deploy in this slice;
+- no RDP11 observer/soak mutation.
+
+Mandatory pre-code audit:
+1. EventSourceRuntimeStore schema, immutable tables and read-only methods;
+2. StructuredEventObservation exact fields and identity contract;
+3. Event calendar coverage semantics and category/asset scoping;
+4. news event observations vs structured scheduled events and whether both belong in Event Rail;
+5. existing RDP8 Event Risk derivation boundaries;
+6. existing tests/fixtures and safe read-only opening behavior;
+7. exact customer fields and stale/missing/coverage labels.
+
+Current blocker:
+- FP1-C production changes are forbidden until the event-source capability/source matrix is recorded and scheduled-event vs news-event scope is frozen.
+
+Exact nextAction:
+Audit event_source_runtime.py, data/event_risk.py, RDP8 Event Risk consumers, Product runtime status reader and event-source tests; record a durable FP1-C field/source matrix before changing final_product_read_model.py.
+
+
+## FP1-C1 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_C1_PRODUCT_SAFE_EVENT_QUERY_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+auditDocument: docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+auditCommit: e680826d9af160a456131dc394a5ae5e7820212d
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen scope decision:
+- scheduled Event Rail = structured calendar events only;
+- news_event_observations are NOT mixed into scheduled Event Rail;
+- Event Risk scoring/window logic is NOT copied into Product;
+- empty "no event" claim requires exact point-in-time calendar coverage.
+
+C1 bounded goal:
+- extend src/crypto_signal/product/event_source_runtime.py only;
+- reuse the existing detached SQLite read boundary and full schema/quick-check/WAL rules;
+- add verified Product truth dataclasses for calendar events, coverages and bounded rail query;
+- query only structured events referenced by successful calendar fetch lineage at/before observed_at_ms;
+- exclude late/future ingestion;
+- determine usable coverage only from point-in-time latest calendar fetch per provider when that fetch is successful and references exact coverage;
+- deterministic scheduled_at_ms + event_identity ordering;
+- optional exact asset and category filtering;
+- no news rows;
+- no Product route;
+- no final customer Turkish labels yet;
+- no writer/schema/deploy/runtime mutation.
+
+C1 PASS:
+- missing DB non-creating;
+- nonempty WAL fail closed;
+- orphan structured event not surfaced without successful fetch lineage;
+- future/late-ingested event excluded;
+- future coverage excluded;
+- latest failed provider fetch prevents stale previous coverage from being claimed current;
+- coverage exact for requested window/categories;
+- global events (empty affected_assets) included for asset query;
+- wrong-asset event excluded;
+- category filter exact;
+- news excluded;
+- deterministic limit;
+- source DB/sidecars unchanged;
+- focused tests/Ruff/mypy;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Implement the read_event_source_calendar_rail Product adapter and focused event-source Product tests. Do not modify final_product_read_model.py until C1 acceptance passes.
+
+
+## FP1-C1 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_START
+activeBranch: fp1c/event-rail-read-model
+implementationHead: 818943a8f697dabdc3a6fb295192d203c11f6ad4
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented C1 production scope:
+- src/crypto_signal/product/event_source_runtime.py only;
+- EventSourceCalendarCoverageTruth;
+- EventSourceCalendarEventTruth;
+- EventSourceCalendarRailTruth;
+- read_event_source_calendar_rail(...);
+- detached SQLite + quick_check + schema verification reuse;
+- nonempty WAL fail closed;
+- only structured events referenced by successful point-in-time calendar fetch lineage;
+- late/future ingestion excluded;
+- latest point-in-time calendar fetch per provider determines usable current coverage;
+- latest provider failure removes stale previous coverage claim;
+- exact asset/global filtering;
+- exact category filtering;
+- deterministic scheduled_at_ms + event_identity ordering;
+- bounded limit with total matching count;
+- news observations excluded;
+- no Event Risk scoring/window duplication;
+- no Product route/frontend/writer/schema/deploy.
+
+Implemented C1 tests:
+- verified structured scheduled event query and news exclusion;
+- exact asset filter includes global + requested asset only;
+- orphan structured rows excluded;
+- late-ingested event excluded;
+- latest failed calendar fetch removes current coverage claim;
+- COMPLETE / INCOMPLETE / SOURCE_SCOPED_ONLY coverage semantics;
+- future fetch/coverage ignored point-in-time;
+- deterministic bounded ordering;
+- missing DB non-creating;
+- nonempty WAL fail closed;
+- source files remain byte-stable.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- tests/test_event_source_product.py including C1 tests;
+- existing tests/test_event_source_runtime.py regression;
+- Ruff changed Product module/test;
+- strict mypy changed Product module;
+- canonical Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak mutation.
+
+Acceptance harness rule:
+- prefer existing event-source UID504 Product acceptance workflow;
+- any temporary fp1c trigger/test wiring is acceptance infrastructure only;
+- restore exact current-main workflow before PR.
+
+Exact nextAction:
+Inspect the existing event-source Product hosted workflow. If it proves exact source + non-mutation, temporarily wire fp1c/event-rail-read-model and C1 changed files/tests into that harness; otherwise use a bounded existing UID504 harness without touching Product/Development runtime.
+
+
+## FP1-C1 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_TEST_LINT_FIX_REQUIRED
+activeBranch: fp1c/event-rail-read-model
+acceptanceHead: 3b0a368d31ffcacd945269cc67c5da2d6ce1402f
+uid504Run: 36563163312
+uid504Job: 109388648356
+artifactId: 11030468074
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- all focused pytest tests PASS, including every new C1 Event Rail adapter test;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- acceptance stopped at Ruff before mypy/project-isolation.
+
+Exact failure:
+- Ruff B009 in tests/test_event_source_product.py;
+- helper used getattr(item, "event_identity") with a constant attribute name;
+- Ruff requires direct item.event_identity access;
+- no production code or Event Rail semantic failure occurred.
+
+Repair classification:
+- TEST LINT FIX ONLY;
+- replace constant getattr with direct typed attribute access;
+- do not alter Product query logic.
+
+Exact nextAction:
+Patch only the C1 test helper attribute access, then rerun the same UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness against the new exact head.
+
+
+## FP1-C1 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_PASS
+activeBranch: fp1c/event-rail-read-model
+acceptedHead: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+uid504Run: 36565167503
+uid504Job: 109395207062
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- all focused event-source Product/runtime tests PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation.
+
+Accepted C1 semantics:
+- Product Event Rail source adapter reads only accepted structured calendar observations;
+- news observations remain separate and are not mixed into scheduled Event Rail;
+- only successful point-in-time calendar fetch lineage can surface structured events;
+- orphan/future/late-ingested rows remain excluded;
+- latest provider failure removes stale previous current-coverage claim;
+- asset/global and category filters are exact;
+- ordering is deterministic;
+- empty/no-event claims remain coverage-aware;
+- source DB/sidecars remain read-only;
+- no Event Risk scoring/window logic is duplicated.
+
+Temporary acceptance harness:
+- branch currently contains temporary MI1 FP1-C trigger/test wiring;
+- this is acceptance infrastructure only and must be restored to exact current-main content before review.
+
+Exact nextAction:
+Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml to exact current-main content, verify blob equality, then start FP1-C2 customer Event Rail projection in final_product_read_model.py only after recording a C2 task-start checkpoint.
+
+
+## FP1-C2 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_C2_FINAL_EVENT_RAIL_PROJECTION_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+prerequisiteC1: PASS
+acceptedC1Head: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+acceptedC1Uid504Run: 36565167503
+auditDocument: docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+C2 bounded goal:
+- extend src/crypto_signal/product/final_product_read_model.py only;
+- add optional event_source_runtime_path constructor input;
+- add customer-safe EventRailView / EventRailItem / audit provenance contracts;
+- event_rail(...) delegates all event/coverage truth selection to accepted read_event_source_calendar_rail(...);
+- customer labels only:
+  source quality, temporal relation, scope, freshness, coverage, empty-state;
+- no news rows;
+- no Event Risk window/scoring logic;
+- no bullish/bearish/safe/block/severity inference;
+- no second event database;
+- no Product route/frontend/deploy/runtime mutation.
+
+C2 customer semantics:
+- official -> Resmî kaynak;
+- primary_provider -> Birincil sağlayıcı;
+- secondary_aggregator -> İkincil toplayıcı;
+- unverified -> Doğrulanmamış kaynak;
+- scheduled > observed -> Yaklaşan olay;
+- scheduled == observed -> Şimdi;
+- scheduled < observed -> Yakın geçmiş olayı;
+- empty affected_assets -> Global;
+- otherwise asset-scoped;
+- display freshness threshold affects label only, never Event Risk state;
+- covered empty interval -> Bu kapsamda planlı olay yok;
+- uncovered empty interval -> Planlı olay verisi doğrulanamadı;
+- exact identities audit-only.
+
+C2 PASS:
+- missing event DB explicit/non-creating;
+- C1 adapter errors fail closed;
+- covered/uncovered empty states remain distinct;
+- customer payload contains no SHA/raw enum/database vocabulary;
+- audit preserves event/coverage identities;
+- deterministic ordering inherited without reinterpretation;
+- source DB/sidecars unchanged;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect the accepted C1 dataclass/function surface, then implement the smallest Event Rail customer projection plus focused final_product_read_model tests. Do not edit web.py/frontend.
+
+
+## FP1-C2 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_C2_ACCEPTANCE_START
+activeBranch: fp1c/event-rail-read-model
+implementationHead: 86da1f637d90450d75412732f580319ac56d6f6b
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+prerequisiteC1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented C2 production scope:
+- src/crypto_signal/product/final_product_read_model.py;
+- optional event_source_runtime_path;
+- EventRailView / EventRailItem / EventRailCoverageView;
+- audit-only event/coverage/fetch identities;
+- event_rail(...) delegates truth selection to accepted read_event_source_calendar_rail(...);
+- customer-safe category/source-quality/temporal/scope/freshness/coverage labels;
+- covered empty interval distinct from uncovered empty interval;
+- no news rows;
+- no Event Risk scoring/window copy;
+- no directional/safe/block/severity inference;
+- no route/frontend/new DB/writer/deploy.
+
+Implemented C2 tests:
+- missing event DB explicit/non-creating;
+- verified scheduled calendar event projection;
+- global scope / official source / upcoming-event labels;
+- covered-empty vs uncovered-empty;
+- audit exact identities;
+- default customer payload hides SHA/raw coverage/source/category/database vocabulary;
+- event source DB byte non-mutation.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- tests/test_event_source_product.py;
+- tests/test_event_source_runtime.py;
+- tests/test_final_product_read_model.py;
+- existing Stream final-product regressions as required by harness;
+- Ruff changed modules/tests;
+- strict mypy changed Product modules;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 mutation.
+
+Acceptance harness rule:
+- temporary MI1 fp1c trigger/test wiring is branch-only infrastructure;
+- restore workflow to exact current-main content before PR.
+
+Exact nextAction:
+Wire the existing UID504 harness to C1+C2 changed files, run exact-head acceptance, record the first mechanical failure before repair, and do not claim C2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
+
+
+## FP1-C2 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_C2_ACCEPTANCE_PASS
+activeBranch: fp1c/event-rail-read-model
+acceptedHead: dee12bad640915401f49938217b0d3375900135c
+uid504Run: 36565945747
+uid504Job: 109397747476
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- C1 event-source adapter tests PASS;
+- C2 final-product Event Rail tests PASS;
+- existing final-product/Stream regressions in the harness PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 6 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation.
+
+Accepted C2 semantics:
+- Event Rail is scheduled structured calendar truth only;
+- news remains excluded;
+- customer temporal/source/scope/freshness/coverage labels are presentation-only;
+- no Event Risk scoring/window logic is copied;
+- no directional/safe/block/severity claim is introduced;
+- covered empty interval is distinct from uncovered empty interval;
+- customer payload hides SHA/raw source/category/coverage/database vocabulary;
+- audit mode preserves event/coverage/fetch identities;
+- source event DB remains read-only.
+
+Temporary acceptance harness:
+- branch currently contains temporary MI1 C2 trigger/test wiring;
+- this is acceptance infrastructure only and must be restored to exact current-main content before PR.
+
+Exact nextAction:
+Restore MI1 workflow to exact current-main content, update the FP1 capability matrix current-state/nextAction so agents do not re-run A/B/C, verify current main and branch diff, then open the FP1-C PR only if no duplicate or unrelated change exists.
+
+
+## FP1-C PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_C_REVIEW_READY
+activeBranch: fp1c/event-rail-read-model
+currentBranchHeadBeforeCheckpoint: b41b8d2f255aabf7c0cd9beb3ea34a84483bb89a
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+acceptedC1Head: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+acceptedC1Uid504Run: 36565167503
+acceptedC2Head: dee12bad640915401f49938217b0d3375900135c
+acceptedC2Uid504Run: 36565945747
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup verification:
+- current main remains bb083c062154dd804e087777310c43d4710d29c0;
+- branch is ahead of main and not behind;
+- no duplicate open FP1-C/Event Rail PR found;
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch content equals exact current-main content;
+- temporary C1/C2 acceptance trigger/test wiring is absent from final branch diff;
+- final changed-file set is exactly:
+  - docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+  - docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+  - docs/agent/CURRENT_FRONTIER.md
+  - docs/agent/HANDOFF_LOG.md
+  - src/crypto_signal/product/event_source_runtime.py
+  - src/crypto_signal/product/final_product_read_model.py
+  - tests/test_event_source_product.py
+  - tests/test_final_product_read_model.py
+- no Product route/frontend/deploy/runtime config change is present.
+
+Exact nextAction:
+Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
