@@ -5915,3 +5915,57 @@ Bounded repair:
 
 Exact nextAction:
 Replace the 14 verbose integer Decimal string constructors in the new multi-entry test, rerun exact-head WC6/RDP11/F10, then inspect any remaining gate output.
+
+
+## FP3-C2 MECHANICAL PASS / FP3-D TASK START — 2026-09-29
+
+status: FP3_D_GENUINE_FORWARD_LIVENESS_AUDIT_START
+taskStartMain: d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd
+activeBranch: fp3d/genuine-forward-liveness
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+workbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchVerificationRun: 36613594563
+workbenchVerificationJob: 109560885562
+workbenchVerifiedHead: d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd
+workbenchVerifiedBranch: main
+workbenchDirtyCount: 0
+mechanicalGate: FP3-D genuine forward liveness acceptance
+classification: REUSE FP3-A/B/C runtime + AUDIT genuine-forward source; BUILD isolated liveness acceptance harness only if missing
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP3-C2 exact closure:
+- PR #1683 merged at main \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`;
+- accepted PR head \`7ab66c7e1d27899bd48414a087f29db3f1426e48\`;
+- WC6 run \`36612810152\` / job \`109558250167\`: exact source, focused FP3/paper, paper regression, full regression, Ruff, mypy and Development non-mutation PASS;
+- RDP11 pre-soak run \`36612810246\` / job \`109558250148\`: full pytest/Ruff/mypy + freshness PASS, Development non-mutation PASS, HISTORICAL_BACKFILL=NO;
+- F10 run \`36612810257\` / job \`109558359209\`: exact source + closeout + non-mutation PASS;
+- C2 contract includes OPEN -> SCALE_IN -> REDUCE replay -> EXIT, weighted-average exact accounting, complete active-entry evidence, duplicate-lineage fail-closed and REAL_CAPITAL=0.
+
+FP3-D frozen PASS contract:
+- no fixture may satisfy this gate;
+- at least one genuine post-activation candidate must be processed;
+- policy-correct silence/HOLD is healthy;
+- any genuine eligible action must preserve exact lineage to R22/R21;
+- restart/replay idempotence must be observed;
+- FP3 activation must remain future-bound and immutable;
+- frozen RDP11 Product/Development target must remain untouched.
+
+Duplicate audit:
+- no pre-existing \`fp3d\` branch;
+- no FP3-D PR existed at task start.
+
+RDP11 safety evidence at task start:
+- latest observed failure run \`36611618152\` / job \`109554184576\` first proved Product+Development exact frozen target \`3d9f33db3f1189571d40566125fbeabd00c04930\`, then failed only during endpoint probe with \`curl (56) connection reset by peer\`;
+- no epoch-target mismatch or canonical runtime mutation was observed in that run.
+
+Current blocker:
+- exact genuine-forward source for a post-FP3-activation UnifiedDecisionIssuance and the isolated persistent FP3 activation/receipt location are not yet mechanically identified;
+- do not invent a candidate and do not use fixtures.
+
+Exact nextAction:
+Audit existing Stream/Capital Forward live persistence and WC2 liveness patterns to locate a genuine post-activation candidate source and define an isolated FP3-D observation store that cannot mutate Product/Development or frozen evidence.
