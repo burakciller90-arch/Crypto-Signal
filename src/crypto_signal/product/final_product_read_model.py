@@ -347,6 +347,174 @@ class FinalProductReadModel:
             missing_symbols=tuple(missing),
         )
 
+    def attention_situations(
+        self,
+        *,
+        observed_at_ms: int,
+        limit: int = DEFAULT_ATTENTION_LIMIT,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> AttentionSituationsView:
+        if observed_at_ms < 0:
+            raise ValueError("attention observation time must be non-negative")
+        if limit < 1 or limit > MAX_ATTENTION_LIMIT:
+            raise ValueError(
+                f"attention limit must be inside 1..{MAX_ATTENTION_LIMIT}"
+            )
+        if stale_after_ms <= 0:
+            raise ValueError("attention stale_after_ms must be positive")
+        if not self.stream_ledger_path.is_file():
+            return AttentionSituationsView(
+                availability_label="Veri eksik",
+                observed_at_ms=observed_at_ms,
+                items=(),
+            )
+
+        reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+        try:
+            page = reader.read_messages(
+                StreamMessageQuery(
+                    limit=_ATTENTION_SCAN_LIMIT,
+                    to_ms=observed_at_ms,
+                )
+            )
+            candidates: dict[tuple[str, ...], _AttentionCandidate] = {}
+            for record in page.items:
+                narrative_identity = _required_sha(record, "narrative_identity")
+                detail = reader.read_message_detail(narrative_identity)
+                if detail is None:
+                    raise FinalProductReadError(
+                        "attention source disappeared during verified read"
+                    )
+                candidate = _attention_candidate(
+                    detail,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                if candidate is None:
+                    continue
+                previous = candidates.get(candidate.dedupe_key)
+                if previous is None or (
+                    candidate.event_at_ms,
+                    candidate.narrative_identity,
+                ) > (
+                    previous.event_at_ms,
+                    previous.narrative_identity,
+                ):
+                    candidates[candidate.dedupe_key] = candidate
+        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "attention source cannot be projected safely"
+            ) from exc
+
+        ordered = sorted(
+            candidates.values(),
+            key=lambda item: (
+                item.importance_rank,
+                item.event_at_ms,
+                item.narrative_identity,
+            ),
+            reverse=True,
+        )
+        items = tuple(item.view for item in ordered[:limit])
+        return AttentionSituationsView(
+            availability_label=(
+                "Dikkat gerektiren durum yok"
+                if not items
+                else "Doğrulanmış veri"
+            ),
+            observed_at_ms=observed_at_ms,
+            items=items,
+        )
+
+    def five_family_summary(
+        self,
+        *,
+        symbol: str,
+        observed_at_ms: int,
+        stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
+        include_audit: bool = False,
+    ) -> FiveFamilySummaryView:
+        if observed_at_ms < 0:
+            raise ValueError("family summary observation time must be non-negative")
+        if stale_after_ms <= 0:
+            raise ValueError("family summary stale_after_ms must be positive")
+        normalized = _normalize_symbols((symbol,))[0]
+        if not self.stream_ledger_path.is_file():
+            return FiveFamilySummaryView(
+                availability_label="Veri eksik",
+                symbol=normalized,
+                timeframe=None,
+                updated_at_ms=None,
+                stance_label=None,
+                families=(),
+            )
+
+        try:
+            payload = _latest_verified_system_view(
+                self.stream_ledger_path,
+                symbol=normalized,
+                observed_at_ms=observed_at_ms,
+            )
+            if payload is None:
+                return FiveFamilySummaryView(
+                    availability_label="Veri eksik",
+                    symbol=normalized,
+                    timeframe=None,
+                    updated_at_ms=None,
+                    stance_label=None,
+                    families=(),
+                )
+            fact = _required_mapping(payload, "fact_bundle")
+            analytical = _required_mapping(payload, "analytical_view")
+            stance = _required_mapping(analytical, "stance")
+            raw_stance = _required_text(stance, "effective_stance")
+            reader = IntelligenceStreamReadModel(self.stream_ledger_path)
+            rows = sorted(
+                (
+                    _mapping_value(value, "family contribution")
+                    for value in _required_sequence(fact, "family_contributions")
+                ),
+                key=lambda value: (
+                    _FAMILY_ORDER.get(str(value.get("family")), 99),
+                    str(value.get("family")),
+                ),
+            )
+            families = tuple(
+                _enriched_family_summary(
+                    row,
+                    raw_stance=raw_stance,
+                    reader=reader,
+                    observed_at_ms=observed_at_ms,
+                    stale_after_ms=stale_after_ms,
+                    include_audit=include_audit,
+                )
+                for row in rows
+            )
+            return FiveFamilySummaryView(
+                availability_label="Doğrulanmış veri",
+                symbol=normalized,
+                timeframe=_required_text(payload, "timeframe"),
+                updated_at_ms=_required_int(payload, "event_at_ms"),
+                stance_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+                families=families,
+            )
+        except (
+            sqlite3.DatabaseError,
+            StreamReadModelError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            if isinstance(exc, FinalProductReadError):
+                raise
+            raise FinalProductReadError(
+                "five-family source cannot be projected safely"
+            ) from exc
+
 
 def _normalize_symbols(symbols: tuple[str, ...]) -> tuple[str, ...]:
     if not symbols:
