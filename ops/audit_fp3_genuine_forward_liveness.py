@@ -26,6 +26,7 @@ from crypto_signal.evaluation.live_untouched_forward_operational import (
 )
 from crypto_signal.evaluation.untouched_forward_prepared import (
     WC2PreparedCycleJournal,
+    WC2PreparedCycleReceipt,
 )
 from crypto_signal.paper.autopilot_forward_runtime import (
     CanonicalPaperAutopilotForwardRuntime,
@@ -163,7 +164,11 @@ def _choose_genuine_candidate(
     prepared_path: Path,
     decision_path: Path,
     activated_at_ms: int,
-):
+) -> tuple[
+    WC2PreparedCycleReceipt,
+    dict[str, Any],
+    dict[str, Any],
+] | None:
     prepared = WC2PreparedCycleJournal(prepared_path)
     decision = ImmutableDecisionEvidenceLedger(decision_path)
     for signal_identity in candidate_signal_identities(
@@ -179,7 +184,12 @@ def _choose_genuine_candidate(
         if receipt.capital_assessed_at_ms < activated_at_ms:
             continue
         forecast, proof = persisted
-        if int(forecast["issued_at_ms"]) != receipt.issued_at_ms:
+        persisted_issued_at = forecast.get("issued_at_ms")
+        if (
+            not isinstance(persisted_issued_at, int)
+            or isinstance(persisted_issued_at, bool)
+            or persisted_issued_at != receipt.issued_at_ms
+        ):
             raise ValueError("FP3-D prepared/persisted issuance time mismatch")
         if forecast["forecast_identity"] != proof["forecast_identity"]:
             raise ValueError("FP3-D persisted forecast/proof lineage mismatch")
@@ -239,7 +249,10 @@ def audit(
         epoch2_path=copies["epoch2"],
         stream_path=copies["stream"],
     )
-    activated_at_ms = int(front_activation["activated_at_ms"])
+    activated_raw = front_activation.get("activated_at_ms")
+    if not isinstance(activated_raw, int) or isinstance(activated_raw, bool):
+        raise TypeError("FP3-D capital activation time must be int")
+    activated_at_ms = activated_raw
     candidate = _choose_genuine_candidate(
         prepared_path=copies["prepared"],
         decision_path=copies["decision"],
