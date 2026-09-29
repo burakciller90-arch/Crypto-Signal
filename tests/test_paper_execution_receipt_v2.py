@@ -178,7 +178,7 @@ def _orderbook(
     ask_price: str = "101",
 ):
     return build_orderbook_snapshot(
-        exchange=Exchange.BYBIT,
+        exchange=Exchange.BINANCE,
         market_type=MarketType.SPOT,
         symbol="BTCUSDT",
         event_at_ms=20_110,
@@ -196,7 +196,7 @@ def _orderbook(
 
 def _public_trade(*, size: str = "0.15"):
     return build_public_trade_observation(
-        exchange=Exchange.BYBIT,
+        exchange=Exchange.BINANCE,
         market_type=MarketType.SPOT,
         symbol="BTCUSDT",
         exec_id="receipt-fill",
@@ -262,10 +262,11 @@ def _fee(*, role: InstrumentFeeRole, notional: Decimal):
 
 def test_depth_full_receipt_binds_taker_fee_and_real_price_impact(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook()
     outcome = simulate_depth_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
-        orderbook=_orderbook(),
+        orderbook=book,
         execution_cutoff_ms=20_200,
         partial_fills_enabled=True,
     )
@@ -275,6 +276,7 @@ def test_depth_full_receipt_binds_taker_fee_and_real_price_impact(tmp_path) -> N
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        orderbook=book,
     )
 
     assert outcome.status is DepthExecutionStatus.FULL
@@ -292,10 +294,11 @@ def test_depth_full_receipt_binds_taker_fee_and_real_price_impact(tmp_path) -> N
 
 def test_depth_partial_receipt_reconciles_partial_notional_exactly(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook(ask_size="0.05")
     outcome = simulate_depth_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
-        orderbook=_orderbook(ask_size="0.05"),
+        orderbook=book,
         execution_cutoff_ms=20_200,
         partial_fills_enabled=True,
     )
@@ -305,6 +308,7 @@ def test_depth_partial_receipt_reconciles_partial_notional_exactly(tmp_path) -> 
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        orderbook=book,
     )
 
     assert outcome.status is DepthExecutionStatus.PARTIAL
@@ -319,17 +323,19 @@ def test_passive_full_receipt_requires_maker_fee_and_no_optimistic_cost_credit(
     tmp_path,
 ) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook(
+        bid_price="99",
+        bid_size="0.05",
+        ask_price="101",
+        ask_size="1",
+    )
+    trades = (_public_trade(),)
     outcome = simulate_passive_limit_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
         limit_price=Decimal(99),
-        arrival_book=_orderbook(
-            bid_price="99",
-            bid_size="0.05",
-            ask_price="101",
-            ask_size="1",
-        ),
-        public_trades=(_public_trade(),),
+        arrival_book=book,
+        public_trades=trades,
         submitted_at_ms=20_100,
         latency_ms=10,
         timeout_ms=100,
@@ -343,6 +349,8 @@ def test_passive_full_receipt_requires_maker_fee_and_no_optimistic_cost_credit(
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        orderbook=book,
+        public_trades=trades,
     )
 
     assert outcome.status is PassiveLimitExecutionStatus.FULL
@@ -359,16 +367,17 @@ def test_passive_full_receipt_requires_maker_fee_and_no_optimistic_cost_credit(
 
 def test_not_filled_receipt_has_zero_cost_and_no_fee_evidence(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook(
+        bid_price="99",
+        bid_size="0.05",
+        ask_price="101",
+        ask_size="1",
+    )
     outcome = simulate_passive_limit_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
         limit_price=Decimal(99),
-        arrival_book=_orderbook(
-            bid_price="99",
-            bid_size="0.05",
-            ask_price="101",
-            ask_size="1",
-        ),
+        arrival_book=book,
         public_trades=(),
         submitted_at_ms=20_100,
         latency_ms=10,
@@ -382,6 +391,7 @@ def test_not_filled_receipt_has_zero_cost_and_no_fee_evidence(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=None,
+        orderbook=book,
     )
 
     assert outcome.status is PassiveLimitExecutionStatus.NOT_FILLED
@@ -395,17 +405,19 @@ def test_not_filled_receipt_has_zero_cost_and_no_fee_evidence(tmp_path) -> None:
 
 def test_fill_not_proven_receipt_cannot_invent_fee_or_cost(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook(
+        bid_price="99",
+        bid_size="0.05",
+        ask_price="101",
+        ask_size="1",
+    )
+    trades = (_public_trade(),)
     outcome = simulate_passive_limit_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
         limit_price=Decimal(99),
-        arrival_book=_orderbook(
-            bid_price="99",
-            bid_size="0.05",
-            ask_price="101",
-            ask_size="1",
-        ),
-        public_trades=(_public_trade(),),
+        arrival_book=book,
+        public_trades=trades,
         submitted_at_ms=20_100,
         latency_ms=10,
         timeout_ms=100,
@@ -418,6 +430,8 @@ def test_fill_not_proven_receipt_cannot_invent_fee_or_cost(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=None,
+        orderbook=book,
+        public_trades=trades,
     )
 
     assert outcome.status is PassiveLimitExecutionStatus.FILL_NOT_PROVEN
@@ -428,10 +442,11 @@ def test_fill_not_proven_receipt_cannot_invent_fee_or_cost(tmp_path) -> None:
 
 def test_filled_receipt_rejects_wrong_fee_role(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook()
     outcome = simulate_depth_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
-        orderbook=_orderbook(),
+        orderbook=book,
         execution_cutoff_ms=20_200,
         partial_fills_enabled=True,
     )
@@ -445,15 +460,17 @@ def test_filled_receipt_rejects_wrong_fee_role(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=wrong_fee,
+            orderbook=book,
         )
 
 
 def test_filled_receipt_rejects_fee_notional_mismatch(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook()
     outcome = simulate_depth_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
-        orderbook=_orderbook(),
+        orderbook=book,
         execution_cutoff_ms=20_200,
         partial_fills_enabled=True,
     )
@@ -467,21 +484,23 @@ def test_filled_receipt_rejects_fee_notional_mismatch(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=wrong_fee,
+            orderbook=book,
         )
 
 
 def test_nonfilled_receipt_rejects_fee_projection(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook(
+        bid_price="99",
+        bid_size="0.05",
+        ask_price="101",
+        ask_size="1",
+    )
     outcome = simulate_passive_limit_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
         limit_price=Decimal(99),
-        arrival_book=_orderbook(
-            bid_price="99",
-            bid_size="0.05",
-            ask_price="101",
-            ask_size="1",
-        ),
+        arrival_book=book,
         public_trades=(),
         submitted_at_ms=20_100,
         latency_ms=10,
@@ -500,15 +519,17 @@ def test_nonfilled_receipt_rejects_fee_projection(tmp_path) -> None:
             bound_pretrade=bound,
             outcome=outcome,
             fee_projection=unrelated_fee,
+            orderbook=book,
         )
 
 
 def test_exact_receipt_replay_is_identity_stable(tmp_path) -> None:
     bound = _bound_pretrade(tmp_path)
+    book = _orderbook()
     outcome = simulate_depth_execution(
         action=PaperAction.BUY,
         requested_quantity=Decimal("0.10"),
-        orderbook=_orderbook(),
+        orderbook=book,
         execution_cutoff_ms=20_200,
         partial_fills_enabled=True,
     )
@@ -518,12 +539,49 @@ def test_exact_receipt_replay_is_identity_stable(tmp_path) -> None:
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        orderbook=book,
     )
     replay = build_execution_receipt_v2(
         bound_pretrade=bound,
         outcome=outcome,
         fee_projection=fee,
+        orderbook=book,
     )
 
     assert replay == first
     assert replay.receipt_identity == first.receipt_identity
+
+
+def test_cross_venue_market_evidence_is_rejected(tmp_path) -> None:
+    bound = _bound_pretrade(tmp_path)
+    bybit_book = build_orderbook_snapshot(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        event_at_ms=20_110,
+        source_timestamp_ms=20_110,
+        response_time_ms=20_110,
+        ingested_at_ms=20_110,
+        update_id=99,
+        sequence=99,
+        bids=(OrderBookLevel(Decimal(99), Decimal(1)),),
+        asks=(OrderBookLevel(Decimal(101), Decimal("0.10")),),
+        source=DataSource.REST,
+        adapter_version="fp4e-test/1",
+    )
+    outcome = simulate_depth_execution(
+        action=PaperAction.BUY,
+        requested_quantity=Decimal("0.10"),
+        orderbook=bybit_book,
+        execution_cutoff_ms=20_200,
+        partial_fills_enabled=True,
+    )
+    fee = _fee(role=InstrumentFeeRole.TAKER, notional=outcome.fill_notional)
+
+    with pytest.raises(ExecutionReceiptRejectedError, match="Binance Spot"):
+        build_execution_receipt_v2(
+            bound_pretrade=bound,
+            outcome=outcome,
+            fee_projection=fee,
+            orderbook=bybit_book,
+        )
