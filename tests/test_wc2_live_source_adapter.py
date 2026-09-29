@@ -65,6 +65,8 @@ def _bundle():
             *harmonic_series(),
             harmonic_candle(16, 1050),
             harmonic_candle(17, 1090),
+            harmonic_candle(18, 1080),
+            harmonic_candle(19, 1110),
         )
     )
     as_of_ms = max(candle.ingested_at_ms for candle in source)
