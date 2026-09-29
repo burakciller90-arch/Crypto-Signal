@@ -3762,3 +3762,38 @@ Current blocker:
 Exact nextAction:
 Audit Stream Capital message/query APIs, R22 transaction/decision tape read surfaces, R21 accounting lineage and existing capital lifecycle tests; update the FP1-D field-source matrix with an exact D2 source contract before production code changes.
 
+
+
+## FP1-D2 AUDIT-COMPLETE / IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_START
+activeBranch: fp1d/portfolio-capital-movements-current
+currentMainBase: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+auditDocument: docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+auditContractCommit: 1249e48bbd411637a085ea364b08fdb98459e3b3
+prerequisiteD1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen D2 source contract:
+- query authority is IntelligenceStreamReadModel.read_messages(StreamMessageQuery(category="capital", ...));
+- accepted read model already verifies and merges capital decision/sizing/execution/lifecycle tables;
+- deterministic newest-first order is reused; no new ranking score;
+- decision, sizing, execution, lifecycle candidate/accounting/outcome message classes have exact field maps frozen in the FP1-D matrix;
+- no R22/R21 duplicate timeline query is introduced;
+- deep trade reconstruction remains FP1-E.
+
+Bounded implementation:
+- add CapitalMovement customer/audit dataclasses;
+- add capital_movements(observed_at_ms, from_ms, to_ms, vault=None, limit=..., include_audit=False);
+- only exact persisted amounts may appear;
+- source_as_of may remain unavailable for execution messages that do not carry an exact separate source time;
+- missing Stream DB explicit/non-creating;
+- valid empty interval explicit;
+- audit-only identities/raw subtype/reason lineage;
+- no web.py/frontend/deploy/new DB/schema/writer.
+
+Exact nextAction:
+Implement Capital Movements projection in final_product_read_model.py plus focused immutable Stream Capital tests. Do not modify routes or frontend.
