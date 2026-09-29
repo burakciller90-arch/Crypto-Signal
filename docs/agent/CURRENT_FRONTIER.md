@@ -5198,3 +5198,47 @@ Correction:
 Exact nextAction:
 Implement FP3-C1 versioned action policy/request, immutable action-stage receipt, exact R22 replay/bundle recovery and canonical Stream lifecycle projection; no multi-entry SCALE_IN code in C1.
 
+
+
+## FP3-C1 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_START
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+implementationHead: ee199ed86559541edeb13810d98a859cbae42c79
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented C1 scope:
+- immutable versioned preregistered action intent;
+- OPEN -> canonical BUY only;
+- PARTIAL_TAKE_PROFIT -> REDUCE;
+- TAKE_PROFIT / STOP / CLOSE -> EXIT;
+- WAIT -> explicit no-trade receipt;
+- STOP_UPDATE -> explicit unavailable;
+- SCALE_IN -> explicit unavailable in C1 pending separately accepted C2 multi-entry lineage;
+- exact FP3-A + FP3-B lineage validation;
+- action evidence bound into canonical R22 source evidence;
+- canonical BUY/SELL remain the sole R21/R22 mutation owners;
+- read-only R22 fill->bundle lookup + full audit for crash recovery;
+- preflight exact trade replay before any new commit;
+- canonical Stream bundle lifecycle projector only;
+- append-only action-stage receipt in isolated FP3 store;
+- no new accounting/execution/order engine.
+
+Focused tests:
+- OPEN BUY + exact replay byte stability;
+- crash after canonical BUY before action receipt -> recovery without duplicate accounting;
+- WAIT + STOP_UPDATE no R21/R22 mutation;
+- SCALE_IN explicitly unavailable in C1;
+- partial take profit REDUCE then CLOSE EXIT over original open lineage;
+- action receipt physical immutability.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Wire temporary UID504 acceptance for autopilot_forward_actions.py, canonical_capital_runtime.py, transaction_tape_atomic.py and focused action/canonical regression tests; inspect exact failures, apply only bounded fixes, restore workflow after PASS.
+
