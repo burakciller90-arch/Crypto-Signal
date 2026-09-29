@@ -1,6 +1,6 @@
 # Crypto Signal — FP1-D Portfolio + Capital Movements Field-Source Matrix
 
-Status: **D1 ACCEPTED / D2 AUDIT COMPLETE / D2 IMPLEMENTATION NEXT**
+Status: **D1 ACCEPTED / D2 ACCEPTED / FP1-D REVIEW READY**
 Date: 2026-09-29
 Base main: `e16bf10e6cd6a653cb9ab96616cea88d1df5e242`
 Active branch: `fp1d/portfolio-capital-movements-current`
@@ -579,3 +579,40 @@ After this audit:
 
 Exact next action:
 Append D2 implementation-start checkpoint if not already present, then implement only the final-product Capital Movements projection and focused tests. No route/frontend/deploy.
+
+
+## 11. FP1-D2 acceptance — UID504 PASS
+
+Status: **ACCEPTED**
+
+Accepted implementation head:
+`ec70ba3daa367c73f67d04c14cbeeb8ff797a276`
+
+Exact-head UID504 acceptance:
+- run `36574415360`;
+- job `109426221692`;
+- conclusion: **SUCCESS**;
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Post-acceptance cleanup:
+- temporary MI1 branch trigger/test wiring restored in commit `30cad29c4b30cfc664d33945d88d5ef8bdf4dd01`;
+- branch MI1 workflow blob equals exact current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`;
+- no route/frontend/deploy/runtime/writer change is part of FP1-D.
+
+Accepted FP1-D result:
+- D1 Portfolio Summary: PASS;
+- D2 Daily Capital Movements: PASS;
+- no duplicate accounting/event ledger;
+- no historical backfill;
+- no fabricated zero values;
+- exact identities stay audit-only;
+- customer view remains human-readable and read-only.
+
+Exact next action:
+Open one FP1-D pull request against current main, inspect the exact five-file product/docs diff and PR-triggered checks, and merge only if current main has not introduced an overlapping FP1-D implementation or runtime conflict.
