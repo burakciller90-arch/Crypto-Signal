@@ -291,3 +291,50 @@ def test_risk_gate_flags_must_be_real_booleans() -> None:
             liquidity_eligible=True,
             conflict_clear=True,
         )
+
+
+def test_existing_exposure_cannot_escape_cluster_contract() -> None:
+    clusters = (
+        CorrelationCluster(
+            cluster_id="CRYPTO_BETA",
+            members=("BTCUSDT", "ETHUSDT"),
+            max_gross_exposure_fraction=Decimal("0.50"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="exactly one correlation cluster"):
+        _snapshot(
+            clusters=clusters,
+            exposures=(
+                AssetGrossExposure(
+                    asset="SOLUSDT",
+                    gross_exposure_usdt=Decimal(100),
+                ),
+            ),
+        )
+
+
+def test_existing_exposure_cannot_be_ambiguous_across_clusters() -> None:
+    clusters = (
+        CorrelationCluster(
+            cluster_id="ALT_BETA",
+            members=("ETHUSDT", "SOLUSDT"),
+            max_gross_exposure_fraction=Decimal("0.30"),
+        ),
+        CorrelationCluster(
+            cluster_id="CRYPTO_BETA",
+            members=("BTCUSDT", "ETHUSDT"),
+            max_gross_exposure_fraction=Decimal("0.50"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="exactly one correlation cluster"):
+        _snapshot(
+            clusters=clusters,
+            exposures=(
+                AssetGrossExposure(
+                    asset="ETHUSDT",
+                    gross_exposure_usdt=Decimal(100),
+                ),
+            ),
+        )
