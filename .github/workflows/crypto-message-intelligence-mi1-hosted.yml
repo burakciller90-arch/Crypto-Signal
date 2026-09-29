@@ -5,6 +5,7 @@ on:
     branches:
       - 'feat/message-intelligence-mi1'
       - 'feat/message-intelligence-mi1-primary-surface'
+      - 'fp1d/portfolio-capital-movements'
   pull_request:
     branches:
       - main
@@ -80,6 +81,9 @@ jobs:
             tests/test_intelligence_stream_local_rewriter.py \
             tests/test_intelligence_stream_production_projector.py \
             tests/test_intelligence_stream_ui.py \
+            tests/test_final_product_read_model.py \
+            tests/test_epoch2_accounting.py \
+            tests/test_epoch2_read_only_product.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-pytest.log"
           "$TEST_PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_family.py \
@@ -90,12 +94,15 @@ jobs:
             tests/test_intelligence_stream_read_model.py \
             tests/test_intelligence_stream_ledger.py \
             tests/test_intelligence_stream_ui.py \
+            src/crypto_signal/product/final_product_read_model.py \
+            tests/test_final_product_read_model.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-ruff.log"
           "$TEST_PY" -m mypy \
             src/crypto_signal/product/intelligence_stream_family.py \
             src/crypto_signal/product/intelligence_stream_read_model.py \
             src/crypto_signal/product/intelligence_stream_narrative.py \
             src/crypto_signal/product/web.py \
+            src/crypto_signal/product/final_product_read_model.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-mypy.log"
           node --check src/crypto_signal/product/stream/app.js \
             2>&1 | tee "$RUNNER_TEMP/mi1-node.log"
