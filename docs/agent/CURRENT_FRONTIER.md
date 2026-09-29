@@ -6030,3 +6030,34 @@ Current blocker:
 
 Exact nextAction:
 Implement the isolated FP3-D genuine-forward audit helper, focused harness tests, and an exact-head UID504 workflow that executes the live read-only/snapshot probe and emits mechanical PASS/WAITING markers without mutating live stores.
+
+
+## FP3-D IMPLEMENTATION COMPLETE / LIVE ACCEPTANCE START — 2026-09-29
+
+status: FP3_D_LIVE_ACCEPTANCE_START
+baseMain: 4490e3a32eabbd21e84fe32ba70aa2324151a168
+activeBranch: fp3d/genuine-forward-liveness-v2
+implementationHeadBeforeAcceptanceDocs: b7211ee79db619d69b8501abe02741e5bfc7d559
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- \`ops/audit_fp3_genuine_forward_liveness.py\`: live sources query-only; SQLite-consistent snapshots into runner-temp; no fixture acceptance;
+- candidate requires immutable prepared receipt + persisted R20/R20.5 + exact live signal-ledger bundle/frozen-at lineage + issuance after existing Stream Capital activation;
+- genuine issuance is recovered from copied immutable prepared truth and copied Decision Ledger;
+- FP3-A executes only on copied Epoch2/Stream + isolated temp FP3 store;
+- runtime restart replays the exact FP3 receipt and compares copied SQLite file-set fingerprints for no duplicate mutation;
+- activation exact replay is stable and a changed activation watermark must fail closed;
+- WAITING_NO_POST_ACTIVATION_ISSUANCE is explicit and never reported as PASS;
+- focused harness tests cover SQLite snapshot isolation, post-activation ordering and live signal lineage verification;
+- UID504 workflow checks exact PR head, frozen RDP11 Product/Development target, focused tests, live genuine probe, full regression and final runtime non-mutation.
+
+Current blocker:
+- no exact UID504 live probe result exists for this implementation head yet.
+
+Exact nextAction:
+Open one isolated FP3-D PR from this branch, inspect the dedicated UID504 workflow's live status and mechanical markers; claim FP3-D PASS only if it reports a genuine post-activation candidate plus replay/activation/non-mutation PASS, otherwise record WAITING or the exact failure without inventing evidence.
