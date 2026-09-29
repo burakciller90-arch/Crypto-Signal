@@ -3958,3 +3958,34 @@ Current blocker:
 Exact nextAction:
 Audit R22Epoch2AtomicTape trade-history/story-context reads, R21 accounting snapshots, canonical capital outcome evidence and existing Decision Proof/RDP10 exact-evidence readers; freeze an FP1-E field-source matrix before production code changes.
 
+
+
+## FP1-E SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_E_IMPLEMENTATION_START
+baseMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+auditDocument: docs/CRYPTO_SIGNAL_FP1E_TRADE_PASSPORT_FIELD_SOURCE_MATRIX.md
+classification: REUSE R22/R21/S11/Decision Proof truth + EXTEND customer projection
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen source contract:
+- passport lookup key is immutable R22 bundle identity;
+- canonical trade/accounting read is R22Epoch2AtomicTape.read_bundle_story_context(bundle_identity);
+- no Final Product direct SQL and no second trade/accounting ledger;
+- R21 before/after values are copied exactly, not recomputed;
+- S11 outcome remains canonical for REDUCE/EXIT;
+- optional Decision Proof is resolved by forecast identity and must match R22 proof + signal-freeze lineage;
+- missing proof source does not erase an otherwise valid passport;
+- R22 source evidence identities carry exact RDP10 lineage into audit only;
+- no current-data substitution or historical backfill.
+
+Current blocker:
+- none for implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement TradePassport customer/audit dataclasses and trade_passport(...) in final_product_read_model.py, then add focused immutable-source tests before UID504 acceptance.
+
