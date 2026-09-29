@@ -28,6 +28,11 @@ from crypto_signal.product.intelligence_stream_read_model import (
 from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2MetricsStatus,
+    read_epoch2_state_read_only,
+)
+from crypto_signal.paper.epochs import PaperVaultId
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
@@ -386,6 +391,82 @@ class EventRailView:
 
 
 @dataclass(frozen=True, slots=True)
+class PortfolioPositionView:
+    symbol: str
+    quantity: str
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultAudit:
+    snapshot_identity: str
+    source_record_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioVaultView:
+    vault_label: str
+    starting_budget_usdt: str
+    cash_usdt: str
+    used_capital_usdt: str
+    nav_usdt: str
+    realized_pnl_usdt: str
+    unrealized_pnl_usdt: str
+    total_pnl_usdt: str
+    current_drawdown_percent: str
+    fee_usdt: str
+    spread_usdt: str
+    slippage_usdt: str
+    turnover_percent: str
+    open_position_count: int
+    positions: tuple[PortfolioPositionView, ...]
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    audit: PortfolioVaultAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioAudit:
+    activation_identity: str
+    consolidated_snapshot_identity: str
+    vault_snapshot_identities: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioSummaryView:
+    availability_label: str
+    program_label: str
+    snapshot_at_ms: int | None
+    starting_capital_usdt: str | None
+    current_equity_usdt: str | None
+    cash_usdt: str | None
+    used_capital_usdt: str | None
+    realized_pnl_usdt: str | None
+    unrealized_pnl_usdt: str | None
+    total_pnl_usdt: str | None
+    current_drawdown_percent: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    turnover_percent: str | None
+    open_position_count: int
+    closed_trade_count: int
+    win_count: int
+    loss_count: int
+    breakeven_count: int
+    expectancy_label: str
+    performance_status_label: str
+    vaults: tuple[PortfolioVaultView, ...]
+    audit: PortfolioAudit | None = None
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
@@ -404,11 +485,13 @@ class FinalProductReadModel:
         decision_evidence_path: Path | None = None,
         signal_ledger_path: Path | None = None,
         event_source_runtime_path: Path | None = None,
+        epoch2_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.decision_evidence_path = decision_evidence_path
         self.signal_ledger_path = signal_ledger_path
         self.event_source_runtime_path = event_source_runtime_path
+        self.epoch2_path = epoch2_path
 
     def market_pulse(
         self,
