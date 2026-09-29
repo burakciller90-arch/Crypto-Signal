@@ -2417,6 +2417,190 @@ def _global_search_stream_item(
     )
 
 
+
+def _trade_lifecycle_unavailable(reason: str) -> TradeLifecycleView:
+    return TradeLifecycleView(
+        availability_label=reason,
+        program_label="Paper Capital · Epoch 2",
+        lifecycle_state_label=None,
+        vault_label=None,
+        symbol=None,
+        opened_at_ms=None,
+        closed_at_ms=None,
+        final_outcome_label=None,
+        event_count=0,
+        events=(),
+        unavailable_capabilities=(
+            "STOP_UPDATE · exact trade-root bağı mevcut değil",
+            "CORRECTION/SUPERSEDED · canonical kayıt mevcut değil",
+        ),
+    )
+
+
+def _verified_trade_lifecycle_episodes(
+    *,
+    tape: R22Epoch2AtomicTape,
+    history: tuple[dict[str, object], ...],
+    vault_id: PaperVaultId,
+    symbol: PaperSymbol,
+) -> tuple[tuple[dict[str, object], ...], ...]:
+    episodes: list[tuple[dict[str, object], ...]] = []
+    current: list[dict[str, object]] = []
+    position_quantity = Decimal(0)
+
+    for record in history:
+        intent = _required_mapping(record, "intent")
+        fill = _required_mapping(record, "fill")
+        if (
+            _required_text(intent, "vault_id") != vault_id.value
+            or _required_text(fill, "vault_id") != vault_id.value
+        ):
+            raise ValueError("Trade lifecycle history crossed vaults")
+        if (
+            _required_text(intent, "symbol") != symbol.value
+            or _required_text(fill, "symbol") != symbol.value
+        ):
+            raise ValueError("Trade lifecycle history crossed symbols")
+
+        raw_action = _required_text(fill, "action")
+        if _required_text(intent, "action") != raw_action:
+            raise ValueError("Trade lifecycle intent/fill action mismatch")
+        quantity = _decimal(fill.get("quantity"), "Trade lifecycle quantity")
+        if quantity <= 0:
+            raise ValueError("Trade lifecycle quantity must be positive")
+        reason_codes = _text_sequence(
+            _required_sequence(intent, "reason_codes"),
+            "Trade lifecycle reason codes",
+        )
+        position_before = position_quantity
+        lifecycle_kind = _trade_lifecycle_kind(
+            raw_action=raw_action,
+            reason_codes=reason_codes,
+            position_before=position_before,
+        )
+
+        if raw_action == "BUY":
+            position_after = position_before + quantity
+        elif raw_action == "REDUCE":
+            if position_before <= 0 or quantity >= position_before:
+                raise ValueError(
+                    "Trade lifecycle REDUCE must preserve positive holdings"
+                )
+            position_after = position_before - quantity
+        elif raw_action == "EXIT":
+            if position_before <= 0 or quantity != position_before:
+                raise ValueError(
+                    "Trade lifecycle EXIT must flatten exact holdings"
+                )
+            position_after = Decimal(0)
+        else:
+            raise ValueError("Trade lifecycle found unsupported R22 action")
+
+        stored_before = _decimal(
+            fill.get("position_before_quantity"),
+            "Trade lifecycle stored position before",
+        )
+        stored_after = _decimal(
+            fill.get("position_after_quantity"),
+            "Trade lifecycle stored position after",
+        )
+        if stored_before != position_before or stored_after != position_after:
+            raise ValueError(
+                "Trade lifecycle quantity replay differs from immutable R22 fill"
+            )
+
+        fill_identity = _required_sha(fill, "fill_identity")
+        bundle_identity = tape.read_bundle_identity_for_fill(fill_identity)
+        if bundle_identity is None:
+            raise ValueError("Trade lifecycle fill lost R22 accounting bundle")
+        item: dict[str, object] = {
+            "bundle_identity": bundle_identity,
+            "intent_identity": _required_sha(intent, "intent_identity"),
+            "fill_identity": fill_identity,
+            "forecast_identity": _required_sha(intent, "forecast_identity"),
+            "proof_identity": _required_sha(intent, "proof_identity"),
+            "raw_action": raw_action,
+            "lifecycle_kind": lifecycle_kind,
+            "reason_codes": reason_codes,
+            "event_at_ms": _required_int(fill, "filled_at_ms"),
+            "position_before_quantity": position_before,
+            "position_after_quantity": position_after,
+        }
+
+        if position_before == 0:
+            if raw_action != "BUY" or lifecycle_kind != "OPEN":
+                raise ValueError(
+                    "Trade lifecycle episode must start from canonical BUY open"
+                )
+            if current:
+                raise ValueError("Trade lifecycle open overlapped prior episode")
+        elif not current:
+            raise ValueError("Trade lifecycle mutation lacks active episode")
+
+        current.append(item)
+        position_quantity = position_after
+        if position_quantity == 0:
+            episodes.append(tuple(current))
+            current = []
+
+    if current:
+        episodes.append(tuple(current))
+    return tuple(episodes)
+
+
+def _trade_lifecycle_kind(
+    *,
+    raw_action: str,
+    reason_codes: tuple[str, ...],
+    position_before: Decimal,
+) -> str:
+    reasons = set(reason_codes)
+    if raw_action == "BUY":
+        kind = "OPEN" if position_before == 0 else "SCALE_IN"
+        exact_marker = f"fp3_action_{kind.lower()}"
+        opposite_marker = (
+            "fp3_action_scale_in"
+            if kind == "OPEN"
+            else "fp3_action_open"
+        )
+        if opposite_marker in reasons:
+            raise ValueError("Trade lifecycle BUY reason contradicts holdings")
+        if any(
+            reason.startswith("fp3_action_")
+            for reason in reasons
+        ) and exact_marker not in reasons:
+            raise ValueError("Trade lifecycle BUY has unsupported FP3 reason")
+        return kind
+    if raw_action == "REDUCE":
+        return (
+            "PARTIAL_TAKE_PROFIT"
+            if "partial_take_profit" in reasons
+            else "REDUCE"
+        )
+    if raw_action == "EXIT":
+        return "CLOSE"
+    raise ValueError("unsupported Trade lifecycle action")
+
+
+def _trade_lifecycle_label(value: str) -> str:
+    labels = {
+        "OPEN": "Pozisyon açılışı",
+        "SCALE_IN": "Pozisyon artırma",
+        "PARTIAL_TAKE_PROFIT": "Kısmi kâr alma",
+        "REDUCE": "Pozisyon azaltma",
+        "CLOSE": "Pozisyon kapanışı",
+    }
+    try:
+        return labels[value]
+    except KeyError as exc:
+        raise ValueError("unsupported Trade lifecycle kind") from exc
+
+
+def _required_non_negative_int_value(value: object, label: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise TypeError(f"{label} must be non-negative integer")
+    return value
+
 def _trade_passport_unavailable(reason: str) -> TradePassportView:
     return TradePassportView(
         availability_label=reason,
