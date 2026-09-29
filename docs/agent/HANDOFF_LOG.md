@@ -4449,3 +4449,53 @@ Workflow state:
 Exact nextAction:
 Apply exactly the three Ruff edits, then re-wire one final exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
 
+
+
+## FP1-F UID504 ACCEPTANCE PASS / FP1 REVIEW READY — 2026-09-29
+
+status: FP1_F_REVIEW_READY
+verifiedMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+acceptedHead: e1137086c5044f6e52b50950073947d7b2c146b3
+acceptedRun: 36583882210
+acceptedJob: 109458903547
+cleanupHead: 09200a11130de9b24c57d034ea3e5bfab1460f73
+branchAheadMain: 28
+branchBehindMain: 0
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+persistentSearchIndex: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP1-F truth:
+- Screener is a pure current Market Pulse projection;
+- legacy market_radar is not promoted to current truth;
+- global search federates accepted readers only;
+- no new search truth DB/index exists;
+- asset/Stream/Event/Trade/Proof result taxonomy is deterministic;
+- exact R22 bundle and accepted Decision Evidence signal/forecast lookups work;
+- raw proof identity direct search remains explicitly unavailable;
+- customer default payload hides exact identities; audit preserves them;
+- no Product route/frontend/runtime/source writer changed.
+
+FP1 aggregate:
+- FP1-A/B/C/D/E/F are now accepted at read-model level;
+- FP0/RDP11 remains ACTIVE / NOT PASS and was not mutated.
+
+Current blocker:
+- FP1-F still requires PR review/merge checks against current main.
+
+Exact nextAction:
+Recheck current main + duplicate PR state, open one FP1-F PR, verify exact changed-file set and PR checks, merge if isolated, then checkpoint FP1 COMPLETE and start the next mechanically allowed Final Product roadmap slice from fresh main.
+
