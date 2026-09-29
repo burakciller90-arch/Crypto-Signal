@@ -3211,3 +3211,38 @@ Repair classification:
 
 Exact nextAction:
 Patch only the C1 test helper attribute access, then rerun the same UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness against the new exact head.
+
+
+## FP1-C1 SECOND UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_C1_ACCEPTANCE_MYPY_FIX_REQUIRED
+activeBranch: fp1c/event-rail-read-model
+acceptanceHead: d7829360a0f223cb027187d0d2940701e034ed70
+uid504Run: 36563362600
+uid504Job: 109389304158
+artifactId: 11030448304
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- all focused pytest tests PASS;
+- Ruff marker: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy found exactly one issue in src/crypto_signal/product/event_source_runtime.py.
+
+Exact failure:
+- mypy arg-type at the calendar event row/payload integer consistency check;
+- payload.get(key) is typed Any | None and was passed directly to int();
+- runtime tests prove the behavior, but strict type contract requires explicit persisted-integer validation.
+
+Repair classification:
+- PRODUCTION TYPE-SAFETY FIX ONLY;
+- add/use a helper that accepts object and returns a validated non-negative integer;
+- preserve the same fail-closed row/payload semantics;
+- no Event Rail query/ranking/coverage behavior change.
+
+Exact nextAction:
+Patch the persisted integer conversion in event_source_runtime.py with explicit type validation, then rerun the identical UID504 C1 harness. Do not proceed to C2 until strict mypy and project isolation are green.
