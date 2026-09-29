@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -58,8 +59,12 @@ from crypto_signal.unified_decision_runtime import issue_unified_decision
 def _second_issuance(tmp_path: Path):
     family = _family_evidence()
     event = _event_context()
+    signal = replace(
+        _signal(),
+        freeze_identity=_sha("fp3c2-second-frozen-signal"),
+    )
     return issue_unified_decision(
-        signal=_signal(),
+        signal=signal,
         base_asset="BTC",
         regime="trend_up",
         family_evidence=family,
