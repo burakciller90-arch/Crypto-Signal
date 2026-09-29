@@ -1,6 +1,6 @@
 # Crypto Signal — FP1 Human Read-Model Capability Matrix
 
-Status: **FP1 DUPLICATE AUDIT COMPLETE / CONTRACT DESIGN ACTIVE**
+Status: **FP1-A/B MERGED / FP1-C ACCEPTED ON REVIEW BRANCH / FP1-D NEXT AFTER C MERGE**
 Date: 2026-09-29
 Authority: `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
 Active mechanical gate: **FP0 / RDP11 soak remains ACTIVE / NOT PASS**
@@ -295,12 +295,22 @@ FP1 cannot PASS until:
 12. canonical checkout non-mutation is proven;
 13. REAL_CAPITAL=0.
 
-## 10. Current exact next action
+## 10. Current exact progress and next action
 
-Implement **FP1-A only**:
-- shared customer state/provenance contract;
-- Market Pulse read model over existing accepted Stream system-view truth;
-- deterministic tests proving human-facing output does not leak SHA/internal enums by default;
-- no web route, frontend code, Product deploy or canonical runtime mutation in this slice.
+Accepted/merged:
+- **FP1-A** — Market Pulse customer read model merged via PR #1671;
+- **FP1-B** — Attention Situations, Workspace Summary and Five-Family Summary merged via PR #1672.
 
-Before FP1-A production code change, append a new implementation checkpoint to `docs/agent/CURRENT_FRONTIER.md` and `HANDOFF_LOG.md`.
+Accepted on isolated review branch:
+- **FP1-C1** — point-in-time read-only structured calendar query adapter PASS on UID504 run `36565167503`;
+- **FP1-C2** — customer-safe Event Rail projection PASS on UID504 run `36565945747`;
+- branch: `fp1c/event-rail-read-model`;
+- no Product/Development deploy and no RDP11 soak/runtime mutation.
+
+Exact next action:
+1. review and merge FP1-C only if the final diff contains no temporary workflow/runtime/deploy changes;
+2. bootstrap again from the new main;
+3. start **FP1-D — Portfolio + capital movements** with a fresh duplicate audit and task-start checkpoint;
+4. use canonical Epoch 2 / R22 / R24 / Stream Capital only and keep Epoch 1 strictly separate.
+
+Do not rebuild FP1-A, FP1-B or accepted FP1-C source/query semantics.
