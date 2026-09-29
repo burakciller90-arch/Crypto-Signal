@@ -6429,3 +6429,11 @@ QuantumCapitalTouched: NO
 - sole blocker FURB157 in test assertion: `Decimal("12")` -> `Decimal(12)`
 - source behavior/identity/lineage untouched; no merge PASS claimed
 - nextAction: one-line test-style repair, then all four exact-head lanes again
+
+
+
+## 2026-09-30 — FP5-B test-Ruff repair applied
+
+- repair `87e07ecae0512fdbf62b0cc3bf425c49cdbc0d4e`
+- test literal only; source code/behavior/identity unchanged
+- prior results stale; require fresh dedicated/WC6/RDP11/F10 on final head
