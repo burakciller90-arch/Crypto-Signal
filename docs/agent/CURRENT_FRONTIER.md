@@ -7326,3 +7326,37 @@ Current blocker:
 
 Exact nextAction:
 Capture post-merge Workbench exact main/branch/dirty0/SSD504 markers. Then finalize FP5-B handoff and start duplicate/owner audit for the remaining FP5-C forward-bridge integration; full FP5 stays OPEN until the canonical forward runtime mechanically consumes the V2 portfolio-risk result.
+
+
+
+### FP5-B POST-MERGE WORKBENCH VERIFIED — 2026-09-30
+
+status: FP5B_MECHANICAL_PASS
+technicalMain: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+postMergeWorkbenchRunJob: 36641195576 / 109653613793
+postMergeWorkbenchHead: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+postMergeWorkbenchBranch: main
+postMergeWorkbenchDirtyCount: 0
+ssd504WorkbenchPass: YES
+bootstrapSha: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+postMergeWC6RunJob: 36641195475 / 109653613311
+postMergeWC6: SUCCESS
+realCapital: 0
+
+FP5-B gate result:
+- PASS for the isolated portfolio-risk-bounded canonical sizing mechanic.
+- exact V1 compatibility PASS;
+- V2 FP5/R21 source + cap binding PASS;
+- canonical S11 sizing event lineage PASS;
+- full repository/paper regressions PASS;
+- frozen Product/Development non-mutation PASS;
+- exact SSD504 Workbench main/clean proof PASS.
+
+Global state:
+- FP5 whole phase is NOT yet PASS.
+- The remaining mechanical gap is the accepted FP3 forward sizing/runtime bridge still calling V1 promotion by default and not persisting FP5 V2 portfolio assessment identity in its sizing receipt/replay contract.
+- RDP11 R2 remains ACTIVE / NOT PASS and continues accumulating real time; latest scheduled observer `36640379159/109650997040` SUCCESS.
+- REAL_CAPITAL=0; no historical/frozen evidence mutation.
+
+Exact nextAction:
+Merge this docs-only closeout after F10. Then start FP5-C from resulting exact main: extend the existing FP3 forward sizing bridge/receipt in a backward-compatible way so an exact caller-supplied FP5 portfolio assessment is replay-bound, HOLD_CASH/NOT_PROVEN remain normal fail-closed outcomes, and a DEPLOYABLE assessment invokes the accepted V2 canonical promotion. Do not create a second runtime/allocator.
