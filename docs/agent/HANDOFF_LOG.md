@@ -2548,3 +2548,32 @@ Repair decision:
 
 Exact nextAction:
 Delete the temporary workflow, add only fp1/human-read-model-contract to the existing Stage10 hosted branch trigger, run the registered gate on the resulting exact head, inspect any failure, and repair only demonstrated FP1-A defects.
+
+
+## FP1-A HOSTED-GATE INFRA FAILURE / UID504 FALLBACK CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_HOSTED_INFRA_FAILURE
+activeBranch: fp1/human-read-model-contract
+hostedGateHead: 755f6d71313c0836e37949e55c777fd4cb8e7b7f
+hostedGateRun: 36553831765
+hostedGateJob: 109358113946
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Observed:
+- registered Crypto Stage10 Hosted Gate triggered on the exact FP1 branch head;
+- run conclusion = FAILURE;
+- job step payload is null and downloadable job log returns BlobNotFound;
+- therefore the gate failed before any auditable FP1 pytest/Ruff/mypy execution;
+- this is not evidence that FP1-A code failed and no FP1-A PASS is claimed.
+
+Next acceptance path:
+- reuse the already-registered self-hosted Crypto Message Intelligence MI1 UID504 workflow as a temporary branch acceptance harness;
+- branch-only edits will add fp1/human-read-model-contract to its push trigger and add the new FP1-A test/module to its existing exact-source pytest/Ruff/mypy checks;
+- its accepted harness already proves UID504, isolated test venv, Product/Development checkout non-mutation and project isolation;
+- after acceptance, temporary workflow trigger/test wiring will be reverted before the implementation PR; the accepted production code/test content will remain unchanged.
+
+Exact nextAction:
+Modify the registered MI1 UID504 workflow on this branch only, run it on the exact resulting head, and inspect focused pytest/Ruff/mypy plus Product/Development non-mutation markers.
