@@ -254,7 +254,7 @@ class PortfolioAllocationAssessmentV2:
     def __post_init__(self) -> None:
         if self.real_capital != REAL_CAPITAL:
             raise ValueError("REAL_CAPITAL must remain 0")
-        for value, label in (
+        for identity_value, label in (
             (self.assessment_identity, "assessment_identity"),
             (self.policy_identity, "policy_identity"),
             (self.sizing_policy_identity, "sizing_policy_identity"),
@@ -262,7 +262,7 @@ class PortfolioAllocationAssessmentV2:
             (self.event_risk_identity, "event_risk_identity"),
             (self.confluence_identity, "confluence_identity"),
         ):
-            _require_sha256(value, label)
+            _require_sha256(identity_value, label)
         if self.snapshot_identity is not None:
             _require_sha256(self.snapshot_identity, "snapshot_identity")
         if self.source_portfolio_identity is not None:
