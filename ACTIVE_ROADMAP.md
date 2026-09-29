@@ -34,7 +34,9 @@ Elapsed time alone does not close FP0. The epoch must remain non-invalidated and
 
 ## 3. Locked post-FP0 sequence
 
-After FP0 PASS, continue from the first mechanically unclosed phase in:
+FP1+ implementation may proceed **in isolated parallel branches/worktrees during FP0** when it cannot mutate the soaked runtime, observer contract or frozen/historical evidence.
+
+After FP0 PASS, final integrated runtime acceptance/cutover may proceed from the first mechanically unclosed phase in:
 
 `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
 
@@ -126,7 +128,9 @@ Until FP0/RDP11 closes:
 - do not mutate the frozen soak Product/Development target;
 - do not change the observer contract while pretending the same epoch remains valid;
 - do not backfill or rewrite frozen/historical evidence;
-- later-product implementation must remain documentation/read-only/isolated preparation unless it is mechanically proven unable to affect the soaked runtime.
+- FP1+ may be implemented/tested in isolated branches/worktrees with fixtures, temporary DBs and read-only canonical inputs;
+- do not deploy or merge a change that alters soaked runtime behavior unless the epoch consequence is explicitly handled;
+- final integrated Product acceptance/cutover waits for FP0 PASS.
 
 ## 9. Project isolation
 
