@@ -6454,3 +6454,26 @@ QuantumCapitalTouched: NO
 - post-merge Workbench `36641195576` pending; post-merge WC6 `36641195475` running
 - REAL_CAPITAL=0; no deploy/backfill; RDP11 R2 untouched; Durdurulmaz/Quantum untouched
 - nextAction: close Workbench exact-main proof, merge this docs handoff, then start isolated FP5-C forward-bridge integration audit
+
+
+
+## 2026-09-30 — FP5-B mechanical PASS / post-merge Workbench verified
+
+- technical main/merge `a14bc9e4a407a8a5e602f816c7959008928ee7c3`
+- source PR #1701; accepted head `afc7194b22f9ded7c7791beb41e49a1aa188610c`
+- exact-head dedicated `36640403843/109651071050` SUCCESS
+- WC6 `36640403610/109651207380` SUCCESS
+- RDP11 Pre-Soak `36640403492/109651071475` SUCCESS
+- F10 `36640403643/109651071910` SUCCESS
+- post-merge WC6 `36641195475/109653613311` SUCCESS
+- post-merge Workbench `36641195576/109653613793` SUCCESS:
+  - HEAD `a14bc9e4a407a8a5e602f816c7959008928ee7c3`
+  - branch `main`
+  - dirty `0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `BOOTSTRAP_SHA=a14bc9e4a407a8a5e602f816c7959008928ee7c3`
+  - `REAL_CAPITAL=0`
+- FP5-B status: PASS; full FP5 remains OPEN because FP3 forward sizing receipt/runtime has not yet mechanically consumed/persisted FP5 V2 assessment lineage
+- RDP11 R2 remains ACTIVE/NOT PASS; latest observer `36640379159/109650997040` SUCCESS
+- blocker for FP5 whole phase: forward-bridge V2 consumption/replay binding
+- nextAction: docs-only F10/merge, then isolated FP5-C owner audit + implementation from resulting main; no duplicate runtime
