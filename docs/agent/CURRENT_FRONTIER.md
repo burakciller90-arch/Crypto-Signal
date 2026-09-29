@@ -1064,3 +1064,35 @@ Repair policy:
 
 Exact nextAction:
 Apply only the five mechanically demonstrated integration repairs on the RDP11 branch, add a focused UID504 integration-repair acceptance workflow, require focused PASS, then merge/re-sync and rerun the exact-main fulltest before any Product deployment.
+
+
+
+## RDP11 pre-soak second-failure audit checkpoint — 2026-09-29
+
+Exact branch head audited: `3e6d90c466ee7665e4e2fa16db652cabaaa8b00c`.
+
+Focused pre-soak workflow:
+- RDP11 Pre-Soak Fulltest UID504 run `36491772727` / job `109161831615`: FAILURE.
+- canonical Development remained untouched by the branch-only acceptance workflow.
+- previously demonstrated async/WC0/trust/S15/geometry-lineage failure classes no longer appear in the failure summary.
+
+Single remaining root cause:
+- all remaining WC2/Stream failures converge on `WC2 live source requires resolved PIT regime evidence`.
+- the repaired `tests/test_wc2_live_source_adapter.py::_bundle()` currently freezes exactly 18 sequential 15m candles (indices 0..17).
+- canonical `RegimeConfig.minimum_bars` is 20.
+- therefore the accepted PIT regime engine correctly returns `UNRESOLVED` with `insufficient_history`; production behavior is correct and must not be weakened.
+
+Authorized minimal repair:
+- extend only the synthetic WC2 fixture with two additional sequential closed/PIT-observed candles so it satisfies the existing 20-bar minimum;
+- do not change RegimeConfig, WC2 runtime validation, Geometry validation, source truth, or production authority.
+
+Soak/deploy state:
+- Product deploy: NOT ATTEMPTED
+- RDP11 72h clock: NOT STARTED
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Extend the WC2 synthetic source to >=20 contiguous bars, require exact-head pre-soak fulltest PASS, then PR/merge the integration repairs, sync Development, rerun canonical fulltest, and only then proceed to exact Product deployment.
