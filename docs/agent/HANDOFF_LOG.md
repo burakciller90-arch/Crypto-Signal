@@ -4684,3 +4684,47 @@ Bounded fix:
 Exact nextAction:
 Apply exactly the five Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore temporary workflow to current-main blob after PASS.
 
+
+
+## FP2 PAPER VAULT V3 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP2_PAPER_VAULT_V3_REVIEW_READY
+verifiedMain: 3b7cd1bc63446d818a6c5fff852b9ff10c7797b3
+activeBranch: fp2/paper-vault-v3-constitution
+acceptedHead: 7d98300ffbd3b0e32b9f4aac7f3eb44514c224cf
+acceptedRun: 36587124704
+acceptedJob: 109470381739
+cleanupHead: cd6a714523e032496809d33d8edf9875b77e2eda
+branchAheadMain: 19
+branchBehindMain: 0
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-head UID504 checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP2 truth:
+- V3 is physically and semantically separate from Epoch 1/2;
+- immutable constitution freezes full configuration identity;
+- allocation policy is replayable, cash-valid, no-borrowing/no-forced-deployment, min exposure 0 and max exposure exactly 1;
+- multiple constitutions coexist without reset semantics;
+- STOP/ARCHIVE only, append-only, no reactivation;
+- persisted payload digest/canonical identity boundaries fail closed;
+- no R21/R22/S11/Smart Capital Allocator rewrite.
+
+Current blocker:
+- none inside FP2 implementation; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and duplicate PR state, open one FP2 PR, inspect exact changed-file set and PR checks, then merge only if isolated and no RDP11 soaked-runtime conflict exists.
+
