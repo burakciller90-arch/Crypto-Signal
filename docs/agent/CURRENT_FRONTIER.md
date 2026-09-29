@@ -1607,3 +1607,40 @@ Safety:
 
 Exact nextAction:
 Apply only the collector sampling-time + bounded-large-DB-probe repair, keep the accepted 8s Stream endpoint contract and all fail-closed freshness/no-future rules, then rerun exact-head UID504 live dry-run acceptance.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 observer bounded-probe repair
+
+This checkpoint is written before code changes on the new isolated repair branch.
+
+- canonical main at task start: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- inherited reconciled head: `2a59d638832283d2ea73295ea8049a577f43b816`
+- active branch: `rdp11/observer-live-acceptance-b`
+- previous branch `rdp11/observer-live-acceptance` is now read-only upstream evidence for this agent
+- duplicate open RDP11 observer PRs: NONE
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence mutation: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Mechanically proven blocker
+
+Run `36545250707` / job `109329971641` proved Product endpoints healthy but the observer failed after a multi-minute collector pre-read window because:
+- one process-start `now_ms` was reused after live collector timestamps advanced;
+- the recurring observer performs a whole `PRAGMA quick_check` on the large live `market_tape.sqlite3` before reading freshness.
+
+### Bounded repair
+
+Only:
+1. preserve strict no-future/freshness thresholds while sampling time at each live row read boundary;
+2. replace recurring full large Market Tape quick-check with bounded read/lock/schema verification;
+3. keep quick-checks for smaller control/evidence DBs;
+4. stamp successful top-level observation time at completion;
+5. retain branch/PR dry-run sidecar non-mutation and exact frozen runtime SHA.
+
+No evidence/source/trading semantics may change.
+
+### Exact nextAction
+
+Implement the bounded large-DB probe and completion-time observation semantics, then rerun the dedicated UID504 dry-run gate and whole-repository pre-soak regression on the exact final head.
