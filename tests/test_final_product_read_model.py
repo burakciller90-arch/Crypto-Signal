@@ -28,6 +28,18 @@ from crypto_signal.product.final_product_read_model import (
     FinalProductReadError,
     FinalProductReadModel,
 )
+from crypto_signal.product.intelligence_stream_capital import (
+    STREAM_CAPITAL_MESSAGE_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_capital_decisions import (
+    STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_capital_lifecycle import (
+    STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_capital_sizing import (
+    STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_family import (
     IntelligenceStreamFamilyRuntime,
     build_family_snapshot,
@@ -36,6 +48,7 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
 from crypto_signal.product.intelligence_stream_models import (
+    STREAM_ENGINE_VERSION,
     StreamCategory,
     StreamImportance,
 )
@@ -1305,3 +1318,555 @@ def test_portfolio_summary_customer_payload_hides_identities_and_raw_metric_enum
         "OPPORTUNITY_RESERVE",
     }
     assert forbidden.isdisjoint(texts)
+
+
+def _capital_fixture_record(
+    *,
+    label: str,
+    schema_version: str,
+    subtype: str,
+    event_at_ms: int,
+    vault_id: str | None,
+    headline: str,
+    detail: str,
+    action: str | None = None,
+    disposition: str | None = None,
+    source_as_of_ms: int | None = None,
+    reason_codes: tuple[str, ...] | None = None,
+    extra: dict[str, object] | None = None,
+) -> tuple[str, str, str]:
+    base: dict[str, object] = {
+        "source_event_identity": _sha(f"{label}-source"),
+        "stream_event_identity": _sha(f"{label}-stream"),
+        "story_identity": _sha(f"{label}-story"),
+        "capital_reference_identities": (
+            _sha(f"{label}-lineage-a"),
+            _sha(f"{label}-lineage-b"),
+        ),
+        "category": "capital",
+        "subtype": subtype,
+        "asset": "BTC",
+        "symbol": "BTCUSDT",
+        "timeframe": "4h",
+        "event_at_ms": event_at_ms,
+        "text": {
+            "collapsed_text": headline,
+            "simple_text": detail,
+            "technical_text": detail,
+            "intelligence_text": detail,
+            "decision_text": detail,
+            "capital_text": detail,
+        },
+        "schema_version": schema_version,
+        "engine_version": STREAM_ENGINE_VERSION,
+        "read_only": True,
+        "production_authority": False,
+        "real_capital": 0,
+    }
+    if vault_id is not None:
+        base["vault_id"] = vault_id
+    if action is not None:
+        base["action"] = action
+    if disposition is not None:
+        base["disposition"] = disposition
+    if source_as_of_ms is not None:
+        base["source_as_of_ms"] = source_as_of_ms
+    if reason_codes is not None:
+        base["reason_codes"] = reason_codes
+    if extra is not None:
+        base.update(extra)
+
+    narrative_identity = canonical_sha256(base)
+    payload = {"narrative_identity": narrative_identity, **base}
+    payload_json = canonical_json(payload)
+    return narrative_identity, payload_json, sha256_text(payload_json)
+
+
+def _insert_capital_fixture_row(
+    connection: sqlite3.Connection,
+    *,
+    table: str,
+    record: tuple[str, str, str],
+) -> None:
+    narrative_identity, payload_json, payload_sha256 = record
+    payload = __import__("json").loads(payload_json)
+    statements = {
+        "stream_capital_messages": """
+            INSERT INTO stream_capital_messages (
+                narrative_identity, story_identity, symbol, timeframe,
+                event_at_ms, payload_json, payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        "stream_capital_decision_messages": """
+            INSERT INTO stream_capital_decision_messages (
+                narrative_identity, story_identity, symbol, timeframe,
+                event_at_ms, payload_json, payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        "stream_capital_sizing_messages": """
+            INSERT INTO stream_capital_sizing_messages (
+                narrative_identity, story_identity, symbol, timeframe,
+                event_at_ms, payload_json, payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        "stream_capital_lifecycle_messages": """
+            INSERT INTO stream_capital_lifecycle_messages (
+                narrative_identity, story_identity, symbol, timeframe,
+                event_at_ms, payload_json, payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+    }
+    statement = statements.get(table)
+    if statement is None:
+        raise ValueError("unsupported capital fixture table")
+    connection.execute(
+        statement,
+        (
+            narrative_identity,
+            payload["story_identity"],
+            payload["symbol"],
+            payload["timeframe"],
+            payload["event_at_ms"],
+            payload_json,
+            payload_sha256,
+        ),
+    )
+
+
+def _seed_capital_movements_stream(tmp_path: Path) -> Path:
+    path = tmp_path / "capital-stream.sqlite3"
+    _create_read_fixture(path)
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE stream_capital_messages (
+                narrative_identity TEXT PRIMARY KEY,
+                story_identity TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL,
+                event_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
+            );
+            CREATE TABLE stream_capital_decision_messages (
+                narrative_identity TEXT PRIMARY KEY,
+                story_identity TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL,
+                event_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
+            );
+            CREATE TABLE stream_capital_sizing_messages (
+                narrative_identity TEXT PRIMARY KEY,
+                story_identity TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL,
+                event_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
+            );
+            CREATE TABLE stream_capital_lifecycle_messages (
+                narrative_identity TEXT PRIMARY KEY,
+                story_identity TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL,
+                event_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
+            );
+            """
+        )
+
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_decision_messages",
+            record=_capital_fixture_record(
+                label="eligible",
+                schema_version=STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_eligible",
+                event_at_ms=1_100,
+                source_as_of_ms=1_050,
+                vault_id="CORE",
+                disposition="eligible",
+                reason_codes=("all_clear",),
+                headline="Core sermaye kararı hazır.",
+                detail="Core için sanal sermaye değerlendirmesi işleme uygun bulundu.",
+                extra={
+                    "decision_identity": _sha("eligible-decision"),
+                    "allocator_assessment_identity": _sha("eligible-assessment"),
+                    "allocator_candidate_identity": _sha("eligible-candidate"),
+                    "starting_budget_usdt": "600.00",
+                    "event_risk_state": "clear",
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_sizing_messages",
+            record=_capital_fixture_record(
+                label="sized",
+                schema_version=STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_sized",
+                event_at_ms=1_200,
+                source_as_of_ms=1_150,
+                vault_id="CORE",
+                reason_codes=("fixed_fractional",),
+                headline="Core pozisyon boyutu hesaplandı.",
+                detail="Sanal pozisyon boyutu kanonik risk kurallarıyla belirlendi.",
+                extra={
+                    "sizing_event_identity": _sha("sized-event"),
+                    "selection_identity": _sha("sized-selection"),
+                    "eligibility_proof_identity": _sha("sized-eligibility"),
+                    "allocator_candidate_identity": _sha("sized-candidate"),
+                    "fraction_of_vault": "0.10",
+                    "canonical_notional_usdt": "60.00",
+                    "current_cash_usdt": "600.00",
+                    "current_nav_usdt": "600.00",
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_messages",
+            record=_capital_fixture_record(
+                label="buy",
+                schema_version=STREAM_CAPITAL_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_executed",
+                event_at_ms=1_300,
+                vault_id="CORE",
+                action="BUY",
+                headline="Core sanal pozisyonu açıldı.",
+                detail="Sanal alım kanonik fill ve maliyet kanıtıyla kaydedildi.",
+                extra={
+                    "forecast_identity": _sha("buy-forecast"),
+                    "proof_identity": _sha("buy-proof"),
+                    "bundle_identity": _sha("buy-bundle"),
+                    "intent_identity": _sha("buy-intent"),
+                    "fill_identity": _sha("buy-fill"),
+                    "before_vault_snapshot_identity": _sha("buy-before-vault"),
+                    "after_vault_snapshot_identity": _sha("buy-after-vault"),
+                    "before_consolidated_snapshot_identity": _sha("buy-before-parent"),
+                    "after_consolidated_snapshot_identity": _sha("buy-after-parent"),
+                    "quantity": "0.001",
+                    "reference_price": "60000.00",
+                    "simulated_fill_price": "60010.00",
+                    "notional_usdt": "60.01",
+                    "cash_before_usdt": "600.00",
+                    "cash_after_usdt": "539.93",
+                    "vault_nav_before_usdt": "600.00",
+                    "vault_nav_after_usdt": "599.99",
+                    "consolidated_nav_before_usdt": "1000.00",
+                    "consolidated_nav_after_usdt": "999.99",
+                    "fee_usdt": "0.06",
+                    "spread_usdt": "0.01",
+                    "slippage_usdt": "0.01",
+                    "outcome_identity": None,
+                    "financial_outcome": None,
+                    "realized_pnl_delta_usdt": None,
+                    "position_quantity_before": None,
+                    "position_quantity_after": None,
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_lifecycle_messages",
+            record=_capital_fixture_record(
+                label="accounting",
+                schema_version=STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_accounting_updated",
+                event_at_ms=1_400,
+                source_as_of_ms=1_300,
+                vault_id="CORE",
+                action="BUY",
+                headline="Core portföy hesabı güncellendi.",
+                detail="Sanal işlem sonrası nakit ve NAV kanonik muhasebeye işlendi.",
+                extra={
+                    "lifecycle_identity": _sha("accounting-lifecycle"),
+                    "allocator_assessment_identity": None,
+                    "allocator_candidate_identity": None,
+                    "forecast_identity": _sha("accounting-forecast"),
+                    "proof_identity": _sha("accounting-proof"),
+                    "decision_context_identity": _sha("accounting-context"),
+                    "bundle_identity": _sha("accounting-bundle"),
+                    "outcome_identity": None,
+                    "financial_outcome": None,
+                    "realized_pnl_delta_usdt": None,
+                    "position_quantity_before": None,
+                    "position_quantity_after": None,
+                    "cash_before_usdt": "600.00",
+                    "cash_after_usdt": "539.93",
+                    "vault_nav_before_usdt": "600.00",
+                    "vault_nav_after_usdt": "599.99",
+                    "consolidated_nav_before_usdt": "1000.00",
+                    "consolidated_nav_after_usdt": "999.99",
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_decision_messages",
+            record=_capital_fixture_record(
+                label="blocked",
+                schema_version=STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_blocked",
+                event_at_ms=1_500,
+                source_as_of_ms=1_490,
+                vault_id="TACTICAL",
+                disposition="blocked",
+                reason_codes=("event_risk",),
+                headline="Taktik vault işlemi engelledi.",
+                detail="Event riski nedeniyle sanal sermaye nakitte korunuyor.",
+                extra={
+                    "decision_identity": _sha("blocked-decision"),
+                    "allocator_assessment_identity": _sha("blocked-assessment"),
+                    "allocator_candidate_identity": _sha("blocked-candidate"),
+                    "starting_budget_usdt": "300.00",
+                    "event_risk_state": "blocked",
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_lifecycle_messages",
+            record=_capital_fixture_record(
+                label="outcome",
+                schema_version=STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_outcome",
+                event_at_ms=1_600,
+                source_as_of_ms=1_550,
+                vault_id="CORE",
+                action="REDUCE",
+                headline="Core sanal pozisyon sonucu kaydedildi.",
+                detail="Kısmi azaltmanın gerçekleşen sanal PnL sonucu immutable kayda geçti.",
+                extra={
+                    "lifecycle_identity": _sha("outcome-lifecycle"),
+                    "allocator_assessment_identity": None,
+                    "allocator_candidate_identity": None,
+                    "forecast_identity": _sha("outcome-forecast"),
+                    "proof_identity": _sha("outcome-proof"),
+                    "decision_context_identity": _sha("outcome-context"),
+                    "bundle_identity": _sha("outcome-bundle"),
+                    "outcome_identity": _sha("outcome-identity"),
+                    "financial_outcome": "PARTIAL_REDUCTION",
+                    "realized_pnl_delta_usdt": "2.50",
+                    "position_quantity_before": "0.001",
+                    "position_quantity_after": "0.0005",
+                    "cash_before_usdt": None,
+                    "cash_after_usdt": None,
+                    "vault_nav_before_usdt": None,
+                    "vault_nav_after_usdt": None,
+                    "consolidated_nav_before_usdt": None,
+                    "consolidated_nav_after_usdt": None,
+                },
+            ),
+        )
+        _insert_capital_fixture_row(
+            connection,
+            table="stream_capital_lifecycle_messages",
+            record=_capital_fixture_record(
+                label="candidate",
+                schema_version=STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+                subtype="capital_candidate",
+                event_at_ms=1_700,
+                source_as_of_ms=1_650,
+                vault_id=None,
+                headline="Yeni sanal sermaye adayı değerlendiriliyor.",
+                detail="Aday üç vault karar zincirine alındı; henüz sermaye hareketi yok.",
+                extra={
+                    "lifecycle_identity": _sha("candidate-lifecycle"),
+                    "allocator_assessment_identity": _sha("candidate-assessment"),
+                    "allocator_candidate_identity": _sha("candidate-candidate"),
+                    "forecast_identity": None,
+                    "proof_identity": None,
+                    "decision_context_identity": None,
+                    "bundle_identity": None,
+                    "outcome_identity": None,
+                    "action": None,
+                    "financial_outcome": None,
+                    "realized_pnl_delta_usdt": None,
+                    "position_quantity_before": None,
+                    "position_quantity_after": None,
+                    "cash_before_usdt": None,
+                    "cash_after_usdt": None,
+                    "vault_nav_before_usdt": None,
+                    "vault_nav_after_usdt": None,
+                    "consolidated_nav_before_usdt": None,
+                    "consolidated_nav_after_usdt": None,
+                },
+            ),
+        )
+    return path
+
+
+def test_capital_movements_missing_stream_is_explicit_and_noncreating(
+    tmp_path: Path,
+) -> None:
+    stream_path = tmp_path / "missing-capital-stream.sqlite3"
+    view = FinalProductReadModel(
+        stream_ledger_path=stream_path,
+    ).capital_movements(
+        observed_at_ms=2_000,
+        from_ms=1_000,
+        to_ms=1_900,
+    )
+
+    assert view.availability_label == "Sermaye hareketleri verisi kullanılamıyor"
+    assert view.items == ()
+    assert view.real_capital == 0
+    assert not stream_path.exists()
+
+
+def test_capital_movements_projects_verified_stream_capital_truth(
+    tmp_path: Path,
+) -> None:
+    stream_path = _seed_capital_movements_stream(tmp_path)
+    view = FinalProductReadModel(
+        stream_ledger_path=stream_path,
+    ).capital_movements(
+        observed_at_ms=2_000,
+        from_ms=1_000,
+        to_ms=1_900,
+        stale_after_ms=10_000,
+    )
+
+    assert view.availability_label == "Doğrulanmış veri"
+    assert [item.event_at_ms for item in view.items] == [
+        1_700,
+        1_600,
+        1_500,
+        1_400,
+        1_300,
+        1_200,
+        1_100,
+    ]
+    assert [item.action_label for item in view.items] == [
+        "Aday sermaye değerlendirmesi",
+        "İşlem sonucu kaydedildi",
+        "İşlem engellendi",
+        "Portföy hesabı güncellendi",
+        "Pozisyon açıldı / artırıldı",
+        "Pozisyon boyutu belirlendi",
+        "İşleme uygun bulundu",
+    ]
+
+    candidate = view.items[0]
+    assert candidate.vault_label is None
+    assert candidate.notional_usdt is None
+    assert candidate.quantity is None
+
+    outcome = view.items[1]
+    assert outcome.vault_label == "Core"
+    assert outcome.outcome_label == "Kısmi azaltma"
+    assert outcome.realized_pnl_delta_usdt == "+2.50"
+
+    execution = view.items[4]
+    assert execution.quantity == "0.001"
+    assert execution.notional_usdt == "60.01"
+    assert execution.fee_usdt == "0.06"
+    assert execution.source_as_of_ms is None
+    assert execution.freshness_label == "Olay zamanı güncel"
+
+    sizing = view.items[5]
+    assert sizing.fraction_of_vault_percent == "10.00%"
+    assert sizing.notional_usdt == "60.00"
+    assert sizing.current_cash_usdt == "600.00"
+    assert sizing.current_nav_usdt == "600.00"
+    assert sizing.freshness_label == "Güncel"
+
+
+def test_capital_movements_reuses_vault_time_filter_order_and_preserves_source(
+    tmp_path: Path,
+) -> None:
+    stream_path = _seed_capital_movements_stream(tmp_path)
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+
+    view = FinalProductReadModel(
+        stream_ledger_path=stream_path,
+    ).capital_movements(
+        observed_at_ms=2_000,
+        from_ms=1_200,
+        to_ms=1_400,
+        vault="core",
+        stale_after_ms=10_000,
+    )
+
+    assert view.vault_label == "Core"
+    assert [item.event_at_ms for item in view.items] == [1_400, 1_300, 1_200]
+    assert all(item.vault_label == "Core" for item in view.items)
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert after == before
+
+
+def test_capital_movements_distinguishes_valid_empty_interval(
+    tmp_path: Path,
+) -> None:
+    stream_path = _seed_capital_movements_stream(tmp_path)
+    view = FinalProductReadModel(
+        stream_ledger_path=stream_path,
+    ).capital_movements(
+        observed_at_ms=2_500,
+        from_ms=2_000,
+        to_ms=2_400,
+    )
+
+    assert view.availability_label == "Bu aralıkta sermaye hareketi yok"
+    assert view.items == ()
+
+
+def test_capital_movements_customer_payload_hides_raw_identity_vocabulary(
+    tmp_path: Path,
+) -> None:
+    stream_path = _seed_capital_movements_stream(tmp_path)
+    model = FinalProductReadModel(stream_ledger_path=stream_path)
+
+    customer = asdict(
+        model.capital_movements(
+            observed_at_ms=2_000,
+            from_ms=1_000,
+            to_ms=1_900,
+            stale_after_ms=10_000,
+            include_audit=False,
+        )
+    )
+    texts = _all_text(customer)
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "capital_candidate",
+        "capital_outcome",
+        "capital_blocked",
+        "capital_accounting_updated",
+        "capital_executed",
+        "capital_sized",
+        "capital_eligible",
+        "all_clear",
+        "fixed_fractional",
+        "event_risk",
+        "eligible",
+        "blocked",
+    }
+    assert forbidden.isdisjoint(texts)
+
+    audited = model.capital_movements(
+        observed_at_ms=2_000,
+        from_ms=1_000,
+        to_ms=1_900,
+        stale_after_ms=10_000,
+        include_audit=True,
+    )
+    eligible = audited.items[-1]
+    assert eligible.audit is not None
+    assert eligible.audit.raw_subtype == "capital_eligible"
+    assert eligible.audit.raw_disposition == "eligible"
+    assert eligible.audit.reason_codes == ("all_clear",)
+    assert len(eligible.audit.narrative_identity) == 64
+    assert all(len(value) == 64 for value in eligible.audit.lineage_identities)
