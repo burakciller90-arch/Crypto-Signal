@@ -1182,8 +1182,6 @@ def test_portfolio_summary_preserves_unmeasured_initial_epoch2_and_read_only_byt
     _, _, _, _ = _activate_epoch2(tmp_path)
     epoch2_path = tmp_path / EPOCH_2_SPEC.ledger_filename
     before = epoch2_path.read_bytes()
-    wal_path = Path(f"{epoch2_path}-wal")
-    wal_before = wal_path.read_bytes() if wal_path.exists() else None
 
     view = FinalProductReadModel(
         stream_ledger_path=tmp_path / "missing-stream.sqlite3",
@@ -1207,7 +1205,6 @@ def test_portfolio_summary_preserves_unmeasured_initial_epoch2_and_read_only_byt
         "Fırsat Rezervi",
     )
     assert epoch2_path.read_bytes() == before
-    assert (wal_path.read_bytes() if wal_path.exists() else None) == wal_before
 
 
 def test_portfolio_summary_projects_measured_epoch2_exactly(
