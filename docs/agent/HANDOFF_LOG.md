@@ -6035,3 +6035,24 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - dedicated FP4-B + WC6 remain pending
 - REAL_CAPITAL=0; Product/Development frozen; no deploy/backfill; Durdurulmaz/Quantum untouched
 - nextAction: accept/merge only #1692 after dedicated + WC6 + full regression non-mutation PASS
+
+
+## 2026-09-29 — FP4-B + FP4-C merged PASS checkpoint
+
+- exact main: `906db410e692a5119b752998301cb58a3eba8b6a`
+- FP4-C PR #1693 -> merge `356b30add6eedb8f7d041abb2f39f58b87db08f7`
+- FP4-C dedicated `36621772972/109588673572` PASS; RDP11 `36621772753/109588672190` PASS; WC6 `36621772743/109588672162` PASS
+- FP4-C F10 `36621772814` concurrency-cancelled; never claimed as PASS
+- FP4-C post-merge Workbench `36623260855/109593712386` PASS, exact main `356b30add6eedb8f7d041abb2f39f58b87db08f7`, main, dirty0
+- FP4-B canonical PR #1692; #1691 CLOSED_UNMERGED superseded
+- FP4-B accepted rebased head `d5fcb23e2d45f1781ce9c8e7e71042ff9db8b4f8`
+- FP4-B merge `906db410e692a5119b752998301cb58a3eba8b6a`
+- FP4-B dedicated `36623439449/109594330532` PASS
+- WC6 `36623439542/109594323112` PASS
+- RDP11 pre-soak `36623439412/109594450093` PASS
+- F10 `36623439500/109594316993` PASS
+- post-B Workbench `36624554107/109598075039`: create/verify PASS; final job/log marker pending at checkpoint
+- FP4-D branch already started from pre-B main: `fp4d/instrument-fee-schedule-v2`; source/test skeleton exists but MUST rebase onto current main before acceptance
+- FP4-D source contract: exact symbol/account commission snapshot; no API credentials persisted; discount only with explicit payment proof
+- REAL_CAPITAL=0; no backfill/deploy; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: close Workbench proof, then rebase FP4-D and run exact-head acceptance
