@@ -38,13 +38,24 @@ Current RDP11 soak state:
 - previous epoch `rdp11-3d9f33db-20260929`: **INVALIDATED / IMMUTABLE HISTORICAL EVIDENCE**;
 - first mechanical invalidation proof: run/job `36622461578/109591020809`, observer `/api/intelligence-center` read raised `ConnectionResetError:[Errno 54] Connection reset by peer`;
 - previous `2026-10-02T09:13:21.134000Z` eligibility timestamp is **VOID FOR PASS**;
-- replacement epoch candidate: `rdp11-3d9f33db-20260930-r2`;
-- replacement epoch state: **PENDING_MERGED_MAIN_ANCHOR**;
-- replacement soak start / 72h eligibility: **NOT ASSERTED until the first successful merged-main non-dry-run observation creates the new immutable anchor**;
+- active replacement epoch: `rdp11-3d9f33db-20260930-r2`;
+- re-anchor PR/merge: `#1699` / `62540a3746c101530cd843353507a6746579bf15`;
+- merged-main observer run: `36637452090`;
+- attempt 1 / job `109641453750`: failed **before observer invocation and before anchor creation** on finite SSE `curl: (18) transfer closed with outstanding read data remaining`; preserved as pre-anchor continuity evidence;
+- one controlled rerun only, attempt 2 / job `109642444475`: **SUCCESS**;
+- `RDP11_SOAK_ANCHOR_CREATED=YES`;
+- R2 soak start UTC: `2026-09-29T22:10:09.650000Z`;
+- earliest R2 72h eligibility UTC: `2026-10-02T22:10:09.650000Z`;
+- earliest R2 72h eligibility Europe/Istanbul: `2026-10-03T01:10:09.650000+03:00`;
+- `RDP11_SOAK_72H_ELIGIBLE=NO`;
+- `RDP11_SOAK_SIDE_CAR_ONLY=YES`;
+- `RDP11_CANONICAL_RUNTIME_MUTATED=NO`;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`;
 - RDP0-RDP10: PASS;
 - RDP11: ACTIVE / NOT PASS.
 
-Do not delete, rewrite, backfill or reinterpret the invalidated epoch. Elapsed time alone never closes FP0; the replacement epoch must acquire a real immutable anchor, remain non-invalidated for its own full 72-hour minimum, and pass the final RDP11 evidence audit mechanically.
+Do not delete, rewrite, backfill or reinterpret either the invalidated epoch or its failure evidence. Elapsed time alone never closes FP0; R2 must remain non-invalidated for its own full 72-hour minimum and then pass the final accumulated RDP11 evidence audit mechanically.
 
 ## 3. Locked post-FP0 sequence
 
