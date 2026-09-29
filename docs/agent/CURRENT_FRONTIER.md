@@ -7228,3 +7228,20 @@ Formatting/type-annotation syntax only. No runtime dependency, cap formula, line
 
 Exact nextAction:
 Apply the two Ruff-only fixes, record repair commit, and rerun all final-head lanes. Treat `1628e318...` as stale for merge.
+
+
+
+### FP5-B RUFF-ONLY REPAIR APPLIED — 2026-09-30
+
+repairCommit: 02bf03930ca43b41fa4d8496bfcaa2746f0633e3
+repairType: STATIC_FORMATTING_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+v1SemanticChange: NO
+
+Changes:
+- inserted the Ruff-required blank line before the TYPE_CHECKING block;
+- removed the unnecessary quoted type annotation under deferred annotations.
+
+Acceptance rule:
+All earlier lane results are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact head after this durable checkpoint.
