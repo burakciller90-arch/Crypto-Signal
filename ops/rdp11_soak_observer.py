@@ -97,6 +97,7 @@ def _ro_connect(path: Path, *, timeout: float = 5.0) -> sqlite3.Connection:
 
 
 def _quick_check(path: Path) -> dict[str, object]:
+    started_ns = time.monotonic_ns()
     with _ro_connect(path) as db:
         row = db.execute("PRAGMA quick_check").fetchone()
         if row is None or str(row[0]).lower() != "ok":
@@ -106,7 +107,13 @@ def _quick_check(path: Path) -> dict[str, object]:
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
             ).fetchone()[0]
         )
-    return {"path": str(path), "quick_check": "ok", "table_count": table_count}
+    elapsed_ms = (time.monotonic_ns() - started_ns) // 1_000_000
+    return {
+        "path": str(path),
+        "quick_check": "ok",
+        "table_count": table_count,
+        "elapsed_ms": elapsed_ms,
+    }
 
 
 def _inspect_product(root: Path, expected_sha: str) -> dict[str, object]:
@@ -216,13 +223,14 @@ def _inspect_collector(
         if heartbeat is None:
             raise ObservationFailure("Market Tape collector heartbeat missing")
 
+    heartbeat_read_at_ms = time.time_ns() // 1_000_000
     heartbeat_ms = int(heartbeat["observed_at_ms"])
     ingestion_raw = heartbeat["last_successful_ingestion_ms"]
     if ingestion_raw is None:
         raise ObservationFailure("collector has no successful ingestion evidence")
     ingestion_ms = int(ingestion_raw)
-    heartbeat_age_ms = now_ms - heartbeat_ms
-    ingestion_age_ms = now_ms - ingestion_ms
+    heartbeat_age_ms = heartbeat_read_at_ms - heartbeat_ms
+    ingestion_age_ms = heartbeat_read_at_ms - ingestion_ms
     if min(heartbeat_age_ms, ingestion_age_ms) < 0:
         raise ObservationFailure("collector evidence timestamp is from the future")
     if heartbeat_age_ms > max_ingestion_age_ms:
@@ -280,8 +288,9 @@ def _inspect_collector(
                     raise ObservationFailure(
                         f"raw Market Tape context missing: {channel}/{symbol}"
                     )
+                context_read_at_ms = time.time_ns() // 1_000_000
                 ingested_at_ms = int(row["ingested_at_ms"])
-                age_ms = now_ms - ingested_at_ms
+                age_ms = context_read_at_ms - ingested_at_ms
                 if age_ms < 0:
                     raise ObservationFailure(
                         f"raw Market Tape future ingestion: {channel}/{symbol}"
@@ -304,6 +313,7 @@ def _inspect_collector(
                         "event_at_ms": int(row["event_at_ms"]),
                         "source_timestamp_ms": int(row["source_timestamp_ms"]),
                         "ingested_at_ms": ingested_at_ms,
+                        "freshness_sampled_at_ms": context_read_at_ms,
                         "sequence": int(row["sequence"]),
                         "age_ms": age_ms,
                         "state": state,
@@ -329,6 +339,7 @@ def _inspect_collector(
             "sequence_no": int(heartbeat["sequence_no"]),
             "observed_at_ms": heartbeat_ms,
             "last_successful_ingestion_ms": ingestion_ms,
+            "freshness_sampled_at_ms": heartbeat_read_at_ms,
             "heartbeat_age_ms": heartbeat_age_ms,
             "ingestion_age_ms": ingestion_age_ms,
         },
