@@ -5510,3 +5510,47 @@ Bounded fix:
 Exact nextAction:
 Apply only the typing annotations, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
 
+
+
+## FP3-C1 UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP3_C1_REVIEW_READY
+verifiedMain: 97caeae75ef5c5db17a2ef4a911f66ef7aeae9a4
+activeBranch: fp3c/preregistered-action-bridge
+acceptedHead: 0d982d0fcf0456deabae332db1da9bb3763fd857
+acceptedRun: 36600881901
+acceptedJob: 109517801922
+cleanupHead: afd9c632c7e53e6e08199633fca706453ac70b56
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused/regression pytest gate PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 7 source files;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP3-C1 semantics:
+- canonical OPEN/REDUCE/EXIT mutations reuse accepted S11/R21/R22 owners only;
+- WAIT and unavailable actions perform no R21/R22 mutation;
+- STOP_UPDATE is explicit unavailable;
+- SCALE_IN is explicit unavailable until separate FP3-C2 multi-entry lineage acceptance;
+- exact Stream decision context is required before trade commit;
+- exact action evidence persists into R22 source lineage;
+- replay/crash recovery is read-only preflight plus missing receipt/lifecycle projection only;
+- no duplicate accounting, execution engine, order API or historical backfill.
+
+Current blocker:
+- none inside FP3-C1; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and overlap state, open one FP3-C1 PR with only the accepted matrix/agent-state/canonical action-read-support/action-bridge/tests diff, verify PR checks, merge if isolated, then start FP3-C2 on fresh main.
+
