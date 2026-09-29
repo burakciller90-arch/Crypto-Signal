@@ -1223,3 +1223,45 @@ Safety before deploy:
 
 Exact nextAction:
 Run rollback-safe UID504 `productdeploy` with exact target `3d9f33db3f1189571d40566125fbeabd00c04930`. Accept it only if target equals current `origin/main`, Product moves to that exact SHA, dashboard/service health succeeds and rollback is not invoked. Then run `productstate` and inspect real Product health/proof before starting the 72-hour clock.
+
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 exact-target Product deploy
+
+This checkpoint is written before triggering Product deployment.
+
+Canonical main / deploy target:
+- `3d9f33db3f1189571d40566125fbeabd00c04930`
+- active branch: `rdp11/deploy-soak-anchor`
+- session-local worktree: NONE
+- duplicate/stale-work check: producttest + fulltest are already complete and MUST NOT be repeated.
+
+Completed exact-main prerequisites:
+- sync issue #1661 / run `36539056907` / job `109309839626`: SUCCESS
+- producttest issue #1662 / run `36539209124` / job `109310325314`: SUCCESS
+- fulltest issue #1663 / run `36539290984` / job `109310585130`: SUCCESS
+  - pytest PASS
+  - Ruff `All checks passed!`
+  - mypy `Success: no issues found in 267 source files`
+  - `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+  - `FULL_TEST_PASS=YES`
+
+Bounded goal:
+- deploy Product rollback-safely to exact target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- require target == current origin/main;
+- require Product checkout exact SHA + successful dashboard/service health;
+- reject/rollback on any failure;
+- do not start 72h soak yet.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence immutable
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Current blocker:
+- Product has not yet been promoted to the exact accepted main.
+
+Exact nextAction:
+Trigger one UID504 allowlisted `productdeploy` command with exact target `3d9f33db3f1189571d40566125fbeabd00c04930`; record issue/run/job and inspect rollback/health markers before proceeding to productstate.
