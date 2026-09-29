@@ -2346,3 +2346,31 @@ Repair scope:
 
 Exact nextAction:
 Implement only the typed integer validation repair, rerun the same UID504 harness, and require pytest + Ruff + mypy + non-mutation/project-isolation PASS.
+
+
+## FP1-A THIRD UID504 ACCEPTANCE START CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_RERUN_START
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+previousFailure: strict mypy rejected direct int(object) conversion for persisted system-view event_at_ms
+repairApplied:
+- added explicit _row_non_negative_int validation
+- preserved point-in-time selection and customer semantics
+- no route/frontend/deploy/runtime mutation
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Required mechanical PASS:
+- exact-source UID504 checkout;
+- focused pytest including tests/test_final_product_read_model.py;
+- Ruff PASS;
+- strict mypy PASS for final_product_read_model.py;
+- Product and Development checkout non-mutation PASS;
+- project isolation PASS;
+- no RDP11 soak runtime mutation.
+
+Exact nextAction:
+Inspect the automatically triggered Crypto Message Intelligence MI1 UID504 run for exact head ae5b1f4ed13f57f783cd36963116bd3324210deb. If any step fails, record the exact failure before changing code; otherwise record FP1-A acceptance PASS and revert temporary acceptance-harness workflow edits before preparing the implementation PR.
