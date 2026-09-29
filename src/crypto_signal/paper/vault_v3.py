@@ -269,16 +269,18 @@ class PaperVaultV3LifecycleEvent:
                 or self.new_status is not PaperVaultV3Status.STOPPED
             ):
                 raise ValueError("Paper Vault V3 STOP transition is invalid")
-        elif self.action is PaperVaultV3LifecycleAction.ARCHIVE:
-            if (
+        elif (
+            self.action is PaperVaultV3LifecycleAction.ARCHIVE
+            and (
                 self.previous_status
                 not in {
                     PaperVaultV3Status.ACTIVE,
                     PaperVaultV3Status.STOPPED,
                 }
                 or self.new_status is not PaperVaultV3Status.ARCHIVED
-            ):
-                raise ValueError("Paper Vault V3 ARCHIVE transition is invalid")
+            )
+        ):
+            raise ValueError("Paper Vault V3 ARCHIVE transition is invalid")
         if self.production_authority:
             raise ValueError("Paper Vault V3 lifecycle cannot grant authority")
         if self.real_capital != REAL_CAPITAL:
