@@ -42,6 +42,7 @@ from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.intelligence_stream_capital_lifecycle import (
     project_capital_bundle_lifecycle_to_stream,
 )
+from crypto_signal.product.intelligence_stream_ledger import IntelligenceStreamLedger
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 FP3_ACTION_SCHEMA_VERSION = "fp3-preregistered-action-bridge-v1/1"
@@ -704,6 +705,18 @@ class FP3PreregisteredActionBridge:
             or issuance.proof.proof_identity != intent.proof_identity
         ):
             raise ValueError("FP3-C issuance differs from preregistered action")
+        stream_context = IntelligenceStreamLedger(
+            self.stream_path
+        ).read_context_for_forecast(intent.forecast_identity)
+        if stream_context is None:
+            raise ValueError(
+                "FP3-C requires existing forward Stream decision context"
+            )
+        if (
+            stream_context.get("forecast_identity") != intent.forecast_identity
+            or stream_context.get("proof_identity") != intent.proof_identity
+        ):
+            raise ValueError("FP3-C Stream decision context lineage mismatch")
         sizing = self.sizing_store.read(
             forecast_identity=intent.forecast_identity,
             vault_id=intent.vault_id,
