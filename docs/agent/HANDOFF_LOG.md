@@ -6357,3 +6357,19 @@ QuantumCapitalTouched: NO
 - preserve V1 identities/behavior; HOLD_CASH/NOT_PROVEN fail closed; no Kelly/leverage/borrowing/forced deployment
 - REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 R2 runtime/sidecar untouched; Durdurulmaz/Quantum untouched
 - nextAction: implement backward-compatible V2 promotion + focused acceptance, then exact-head UID504 gates
+
+
+
+## 2026-09-30 — FP5-B implementation ready for exact-head acceptance
+
+- base main `b7cadf0b49fb6b57ec804040cab73702eb5d0a56`
+- branch `fp5b/portfolio-risk-sizing-promotion-v2`; pre-checkpoint implementation head `94da812a98c957b4994e74306b2cf42fbd010a23`
+- no competing open FP5 integration PR; branch was 8 ahead / 0 behind at pre-PR audit
+- extended accepted S11 sizing only: V1 payload/identity preserved; V2 binds FP5 assessment + canonical R21 consolidated portfolio + risk cap
+- V2 deployable notional = min(existing fixed-fractional notional, current vault cash, FP5 capacity)
+- HOLD_CASH / NOT_PROVEN => no sizing selection; stale/mismatched lineage fails closed
+- focused tests cover V1 exact identity, real cap binding, S11 event lineage, hold/not-proven and stale/risk mismatch
+- dedicated workflow `.github/workflows/fp5b-portfolio-sizing-uid504.yml`
+- REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen RDP11 R2 Product/Development and sidecar untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head PR acceptance not run
+- nextAction: open sole PR and require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 SUCCESS on one final head before merge
