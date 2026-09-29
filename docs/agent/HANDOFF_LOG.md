@@ -4022,3 +4022,53 @@ Rebase guard:
 
 Exact nextAction:
 Reorder only final_product_read_model.py import statements according to Ruff I001 guidance, rerun the identical exact-head UID504 harness, and require pytest + Ruff + strict mypy + non-mutation + project-isolation PASS before D1 closeout.
+
+
+## FP1-D1 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_D1_ACCEPTANCE_PASS
+activeBranch: fp1d/portfolio-capital-movements
+acceptedHead: f49ba2913654dd46b99c65842e9fa0603195c8df
+uid504Run: 36571535907
+uid504Job: 109416495617
+runConclusion: SUCCESS
+currentParallelMainObserved: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- D1 final-product + Epoch2 focused pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deploy;
+- no RDP11 observer/runtime mutation.
+
+Accepted D1 semantics:
+- canonical Portfolio Summary is Epoch 2 / R21 only;
+- no legacy Mission Control fallback and no Epoch 1 mixing;
+- missing Epoch2 file is explicit and non-creating;
+- incomplete/corrupt R21 schema fails closed;
+- consolidated/current accounting values come from accepted R21 snapshots;
+- customer vault order is Core -> Taktik -> Fırsat Rezervi;
+- exact R21 positions expose only symbol/quantity;
+- current drawdown is labelled current and is not misrepresented as historical max drawdown;
+- unmeasured expectancy remains unavailable;
+- audit mode preserves exact activation/consolidated/vault/source identities;
+- default customer payload hides SHA/raw metric/vault/database vocabulary;
+- canonical Epoch2 DB bytes remain unchanged by reads.
+
+Authority/rebase requirement:
+- this acceptance branch predates docs-only roadmap authority PRs #1674/#1675;
+- do NOT merge this branch directly;
+- temporary MI1 acceptance wiring must first be restored to exact current-main content;
+- then create a fresh FP1-D continuation branch from current main e16bf10e6cd6a653cb9ab96616cea88d1df5e242 and carry only accepted D1 product/test/matrix content plus a fresh current-authority checkpoint.
+
+Exact nextAction:
+Restore MI1 workflow on this old acceptance branch to exact current-main content, verify cleanup, then create a fresh continuation branch from current main and transfer accepted D1 files before starting FP1-D2 Capital Movements.
