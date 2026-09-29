@@ -38,6 +38,8 @@ from crypto_signal.product.intelligence_stream_system_view import (
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
 DEFAULT_EVENT_RAIL_FRESH_AFTER_MS = 30 * 60 * 1000
+DEFAULT_CAPITAL_MOVEMENTS_LIMIT = 50
+MAX_CAPITAL_MOVEMENTS_LIMIT = 200
 DEFAULT_ATTENTION_LIMIT = 5
 MAX_ATTENTION_LIMIT = 20
 _ATTENTION_SCAN_LIMIT = 200
@@ -705,7 +707,13 @@ class FinalProductReadModel:
                     previous.narrative_identity,
                 ):
                     candidates[candidate.dedupe_key] = candidate
-        except (StreamReadModelError, KeyError, TypeError, ValueError) as exc:
+        except (
+            FileNotFoundError,
+            StreamReadModelError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as exc:
             if isinstance(exc, FinalProductReadError):
                 raise
             raise FinalProductReadError(
@@ -1059,7 +1067,7 @@ class FinalProductReadModel:
         from_ms: int,
         to_ms: int,
         vault: str | None = None,
-        limit: int = 50,
+        limit: int = DEFAULT_CAPITAL_MOVEMENTS_LIMIT,
         stale_after_ms: int = DEFAULT_MARKET_PULSE_STALE_AFTER_MS,
         include_audit: bool = False,
     ) -> CapitalMovementsView:
@@ -1071,6 +1079,11 @@ class FinalProductReadModel:
             raise ValueError("capital movements cannot read future event time")
         if stale_after_ms <= 0:
             raise ValueError("capital movements stale_after_ms must be positive")
+        if limit < 1 or limit > MAX_CAPITAL_MOVEMENTS_LIMIT:
+            raise ValueError(
+                "capital movements limit must be inside "
+                f"1..{MAX_CAPITAL_MOVEMENTS_LIMIT}"
+            )
         normalized_vault = None
         if vault is not None:
             try:
@@ -1302,6 +1315,243 @@ def _plain_decimal_text(value: Decimal) -> str:
     if "." in raw:
         raw = raw.rstrip("0").rstrip(".")
     return raw or "0"
+
+
+def _capital_vault_label(vault_id: str | None) -> str | None:
+    if vault_id is None:
+        return None
+    try:
+        canonical = PaperVaultId(vault_id)
+    except ValueError as exc:
+        raise ValueError("capital movement vault is not canonical") from exc
+    return _PORTFOLIO_VAULT_LABELS[canonical]
+
+
+def _capital_movement_item(
+    record: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> CapitalMovementItem:
+    if _required_text(record, "category") != "capital":
+        raise ValueError("capital movement record is not capital category")
+
+    subtype = _required_text(record, "subtype")
+    event_at_ms = _required_int(record, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise ValueError("capital movement event cannot be in the future")
+
+    source_as_of_ms = _optional_non_negative_int_value(
+        record.get("source_as_of_ms")
+    )
+    if source_as_of_ms is not None and source_as_of_ms > event_at_ms:
+        raise ValueError("capital movement source time cannot follow event time")
+    freshness_label = _capital_movement_freshness_label(
+        observed_at_ms=observed_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        event_at_ms=event_at_ms,
+        stale_after_ms=stale_after_ms,
+    )
+
+    raw_vault = record.get("vault_id")
+    vault_id = None
+    if raw_vault is not None:
+        if not isinstance(raw_vault, str) or not raw_vault.strip():
+            raise TypeError("capital movement vault must be non-empty text")
+        vault_id = raw_vault
+
+    raw_action = _optional_text_value(record.get("action"))
+    raw_disposition = _optional_text_value(record.get("disposition"))
+    action_label = _capital_movement_action_label(
+        subtype=subtype,
+        action=raw_action,
+        disposition=raw_disposition,
+    )
+
+    text = _required_mapping(record, "text")
+    headline = _required_text(text, "collapsed_text")
+    detail = _required_text(text, "capital_text")
+
+    reason_codes_raw = record.get("reason_codes")
+    if reason_codes_raw is None:
+        reason_codes: tuple[str, ...] = ()
+    else:
+        reason_codes = _text_sequence(
+            reason_codes_raw,
+            "capital movement reason codes",
+        )
+
+    lineage_raw = _required_sequence(record, "capital_reference_identities")
+    lineage_identities = tuple(
+        _sha_text(value, "capital movement lineage identity")
+        for value in lineage_raw
+    )
+
+    audit = None
+    if include_audit:
+        audit = CapitalMovementAudit(
+            narrative_identity=_required_sha(record, "narrative_identity"),
+            story_identity=_required_sha(record, "story_identity"),
+            source_event_identity=_required_sha(record, "source_event_identity"),
+            stream_event_identity=_required_sha(record, "stream_event_identity"),
+            lineage_identities=lineage_identities,
+            raw_subtype=subtype,
+            raw_action=raw_action,
+            raw_disposition=raw_disposition,
+            reason_codes=reason_codes,
+        )
+
+    return CapitalMovementItem(
+        event_at_ms=event_at_ms,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=freshness_label,
+        vault_label=_capital_vault_label(vault_id),
+        symbol=_required_text(record, "symbol"),
+        timeframe=_required_text(record, "timeframe"),
+        action_label=action_label,
+        headline=headline,
+        detail=detail,
+        quantity=_optional_plain_decimal_text(record.get("quantity")),
+        notional_usdt=_optional_decimal_text(
+            record.get("notional_usdt")
+            if record.get("notional_usdt") is not None
+            else record.get("canonical_notional_usdt")
+        ),
+        fraction_of_vault_percent=_optional_fraction_percent_text(
+            record.get("fraction_of_vault")
+        ),
+        current_cash_usdt=_optional_decimal_text(record.get("current_cash_usdt")),
+        current_nav_usdt=_optional_decimal_text(record.get("current_nav_usdt")),
+        cash_before_usdt=_optional_decimal_text(record.get("cash_before_usdt")),
+        cash_after_usdt=_optional_decimal_text(record.get("cash_after_usdt")),
+        vault_nav_before_usdt=_optional_decimal_text(
+            record.get("vault_nav_before_usdt")
+        ),
+        vault_nav_after_usdt=_optional_decimal_text(
+            record.get("vault_nav_after_usdt")
+        ),
+        consolidated_nav_before_usdt=_optional_decimal_text(
+            record.get("consolidated_nav_before_usdt")
+        ),
+        consolidated_nav_after_usdt=_optional_decimal_text(
+            record.get("consolidated_nav_after_usdt")
+        ),
+        fee_usdt=_optional_decimal_text(record.get("fee_usdt")),
+        spread_usdt=_optional_decimal_text(record.get("spread_usdt")),
+        slippage_usdt=_optional_decimal_text(record.get("slippage_usdt")),
+        realized_pnl_delta_usdt=_optional_signed_decimal_text(
+            record.get("realized_pnl_delta_usdt")
+        ),
+        outcome_label=_capital_financial_outcome_label(
+            record.get("financial_outcome")
+        ),
+        audit=audit,
+    )
+
+
+def _capital_movement_action_label(
+    *,
+    subtype: str,
+    action: str | None,
+    disposition: str | None,
+) -> str:
+    decision_contract = {
+        "capital_eligible": ("eligible", "İşleme uygun bulundu"),
+        "capital_hold": ("hold", "Nakit korunuyor / işlem yapılmadı"),
+        "capital_blocked": ("blocked", "İşlem engellendi"),
+    }
+    if subtype in decision_contract:
+        expected, label = decision_contract[subtype]
+        if disposition != expected or action is not None:
+            raise ValueError("capital decision subtype/disposition mismatch")
+        return label
+
+    execution_contract = {
+        "capital_executed": ("BUY", "Pozisyon açıldı / artırıldı"),
+        "capital_reduced": ("REDUCE", "Pozisyon azaltıldı"),
+        "capital_exited": ("EXIT", "Pozisyon kapatıldı"),
+    }
+    if subtype in execution_contract:
+        expected, label = execution_contract[subtype]
+        if action != expected or disposition is not None:
+            raise ValueError("capital execution subtype/action mismatch")
+        return label
+
+    if subtype == "capital_sized":
+        if action is not None or disposition is not None:
+            raise ValueError("capital sizing cannot carry action/disposition")
+        return "Pozisyon boyutu belirlendi"
+    if subtype == "capital_candidate":
+        if action is not None or disposition is not None:
+            raise ValueError("capital candidate cannot carry action/disposition")
+        return "Aday sermaye değerlendirmesi"
+    if subtype == "capital_accounting_updated":
+        if action not in {"BUY", "REDUCE", "EXIT"} or disposition is not None:
+            raise ValueError("capital accounting action is invalid")
+        return "Portföy hesabı güncellendi"
+    if subtype == "capital_outcome":
+        if action not in {"REDUCE", "EXIT"} or disposition is not None:
+            raise ValueError("capital outcome action is invalid")
+        return "İşlem sonucu kaydedildi"
+    raise ValueError("unsupported capital movement subtype")
+
+
+def _capital_movement_freshness_label(
+    *,
+    observed_at_ms: int,
+    source_as_of_ms: int | None,
+    event_at_ms: int,
+    stale_after_ms: int,
+) -> str:
+    if source_as_of_ms is not None:
+        return _freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        )
+    if event_at_ms > observed_at_ms:
+        raise ValueError("capital event time cannot be in the future")
+    return (
+        "Olay zamanı güncel"
+        if observed_at_ms - event_at_ms <= stale_after_ms
+        else "Olay zamanı güncel değil"
+    )
+
+
+def _capital_financial_outcome_label(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("capital financial outcome must be non-empty text")
+    labels = {
+        "PARTIAL_REDUCTION": "Kısmi azaltma",
+        "CLOSED_WIN": "Kârla kapandı",
+        "CLOSED_LOSS": "Zararla kapandı",
+        "CLOSED_BREAKEVEN": "Başa baş kapandı",
+    }
+    try:
+        return labels[value]
+    except KeyError as exc:
+        raise ValueError("unsupported capital financial outcome") from exc
+
+
+def _optional_plain_decimal_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _plain_decimal_text(_decimal(value, "optional quantity"))
+
+
+def _optional_fraction_percent_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _fraction_percent_text(_decimal(value, "optional fraction"))
+
+
+def _optional_signed_decimal_text(value: object) -> str | None:
+    if value is None:
+        return None
+    return _signed_money_text(_decimal(value, "optional signed amount"))
 
 
 def _event_rail_view(
