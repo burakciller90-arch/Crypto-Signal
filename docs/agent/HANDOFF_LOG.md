@@ -5725,3 +5725,15 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - retry runs: RDP11 fulltest \`36605648432\`, WC6 \`36605648281\`, F10 \`36605648280\`
 - safety unchanged: REAL_CAPITAL=0; no historical backfill/runtime deploy; Durdurulmaz/Quantum untouched
 - nextAction: inspect exact acceptance outputs, then recheck main immediately before any merge
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 4 exposed stale Event Risk fixture
+
+- PR: #1683
+- tested head: \`4124c5d5017fd74474fe31c8db1a8b3fab28600c\`
+- WC6 run/job: \`36605732421\` / \`109534138077\`
+- exact checkout, focused tests and paper regression: PASS
+- full-regression failure: second-cycle issuance was paired with the helper's old fixed Event Risk context
+- cleanup: Development non-mutating PASS; REAL_CAPITAL=0
+- repair scope: fixture helper only — derive Event Risk from the issuance forecast's exact \`source_as_of_ms\`
+- nextAction: patch helper and rerun exact-head acceptance
