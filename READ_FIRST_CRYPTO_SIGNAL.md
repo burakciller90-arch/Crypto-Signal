@@ -15,7 +15,8 @@ Current first mechanically unclosed gate:
 - earliest 72h eligibility: `2026-10-02T09:13:21.134000Z`.
 - elapsed time alone cannot close RDP11.
 - while FP0 is active, the exact mechanical gate remains governed by `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`.
-- after FP0 PASS, continue from the first mechanically unclosed FP phase in the Final Product Master Roadmap.
+- FP1+ may be developed/tested in isolated branches/worktrees during the soak when it cannot mutate the soaked runtime, observer contract or frozen/historical evidence;
+- after FP0 PASS, final integrated runtime acceptance/cutover continues from the first mechanically unclosed FP phase in the Final Product Master Roadmap.
 - accepted Intelligence Stream S0-S16/F0-F10/MI1-MI6, R21, R22, R24 and other accepted foundations are REUSE inputs and must not be rebuilt.
 - normal product UX target is now the user-authorized Final Product program: Command Center + progressive exact evidence + Paper Capital Autopilot/Portfolio/Trade Passport, under immutable history and REAL_CAPITAL=0.
 - Durdurulmaz and Quantum Capital remain isolated and untouched.
