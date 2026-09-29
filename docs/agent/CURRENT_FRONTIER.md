@@ -32,6 +32,12 @@ Exact nextAction:
 Update CURRENT_FRONTIER/HANDOFF with this durable start checkpoint, then add the explicit anti-drift authority rule to ACTIVE_ROADMAP.md and AGENTS.md and reconcile CURRENT_FRONTIER's leading state before opening a docs-only PR.
 
 
+## HISTORICAL CHECKPOINT ARCHIVE — DO NOT EXECUTE AS CURRENT FRONTIER
+
+Everything below this heading is retained only as historical execution evidence.
+It must not override the leading Final Product checkpoint, `ACTIVE_ROADMAP.md`, or current Git/GitHub state.
+In particular, the RDP10/F1 text below is stale history because RDP0-RDP10 are already PASS and current main has progressed into FP1 work while FP0/RDP11 soak remains the mechanical gate.
+
 ## LIVE RECONCILIATION CHECKPOINT — raw Options source / derived proof split
 
 This checkpoint is written before the next F1 code change.
