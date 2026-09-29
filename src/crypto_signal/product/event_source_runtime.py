@@ -820,6 +820,140 @@ def _provider_truth_from_row(
     )
 
 
+def _calendar_coverage_truth(
+    connection: sqlite3.Connection,
+    *,
+    coverage_identity: str,
+    source_provider: str,
+    observed_at_ms: int,
+) -> EventSourceCalendarCoverageTruth:
+    _require_sha256(coverage_identity, "calendar coverage identity")
+    row = connection.execute(
+        """
+        SELECT source_provider, observed_at_ms, payload_json
+        FROM event_calendar_coverages
+        WHERE coverage_identity=?
+        """,
+        (coverage_identity,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("event source calendar coverage missing")
+    if str(row["source_provider"]) != source_provider:
+        raise ValueError("event source calendar coverage provider mismatch")
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(
+        coverage_identity,
+        payload_json,
+        "event source calendar coverage",
+    )
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source coverage payload must be object")
+    if str(payload.get("schema_version")) != _EVENT_CALENDAR_COVERAGE_SCHEMA:
+        raise ValueError("event source calendar coverage schema mismatch")
+    if str(payload.get("source_provider")) != source_provider:
+        raise ValueError("event source calendar coverage payload provider mismatch")
+    payload_observed = int(payload.get("observed_at_ms", -1))
+    if payload_observed != int(row["observed_at_ms"]):
+        raise ValueError("event source calendar coverage observed-time mismatch")
+    if payload_observed > observed_at_ms:
+        raise ValueError("event source contains future calendar coverage")
+    categories_raw = payload.get("categories")
+    if not isinstance(categories_raw, list):
+        raise TypeError("event source coverage categories must be array")
+    categories = tuple(str(value) for value in categories_raw)
+    if categories != tuple(sorted(set(categories))):
+        raise ValueError("event source coverage categories not canonical")
+    return EventSourceCalendarCoverageTruth(
+        coverage_identity=coverage_identity,
+        source_provider=source_provider,
+        coverage_start_ms=int(payload.get("coverage_start_ms", -1)),
+        coverage_end_ms=int(payload.get("coverage_end_ms", -1)),
+        categories=categories,
+        source_quality=str(payload.get("source_quality", "")),
+        source=str(payload.get("source", "")),
+        observed_at_ms=payload_observed,
+        adapter_version=str(payload.get("adapter_version", "")),
+    )
+
+
+def _calendar_event_truth(
+    row: sqlite3.Row,
+    *,
+    observed_at_ms: int,
+) -> EventSourceCalendarEventTruth:
+    identity = str(row["event_identity"])
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(identity, payload_json, "event source calendar event")
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source calendar event payload must be object")
+    if str(payload.get("schema_version")) != _STRUCTURED_EVENT_SCHEMA:
+        raise ValueError("event source calendar event schema mismatch")
+    row_pairs = (
+        ("provider_event_id", str(row["provider_event_id"])),
+        ("source_provider", str(row["source_provider"])),
+        ("scheduled_at_ms", int(row["scheduled_at_ms"])),
+        ("ingested_at_ms", int(row["ingested_at_ms"])),
+    )
+    for key, expected in row_pairs:
+        actual = payload.get(key)
+        if isinstance(expected, int):
+            if int(actual) != expected:
+                raise ValueError(f"event source calendar event row mismatch: {key}")
+        elif str(actual) != expected:
+            raise ValueError(f"event source calendar event row mismatch: {key}")
+
+    source_timestamp_ms = int(payload.get("source_timestamp_ms", -1))
+    ingested_at_ms = int(payload.get("ingested_at_ms", -1))
+    if ingested_at_ms > observed_at_ms:
+        raise ValueError("event source contains future-ingested calendar event")
+    assets_raw = payload.get("affected_assets")
+    if not isinstance(assets_raw, list):
+        raise TypeError("event source calendar event assets must be array")
+    assets = tuple(str(value) for value in assets_raw)
+    if assets != tuple(sorted(set(assets))):
+        raise ValueError("event source calendar event assets not canonical")
+    return EventSourceCalendarEventTruth(
+        event_identity=identity,
+        provider_event_id=str(payload.get("provider_event_id", "")),
+        title=str(payload.get("title", "")),
+        category=str(payload.get("category", "")),
+        scheduled_at_ms=int(payload.get("scheduled_at_ms", -1)),
+        affected_assets=assets,
+        source_provider=str(payload.get("source_provider", "")),
+        source_quality=str(payload.get("source_quality", "")),
+        source=str(payload.get("source", "")),
+        source_timestamp_ms=source_timestamp_ms,
+        ingested_at_ms=ingested_at_ms,
+        adapter_version=str(payload.get("adapter_version", "")),
+    )
+
+
+def _calendar_coverage_status(
+    coverages: tuple[EventSourceCalendarCoverageTruth, ...],
+    *,
+    window_start_ms: int,
+    window_end_ms: int,
+    categories: tuple[str, ...],
+) -> str:
+    if not coverages:
+        return "UNAVAILABLE"
+    if not categories:
+        return "SOURCE_SCOPED_ONLY"
+    covered = {
+        category
+        for category in categories
+        if any(
+            item.coverage_start_ms <= window_start_ms
+            and item.coverage_end_ms >= window_end_ms
+            and category in item.categories
+            for item in coverages
+        )
+    }
+    return "COMPLETE" if covered == set(categories) else "INCOMPLETE"
+
+
 def _verify_raw_payload(
     connection: sqlite3.Connection,
     *,
