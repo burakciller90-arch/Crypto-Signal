@@ -478,6 +478,62 @@ class PortfolioSummaryView:
 
 
 @dataclass(frozen=True, slots=True)
+class CapitalMovementAudit:
+    narrative_identity: str
+    story_identity: str
+    source_event_identity: str
+    stream_event_identity: str
+    lineage_identities: tuple[str, ...]
+    raw_subtype: str
+    raw_action: str | None
+    raw_disposition: str | None
+    reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalMovementItem:
+    event_at_ms: int
+    source_as_of_ms: int | None
+    freshness_label: str
+    vault_label: str | None
+    symbol: str
+    timeframe: str
+    action_label: str
+    headline: str
+    detail: str
+    quantity: str | None
+    notional_usdt: str | None
+    fraction_of_vault_percent: str | None
+    current_cash_usdt: str | None
+    current_nav_usdt: str | None
+    cash_before_usdt: str | None
+    cash_after_usdt: str | None
+    vault_nav_before_usdt: str | None
+    vault_nav_after_usdt: str | None
+    consolidated_nav_before_usdt: str | None
+    consolidated_nav_after_usdt: str | None
+    fee_usdt: str | None
+    spread_usdt: str | None
+    slippage_usdt: str | None
+    realized_pnl_delta_usdt: str | None
+    outcome_label: str | None
+    audit: CapitalMovementAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalMovementsView:
+    availability_label: str
+    observed_at_ms: int
+    from_ms: int
+    to_ms: int
+    vault_label: str | None
+    items: tuple[CapitalMovementItem, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
 class _AttentionCandidate:
     dedupe_key: tuple[str, ...]
     importance_rank: int
