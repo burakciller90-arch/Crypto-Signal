@@ -1,6 +1,6 @@
 # Crypto Signal — FP1-E Trade Passport Field-Source Matrix
 
-Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+Status: **ACCEPTED / REVIEW READY**
 Date: 2026-09-29
 Base main: `5490bc184eb51f3507ede93bc72b488ea38cd5dd`
 Active branch: `fp1e/trade-passport-read-model`
@@ -267,3 +267,35 @@ FP1-E PASS requires:
 Implement only `TradePassportView` / `TradePassportAudit` and `FinalProductReadModel.trade_passport(bundle_identity, include_audit=False)` in `final_product_read_model.py`, plus focused tests.
 
 Do not edit routes, frontend, R21/R22 writers, Decision Proof writers, runtime or deploy configuration.
+
+
+## 8. UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head run:
+- head SHA: `587b6dfa29f707901a48f1ece399c7f001567edb`;
+- run: `36577967469`;
+- job: `109438394874`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- `MESSAGE_INTELLIGENCE_MI1_EXACT_SOURCE_PASS=YES`;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- `MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES`;
+- `PROJECT_ISOLATION_PASS=YES`;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 workflow wiring restored in `e8958fb1b58b3576ee7d776f99dcba761def5977`;
+- branch workflow blob equals exact current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted result:
+- Trade Passport composes R22/R21/S11/Decision Proof lineage read-only;
+- no new accounting/trade/evidence truth store;
+- customer payload is human-readable by default;
+- exact immutable lineage remains optional audit metadata;
+- missing proof remains explicit;
+- corrupted/mismatched proof fails closed;
+- canonical sources remain unmodified.
