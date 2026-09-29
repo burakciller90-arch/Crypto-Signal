@@ -4075,3 +4075,45 @@ Current blocker:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP1-E PR with only docs/read-model/tests changes, inspect PR checks and merge only if no overlap/runtime conflict exists.
 
+
+
+## FP1-F SCREENER + FEDERATED GLOBAL SEARCH TASK START — 2026-09-29
+
+status: FP1_F_AUDIT_START
+taskStartMain: ef408ee105e1f226b199b7b1a185a1fdb990159f
+activeBranch: fp1f/screener-federated-search
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE accepted query/read surfaces + EXTEND customer screener/federation only
+duplicateCheck: no open FP1-F PR and no fp1f branch existed at task start
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP1-E Trade Passport merged via PR #1677;
+- merge SHA: ef408ee105e1f226b199b7b1a185a1fdb990159f;
+- FP1-E UID504 acceptance run 36577967469 / job 109438394874 PASS;
+- PR pre-soak fulltest PASS;
+- RDP11 soaked runtime remained unmodified.
+
+Bounded FP1-F goal:
+- add customer-safe Screener rows over accepted current market/system-view/family truth;
+- add one federated read-only global search contract that composes existing Stream search, Event Rail/event-source truth, exact signal/message identity, R22 Trade Passport lookup and proof/evidence lookup only where already supported;
+- do not create a persistent search index/database;
+- do not duplicate Stream full-text/history/SSE;
+- do not reinterpret radar rows as current truth when only historical/latest-signal semantics exist;
+- do not invent unavailable event/trade/proof matches;
+- preserve exact identity/provenance in audit metadata only;
+- no Product route/frontend/deploy/runtime writer in FP1-F.
+
+Current blocker:
+- exact source precedence, query bounds, result taxonomy, screener row semantics and direct-identity fallback order are not yet re-audited on current main; production code is forbidden until frozen.
+
+Exact nextAction:
+Audit DashboardReader market-radar semantics, current Stream system-view/family records, StreamMessageQuery full-text/deep-link capabilities, Event Rail query surface, R22/Trade Passport exact lookup and exact proof/evidence readers; freeze one FP1-F field/source matrix before implementation.
+
