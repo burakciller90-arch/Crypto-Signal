@@ -1,3 +1,29 @@
+# ACTIVE FINAL PRODUCT AUTHORITY — 2026-09-29
+
+Canonical pointer: **`ACTIVE_ROADMAP.md`**  
+Canonical final-product roadmap: **`docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`**
+
+Current mechanical frontier:
+- **FP0 / RDP11 — Continuous soak + final Evidence PASS: ACTIVE / NOT PASS**;
+- RDP0–RDP10: PASS;
+- soak epoch: `rdp11-3d9f33db-20260929`;
+- frozen runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- soak start UTC: `2026-09-29T09:13:21.134000Z`;
+- earliest 72h eligibility UTC: `2026-10-02T09:13:21.134000Z`;
+- `REAL_CAPITAL=0`.
+
+Final-product sequencing after RDP11 PASS:
+`FP1 human read models → FP2–FP7 Paper Capital Autopilot/trust spine → FP8–FP15 Command Center/product UX → FP16 UX hardening → FP17 E2E acceptance → FP18 cutover/release`.
+
+Duplicate-work authority:
+- accepted Intelligence Stream S0-S16/F0-F10/MI1-MI6 is not reopened;
+- accepted R21/R22/R24, Smart Capital, S11 Capital Story, exact RDP10 proof, GALACTECH read models and Stream discovery/notification infrastructure are reused;
+- implementation begins only after a REUSE/EXTEND/BUILD/EXPLICITLY_UNAVAILABLE audit for the exact FP slice.
+
+Any lower historical entry that calls an older roadmap phase “current” is an audit record, not present execution authority.
+
+---
+
 # CURRENT STATUS
 
 Updated: 2026-09-28
