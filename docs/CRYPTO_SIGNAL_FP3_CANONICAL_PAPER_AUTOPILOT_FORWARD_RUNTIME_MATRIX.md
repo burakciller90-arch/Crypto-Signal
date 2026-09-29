@@ -453,3 +453,43 @@ Receipt rows are UPDATE/DELETE protected.
 
 Exact nextAction:
 Implement FP3-C action policy + action-stage receipt + read-only R22 bundle recovery adapter and focused tests. Do not start FP3-D genuine-forward liveness until FP3-C mechanical acceptance PASS.
+
+
+## 13. FP3-C contract correction — single-entry C1 / multi-entry C2
+
+Status: **AUTHORITATIVE CORRECTION BEFORE CODE**
+
+The prior section allowed `SCALE_IN -> BUY` when fresh FP3-B sizing exists.
+That is not yet mechanically safe with the current accepted sell lineage.
+
+Reason:
+- a fresh SCALE_IN requires a distinct canonical sizing/forecast lineage;
+- current `commit_canonical_paper_sell` reconstructs all active BUY intents and
+  requires them to share the supplied forecast/proof/sizing-assessment lineage;
+- multiple active BUY lineages therefore become ambiguous at REDUCE/EXIT.
+
+Therefore FP3-C is split:
+
+### FP3-C1 — single-entry action bridge
+Supported:
+- `WAIT` -> no trade;
+- `OPEN` -> `BUY`, only when no position exists;
+- `PARTIAL_TAKE_PROFIT` -> `REDUCE`;
+- `TAKE_PROFIT` / `STOP` / `CLOSE` -> `EXIT`;
+- `STOP_UPDATE` -> `UNAVAILABLE_EXPLICIT`;
+- `SCALE_IN` -> `UNAVAILABLE_EXPLICIT_MULTI_ENTRY_LINEAGE`.
+
+C1 never creates a second BUY while a position is already open.
+
+### FP3-C2 — multi-entry lineage extension
+Required before SCALE_IN can be marked supported:
+- extend canonical R22/open-position lineage to represent multiple accepted BUY
+  sizing/forecast lineages without ambiguity;
+- extend canonical sell lineage validation to verify the full active-entry set;
+- preserve weighted-average cost basis and exact evidence for every entry;
+- prove REDUCE/EXIT after multiple entries remains deterministic/idempotent.
+
+No SCALE_IN claim is allowed before FP3-C2 acceptance PASS.
+
+Exact next action:
+Implement FP3-C1 only, then mechanically accept it before opening FP3-C2.
