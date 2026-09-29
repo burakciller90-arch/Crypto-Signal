@@ -5887,3 +5887,31 @@ Separate observed signal:
 
 Exact nextAction:
 Patch the S11 weighted-average outcome/reconstruction invariant plus focused regression, rerun exact-head UID504 acceptance, then isolate any remaining unrelated full-suite failure.
+
+
+## FP3-C2 ACCEPTANCE ATTEMPT 8 FAIL / LINT-ONLY CLEANUP — 2026-09-29
+
+status: FP3_C2_LINT_CLEANUP
+pr: 1683
+testedHead: f69e7b793b95644250e1b1733113c51626dab8f9
+wc6Run: 36612394403
+wc6Job: 109556830119
+realCapital: 0
+RDP11RuntimeMutation: NO
+ProductDevelopmentMutation: NO
+
+Observed mechanical result:
+- WC6 exact-source PASS;
+- WC6 focused execution-lab PASS;
+- WC6 full paper subsystem regression PASS;
+- whole-repository pytest completed without a C2 functional failure;
+- whole-repository gate then failed in Ruff with 14 x FURB157, all fixable verbose integer Decimal constructors in the new multi-entry test;
+- Development non-mutating PASS; REAL_CAPITAL=0.
+- therefore the weighted-average S11 production repair and C2 REDUCE/EXIT behavior are functionally accepted so far; only lint blocks the gate.
+
+Bounded repair:
+- mechanical test-only Decimal constructor cleanup;
+- no source/runtime/ledger behavior change.
+
+Exact nextAction:
+Replace the 14 verbose integer Decimal string constructors in the new multi-entry test, rerun exact-head WC6/RDP11/F10, then inspect any remaining gate output.
