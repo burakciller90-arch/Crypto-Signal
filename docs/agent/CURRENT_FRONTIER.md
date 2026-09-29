@@ -7117,3 +7117,43 @@ Acceptance target:
 
 Exact nextAction:
 Inspect exact PositionSizingAssessment/current-vault semantics, implement the smallest backward-compatible V2 promotion and focused tests, then add an isolated UID504 acceptance workflow. Do not merge until exact-head acceptance and main/duplicate recheck.
+
+
+
+### FP5-B IMPLEMENTATION READY / PRE-PR CHECKPOINT — 2026-09-30
+
+status: FP5B_ACCEPTANCE_READY
+baseMain: b7cadf0b49fb6b57ec804040cab73702eb5d0a56
+branch: fp5b/portfolio-risk-sizing-promotion-v2
+preCheckpointImplementationHead: 94da812a98c957b4994e74306b2cf42fbd010a23
+worktree: no session-local /Volumes worktree
+duplicateAudit: no open competing FP5/portfolio-risk integration PR; branch is 8 commits ahead / 0 behind exact main
+classification: EXTEND accepted S11 canonical sizing with FP5-A risk envelope; preserve V1 identity/behavior
+
+Implemented:
+- backward-compatible V2 paper-sizing policy `stream-s11-fixed-fractional-portfolio-risk-promotion-v2/1`;
+- V1 canonical selection payload remains byte/identity compatible because FP5 fields are absent from the V1 payload;
+- V2 binds FP5 assessment identity, exact canonical R21 consolidated portfolio identity and FP5 max-deployable cap into selection identity/source lineage;
+- V2 notional is bounded by accepted fixed-fractional hypothetical notional, exact current vault cash and FP5 max deployable notional;
+- HOLD_CASH / NOT_PROVEN produce no positive canonical sizing selection;
+- candidate/vault/sizing-policy/risk-input/portfolio-source lineage mismatches fail closed;
+- FP5 gross exposure must reconcile to canonical R21 consolidated marked exposure;
+- Kelly/probability promotion, leverage, borrowing, forced deployment and real-capital authority remain unavailable;
+- no R21/R22 schema mutation or historical backfill.
+
+Focused proof added:
+- exact V1 identity payload regression;
+- deterministic FP5 cap binding with an actually limiting cap;
+- FP5 identities propagate into canonical S11 sizing event source evidence;
+- HOLD_CASH and NOT_PROVEN do not promote;
+- stale portfolio and mismatched risk-input identity rejected.
+
+Acceptance workflow:
+- `.github/workflows/fp5b-portfolio-sizing-uid504.yml`
+- requires exact-head source + frozen runtime, focused tests/Ruff/mypy, FP3/S11 V1 compatibility, whole-repo regression and Product/Development non-mutation.
+
+Current blocker:
+- no exact-head PR acceptance has run yet.
+
+Exact nextAction:
+Open the sole FP5-B PR from this branch to current main. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact PR head; inspect mechanical outputs rather than treating workflow existence as PASS.
