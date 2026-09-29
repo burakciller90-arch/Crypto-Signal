@@ -7203,3 +7203,28 @@ Repair:
 
 Acceptance rule:
 All results from prior head `fecdeb9d...` are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 again on the final exact head after this checkpoint.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 2 — WC6 RUFF-ONLY BLOCKER — 2026-09-30
+
+testedHead: 1628e318234c37904371e96aca9b49bf379a2233
+pr: #1701
+wc6RunJob: 36640078864 / 109650020897
+wc6ExactSource: PASS
+wc6FocusedRecovery: PASS
+wc6PaperPytest: PASS
+wc6PaperStatic: FAIL_RUFF_ONLY
+developmentNonMutation: PASS
+
+Exact Ruff findings in `canonical_sizing.py`:
+- I001 import block formatting: missing separator before TYPE_CHECKING block;
+- UP037 unnecessary quoted annotation under `from __future__ import annotations`.
+
+No functional paper test failed. Whole-repo WC6 was skipped only because Ruff stopped the step.
+
+Repair boundary:
+Formatting/type-annotation syntax only. No runtime dependency, cap formula, lineage, identity payload, V1 semantics or authority behavior may change.
+
+Exact nextAction:
+Apply the two Ruff-only fixes, record repair commit, and rerun all final-head lanes. Treat `1628e318...` as stale for merge.
