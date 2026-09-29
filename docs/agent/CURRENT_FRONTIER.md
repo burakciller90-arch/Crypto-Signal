@@ -3828,3 +3828,47 @@ Current blocker:
 Exact nextAction:
 Implement CapitalMovementsView/Item/Audit plus FinalProductReadModel.capital_movements(...) over the frozen Stream query contract, then add focused tests for missing DB, filters/order, subtype/action mapping, exact optional amounts, audit provenance, customer vocabulary and source byte non-mutation.
 
+
+
+## FP1-D2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_D2_ACCEPTANCE_START
+verifiedMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+branchBehindMain: 0
+implementationHeadBeforeCheckpoint: 8f8fc5f23660143300dbe5471d4898db323762ef
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented D2 scope:
+- customer-safe CapitalMovementAudit / CapitalMovementItem / CapitalMovementsView;
+- FinalProductReadModel.capital_movements(...) over verified IntelligenceStreamReadModel only;
+- exact category=capital, bounded time, optional vault, deterministic accepted ordering;
+- exact subtype/disposition/action contract fails closed on mismatch;
+- execution source time remains unavailable when not persisted; freshness falls back explicitly to event-time wording rather than source-freshness invention;
+- optional amounts remain None; no zero fill;
+- canonical outcome labels only for PARTIAL_REDUCTION / CLOSED_WIN / CLOSED_LOSS / CLOSED_BREAKEVEN;
+- persisted Stream collapsed/capital text reused;
+- raw subtype/action/disposition/reasons/SHA lineage audit-only;
+- no direct R21/R22 timeline scan, new ledger, route, frontend, writer, runtime or deploy.
+
+Focused tests added:
+- missing Stream DB explicit/non-creating;
+- verified Capital decision/sizing/execution/lifecycle projection;
+- deterministic newest-first order;
+- accepted vault/time filtering;
+- exact optional amount semantics;
+- valid empty interval;
+- customer payload hides raw identities/subtypes/reasons;
+- audit preserves exact lineage;
+- source DB/file set remains byte-identical.
+
+Acceptance blocker:
+- UID504 exact-head pytest + Ruff + strict mypy + canonical non-mutation + project isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 acceptance workflow to this branch and add final_product_read_model.py/tests/test_final_product_read_model.py to the focused pytest/Ruff/mypy gate; run exact-head acceptance, inspect logs mechanically, then restore the workflow to exact current-main content before any PR.
+
