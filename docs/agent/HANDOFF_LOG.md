@@ -6398,3 +6398,15 @@ QuantumCapitalTouched: NO
 - V1 canonical sizing semantics unchanged
 - all acceptance from `fecdeb9d...` stale; new exact-head dedicated/WC6/RDP11/F10 required
 - REAL_CAPITAL=0; no runtime deployment/backfill; RDP11 R2 untouched
+
+
+
+## 2026-09-30 — FP5-B exact-head WC6 Ruff-only blocker
+
+- tested head `1628e318234c37904371e96aca9b49bf379a2233`; PR #1701
+- WC6 `36640078864/109650020897`
+- exact source PASS; focused recovery PASS; full paper pytest PASS; Development non-mutation PASS
+- only failure: Ruff I001 import separator + UP037 quoted deferred annotation in `canonical_sizing.py`
+- no functional failure and no whole-repo PASS claimed because the static step stopped
+- repair is formatting/type-syntax only; all prior head results stale after repair
+- REAL_CAPITAL=0; RDP11 R2 untouched
