@@ -7157,3 +7157,30 @@ Current blocker:
 
 Exact nextAction:
 Open the sole FP5-B PR from this branch to current main. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact PR head; inspect mechanical outputs rather than treating workflow existence as PASS.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 1 — CIRCULAR IMPORT BLOCKER — 2026-09-30
+
+testedHead: fecdeb9d4192a93624491232a948e817f5c3875d
+pr: #1701
+dedicatedRunJob: 36639914277 / 109649497469
+exactSourceAndFrozenRuntime: PASS
+focusedAcceptance: FAIL_DURING_PYTEST_COLLECTION
+developmentProductNonMutation: PASS
+historicalBackfill: NO
+realCapital: 0
+
+Mechanical blocker:
+- `canonical_sizing.py` imported `portfolio_risk_v2` at runtime for type/status references;
+- `portfolio_risk_v2 -> autopilot_forward_sizing -> ... -> canonical_sizing_events -> canonical_sizing` closes an existing dependency cycle;
+- pytest collection therefore failed with partially initialized `CanonicalPaperSizingSelection`;
+- no behavioral assertion, Ruff, mypy or regression result exists on this head after the collection failure.
+
+Repair boundary:
+- remove the new runtime dependency from canonical sizing;
+- keep FP5 assessment as a type-only dependency and compare its status through the accepted enum value carried by the object;
+- do not change V2 notional formula, lineage contract, V1 payload semantics or safety boundary.
+
+Exact nextAction:
+Apply only the circular-import repair, append the repair handoff, and require all exact-head acceptance lanes again. No result from `fecdeb9d...` can close the gate.
