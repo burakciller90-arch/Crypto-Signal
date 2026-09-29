@@ -1624,3 +1624,35 @@ nextAction:
 - exact-target rollback-safe productdeploy to 3d9f33db3f1189571d40566125fbeabd00c04930;
 - then productstate + real health/proof inspection;
 - do not start soak before both pass.
+
+
+
+---
+
+## 2026-09-29 — RDP11 Product deploy task-start handoff
+
+status: PRODUCT_DEPLOY_STARTING
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+syncIssue: 1661
+syncRun: 36539056907
+syncJob: 109309839626
+producttestIssue: 1662
+producttestRun: 36539209124
+producttestJob: 109310325314
+fulltestIssue: 1663
+fulltestRun: 36539290984
+fulltestJob: 109310585130
+fulltestConclusion: SUCCESS
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- exact-target rollback-safe Product deploy to 3d9f33db3f1189571d40566125fbeabd00c04930 only.
+
+nextAction:
+- trigger productdeploy once; inspect exact Product SHA, rollback marker and dashboard health; then productstate.
