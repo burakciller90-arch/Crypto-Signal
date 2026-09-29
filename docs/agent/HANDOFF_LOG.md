@@ -6177,3 +6177,13 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - blocker: exact-head acceptance not yet run
 - nextAction: open isolated PR and require dedicated FP5-A + existing-owner compatibility + full regression + WC6/RDP11/F10 before merge
+
+
+## 2026-09-29 — FP5-A semantic owner-binding audit
+
+- audited head: `62239a6808bccda8c741aa12cb21ab6b7d47326c`
+- no duplicate implementation created; existing parallel FP5-A source/test/workflow retained
+- acceptance blocker found before PR: raw boolean evidence gates + duplicated FP3 risk policy + incomplete cluster coverage + inconsistent cash-only test
+- repair required: bind accepted FP3 risk/sizing + Event/Confluence identities, classify every exposure uniquely, reconcile cash+gross to NAV, fix 100% cash proof
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: patch existing FP5-A in place and only then open acceptance PR
