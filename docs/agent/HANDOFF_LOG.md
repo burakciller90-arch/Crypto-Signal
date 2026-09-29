@@ -1497,3 +1497,33 @@ repairPolicy:
 
 nextAction:
 - implement focused repairs + branch acceptance workflow; merge only if exact focused acceptance passes; sync Development and rerun fulltest.
+
+
+
+---
+
+## 2026-09-29 — RDP11 second pre-soak failure handoff
+
+status: BLOCKED_REPAIRING
+branch: rdp11/continuous-soak-anchor
+auditedHead: 3e6d90c466ee7665e4e2fa16db652cabaaa8b00c
+preSoakRun: 36491772727
+preSoakJob: 109161831615
+preSoakConclusion: FAILURE
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+
+remainingRootCause:
+- repaired WC2 fixture has 18 contiguous 15m candles.
+- RegimeConfig.minimum_bars=20.
+- accepted PIT regime engine returns UNRESOLVED/insufficient_history.
+- all remaining failures share that same fail-closed root.
+
+minimalRepair:
+- add two sequential frozen test candles only.
+- do not weaken Regime/WC2/Geometry production validation.
+
+nextAction:
+- exact-head pre-soak fulltest; PR/merge only after PASS; then Development sync + canonical fulltest before Product deploy.
