@@ -30,6 +30,7 @@ from crypto_signal.product.intelligence_stream_system_view import (
 )
 from crypto_signal.paper.epoch2_accounting import (
     Epoch2MetricsStatus,
+    Epoch2VaultAccountingSnapshot,
     read_epoch2_state_read_only,
 )
 from crypto_signal.paper.epochs import PaperVaultId
@@ -1059,7 +1060,7 @@ def _portfolio_unavailable(reason: str) -> PortfolioSummaryView:
 
 
 def _portfolio_vault_view(
-    snapshot: Any,
+    snapshot: Epoch2VaultAccountingSnapshot,
     *,
     include_audit: bool,
 ) -> PortfolioVaultView:
