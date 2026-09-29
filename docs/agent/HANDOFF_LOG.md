@@ -5601,3 +5601,18 @@ Current blocker:
 Exact nextAction:
 Open one FP3-C1 PR, verify exact seven-file diff and PR gates, merge if isolated, then start FP3-C2 on fresh main with a new task-start checkpoint. Do not claim SCALE_IN support before FP3-C2 acceptance PASS.
 
+
+
+## 2026-09-29 — FP3-C2 multi-entry lineage task start
+
+- exact task-start main: `1260d6096900107eeb9839ea9a094bb5ce9f028e`
+- branch: `fp3c2/multi-entry-lineage`
+- worktree: not created in this connector-only session; stable Workbench repo remains canonical clean `main`
+- Workbench proof: run `36602456827` / job `109522957589` -> `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`, HEAD `1260d6096900107eeb9839ea9a094bb5ce9f028e`, branch `main`, dirty count `0`
+- predecessor: PR #1682 merged FP3-C1 at main `1260d6096900107eeb9839ea9a094bb5ce9f028e`; accepted UID504 run `36600881901` / job `109517801922`
+- PR gates: RDP11 pre-soak `36601813835` / job `109520818391` PASS; F10 `36601813700` PASS; WC6 `36601813730` PASS
+- duplicate audit: no pre-existing `fp3c2` branch or FP3-C2 PR
+- classification: REUSE canonical S11/R21/R22; EXTEND only FP3-C multi-entry/action lineage
+- safety: `REAL_CAPITAL=0`; historical backfill NO; RDP11 runtime mutation NO; Product/Development deploy NO; Durdurulmaz/Quantum Capital untouched
+- blocker: active-entry representation and sell-lineage validation still require exact source audit
+- nextAction: audit R22 active BUY lineage + sell validator + C1 BUY preconditions, then freeze the minimal C2 contract before implementation
