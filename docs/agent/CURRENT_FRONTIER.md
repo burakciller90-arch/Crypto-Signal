@@ -3642,3 +3642,45 @@ Acceptance harness rule:
 
 Exact nextAction:
 Temporarily wire the already-registered MI1 UID504 harness to fp1d/portfolio-capital-movements and include D1 module/tests plus Epoch2 regressions. Run exact-head acceptance and record the exact first mechanical failure before any repair.
+
+
+## FP1-D1 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_D1_ACCEPTANCE_TEST_CONTRACT_REPAIR
+activeBranch: fp1d/portfolio-capital-movements
+acceptanceHead: 53b8307ec6d0b4eac262b021c61fadb028234ed7
+uid504Run: 36570254863
+uid504Job: 109412175833
+artifactId: 11033023490
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- focused suite reached 100%;
+- all Portfolio Summary value/epoch/isolation/customer-language assertions passed;
+- exactly one assertion failed:
+  test_portfolio_summary_preserves_unmeasured_initial_epoch2_and_read_only_bytes;
+- canonical Epoch2 DB bytes remained identical before/after read;
+- read opened the existing WAL-mode database and an empty -wal filesystem sidecar existed after the read where none existed at snapshot time;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- Ruff/mypy did not run because pytest fail-fast stopped the chain.
+
+Canonical contract re-check:
+- accepted tests/test_epoch2_read_only_product.py defines read-only non-mutation as:
+  missing path is not initialized + canonical Epoch2 DB bytes remain unchanged;
+- that accepted contract does not require WAL sidecar non-existence;
+- therefore the new FP1-D test had added a stronger, unsupported filesystem-sidecar assertion.
+
+Repair classification:
+- TEST / ACCEPTANCE-CONTRACT FIX ONLY;
+- do not change Portfolio production semantics;
+- align D1 acceptance with the existing canonical Epoch2 read-only contract:
+  canonical DB bytes must remain unchanged; missing DB must not be initialized;
+- remove the unsupported WAL equality assertion from the D1 test and matrix.
+
+Exact nextAction:
+Patch only the D1 acceptance documentation/test to require canonical DB byte stability rather than WAL sidecar identity, rerun the identical UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness, and claim no PASS until all steps are green.
