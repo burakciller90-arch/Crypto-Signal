@@ -293,7 +293,7 @@ class PortfolioAllocationAssessmentV2:
             self.max_deployable_notional_usdt,
             "max_deployable_notional_usdt",
         )
-        for value, label in (
+        for decimal_value, decimal_label in (
             (
                 self.baseline_fixed_fractional_notional_usdt,
                 "baseline_fixed_fractional_notional_usdt",
@@ -308,8 +308,8 @@ class PortfolioAllocationAssessmentV2:
             (self.cash_headroom_usdt, "cash_headroom_usdt"),
             (self.risk_limited_notional_usdt, "risk_limited_notional_usdt"),
         ):
-            if value is not None:
-                _require_non_negative_decimal(value, label)
+            if decimal_value is not None:
+                _require_non_negative_decimal(decimal_value, decimal_label)
         if self.status is PortfolioRiskStatus.NOT_PROVEN:
             if self.max_deployable_notional_usdt != Decimal(0):
                 raise ValueError("NOT_PROVEN must expose zero deployable capacity")
