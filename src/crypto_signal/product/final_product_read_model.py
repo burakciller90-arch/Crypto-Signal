@@ -181,7 +181,7 @@ class FinalProductReadModel:
             try:
                 payload = verified_system_view_record(
                     narrative_identity=str(row[0]),
-                    event_at_ms=int(row[1]),
+                    event_at_ms=_row_non_negative_int(row[1], "system-view event time"),
                     payload_json=str(row[2]),
                     expected_digest=str(row[3]),
                 )
@@ -498,6 +498,20 @@ def _required_text(value: dict[str, Any], key: str) -> str:
     if not isinstance(raw, str) or not raw:
         raise TypeError(f"{key} must be non-empty text")
     return raw
+
+
+def _row_non_negative_int(value: object, label: str) -> int:
+    if isinstance(value, bool):
+        raise TypeError(f"{label} must be a non-negative integer")
+    if isinstance(value, int):
+        result = value
+    elif isinstance(value, str) and value.isdigit():
+        result = int(value)
+    else:
+        raise TypeError(f"{label} must be a non-negative integer")
+    if result < 0:
+        raise ValueError(f"{label} must be non-negative")
+    return result
 
 
 def _required_int(value: dict[str, Any], key: str) -> int:
