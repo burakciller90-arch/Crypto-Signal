@@ -831,26 +831,31 @@ PASS:
 
 ## RDP11 — Continuous soak + final Evidence PASS
 
-Status: **ACTIVE — PRIOR EPOCH INVALIDATED / R2 RE-ANCHOR PENDING**
+Status: **ACTIVE — R2 72H SOAK RUNNING / NOT PASS**
 
 Current checkpoint:
-- observer/anchor PR #1666 originally created epoch `rdp11-3d9f33db-20260929` against frozen runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
-- that epoch is now **INVALIDATED** and remains immutable historical sidecar evidence;
-- first mechanical invalidation proof: scheduled observer run `36622461578` / job `109591020809`;
-- failure surface: observer `GET /api/intelligence-center` after the workflow latency probes had returned HTTP 200;
-- failure: `ConnectionResetError:[Errno 54] Connection reset by peer`;
-- subsequent observations correctly fail closed with `soak epoch is already invalidated`;
-- the old soak start `2026-09-29T09:13:21.134000Z` and old `2026-10-02T09:13:21.134000Z` eligibility timestamp can no longer close RDP11;
+- original epoch `rdp11-3d9f33db-20260929` remains **INVALIDATED** immutable historical sidecar evidence;
+- first mechanical invalidation proof: scheduled observer run `36622461578` / job `109591020809`, `ConnectionResetError:[Errno 54] Connection reset by peer` on observer `GET /api/intelligence-center`;
+- its old start/eligibility timestamps are void for PASS and its files must not be rewritten/backfilled;
 - frozen Product/Development target remains unchanged at `3d9f33db3f1189571d40566125fbeabd00c04930`;
-- replacement epoch candidate: `rdp11-3d9f33db-20260930-r2`;
-- replacement state: **PENDING_MERGED_MAIN_ANCHOR**;
-- new start/72h eligibility: **NOT ASSERTED until a successful merged-main non-dry-run observation creates the fresh immutable anchor**;
-- old epoch deletion/rewrite/backfill: FORBIDDEN;
-- observer semantics/thresholds are not weakened for the restart;
+- R2 re-anchor PR #1699 merged as main `62540a3746c101530cd843353507a6746579bf15`;
+- active replacement epoch: `rdp11-3d9f33db-20260930-r2`;
+- merged-main observer run `36637452090`;
+- attempt 1 / job `109641453750` failed before observer invocation/anchor creation on finite SSE `curl: (18) transfer closed with outstanding read data remaining`; no R2 epoch state was created by that attempt;
+- one controlled rerun only, attempt 2 / job `109642444475`: **SUCCESS**;
+- `RDP11_RUNTIME_TARGET_EXACT=YES`;
+- `RDP11_SOAK_ANCHOR_CREATED=YES`;
+- R2 soak start UTC: `2026-09-29T22:10:09.650000Z`;
+- earliest 72h eligibility UTC: `2026-10-02T22:10:09.650000Z`;
+- earliest 72h eligibility Europe/Istanbul: `2026-10-03T01:10:09.650000+03:00`;
+- `RDP11_SOAK_OBSERVATION_PASS=YES`;
+- `RDP11_SOAK_ELAPSED_MS=0` at anchor;
+- `RDP11_SOAK_72H_ELIGIBLE=NO`;
 - `RDP11_SOAK_SIDE_CAR_ONLY=YES`;
 - `RDP11_CANONICAL_RUNTIME_MUTATED=NO`;
 - `HISTORICAL_BACKFILL=NO`;
-- `REAL_CAPITAL=0`.
+- `REAL_CAPITAL=0`;
+- observer semantics/thresholds were not weakened for the restart.
 
 Goal:
 - prove the system survives real time, not only tests.

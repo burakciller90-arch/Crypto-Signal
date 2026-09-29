@@ -6980,3 +6980,97 @@ Safety:
 
 Exact nextAction:
 Advance only the RDP11 workflow epoch id to `rdp11-3d9f33db-20260930-r2`, run exact-head dry-run/pre-soak acceptance, recheck main/duplicates immediately before merge, then accept the new 72h clock only from the first successful merged-main non-dry-run anchor.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-30 — RDP11 R2 anchor closeout
+
+status: RDP11_R2_ANCHOR_CLOSEOUT
+canonicalMainAtTaskStart: `62540a3746c101530cd843353507a6746579bf15`
+activeBranch: `rdp11/r2-anchor-closeout`
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+frozenRuntimeTarget: `3d9f33db3f1189571d40566125fbeabd00c04930`
+r2Epoch: `rdp11-3d9f33db-20260930-r2`
+r2AnchorRunAttemptJob: `36637452090 / attempt 2 / 109642444475`
+r2AnchorStartUtc: `2026-09-29T22:10:09.650000Z`
+earliest72hUtc: `2026-10-02T22:10:09.650000Z`
+earliest72hEuropeIstanbul: `2026-10-03T01:10:09.650000+03:00`
+
+Duplicate/stale-work audit:
+- current main remains the R2 re-anchor merge `62540a3746c101530cd843353507a6746579bf15`
+- competing open RDP11/soak/anchor/handoff PR: NONE at task start
+- prior epoch remains immutable INVALIDATED evidence and is not rewritten
+- R2 first merged-main attempt `36637452090 / attempt 1 / 109641453750` failed before observer invocation/anchor creation on finite SSE curl error 18; it is preserved as evidence
+- one controlled rerun only was used; attempt 2 passed and created the first R2 anchor
+- this closeout is documentation/authority-only; observer/runtime/frozen evidence are not modified
+
+Exact nextAction:
+Record the successful R2 anchor and new 72-hour boundary in canonical authority docs, CURRENT_FRONTIER and HANDOFF_LOG; then merge only after exact diff/main recheck. RDP11 remains ACTIVE / NOT PASS until the new epoch survives its full real-time window and final audit.
+
+
+## RDP11 R2 ANCHOR ACTIVE — 2026-09-30
+
+status: RDP11_R2_SOAK_ACTIVE_NOT_PASS
+anchorMainSha: `62540a3746c101530cd843353507a6746579bf15`
+reanchorBranch: `rdp11/reanchor-invalidated-epoch-r2`
+reanchorWorktree: no session-local /Volumes worktree
+reanchorPr: #1699
+reanchorAcceptedHead: `c0b1e11e7d0e189c5eb52eddbecce116b82f642a`
+reanchorMergeSha: `62540a3746c101530cd843353507a6746579bf15`
+closeoutBranch: `rdp11/r2-anchor-closeout`
+closeoutWorktree: no session-local /Volumes worktree
+runtimeTargetSha: `3d9f33db3f1189571d40566125fbeabd00c04930`
+activeEpoch: `rdp11-3d9f33db-20260930-r2`
+
+Exact acceptance / runtime evidence:
+- final-head RDP11 Pre-Soak: run/job `36636794442/109639308133` — SUCCESS
+- final-head RDP11 PR dry-run observer: `36636845090/109639797301` — SUCCESS
+- final-head F10: `36636845076/109639471686` — SUCCESS
+- post-merge Workbench: `36637452142/109641453293` — SUCCESS
+  - `REPO_HEAD=62540a3746c101530cd843353507a6746579bf15`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- merged-main observer run `36637452090`
+  - attempt 1 / job `109641453750`: FAILED before observer invocation/anchor creation; finite SSE pre-probe returned `curl: (18) transfer closed with outstanding read data remaining`
+  - no R2 sidecar anchor/invalidation was created by attempt 1
+  - exactly one controlled rerun was performed
+  - attempt 2 / job `109642444475`: SUCCESS
+  - `RDP11_RUNTIME_TARGET_EXACT=YES`
+  - `RDP11_PRODUCT_ENDPOINT_TIMING_PROBE=PASS`
+  - `RDP11_SOAK_ANCHOR_CREATED=YES`
+  - `RDP11_SOAK_START_UTC=2026-09-29T22:10:09.650000Z`
+  - `RDP11_SOAK_OBSERVATION_PASS=YES`
+  - `RDP11_SOAK_ELAPSED_MS=0`
+  - `RDP11_SOAK_72H_ELIGIBLE=NO`
+  - `RDP11_SOAK_SIDE_CAR_ONLY=YES`
+  - `RDP11_CANONICAL_RUNTIME_MUTATED=NO`
+  - `HISTORICAL_BACKFILL=NO`
+  - `REAL_CAPITAL=0`
+
+72-hour boundary:
+- start UTC: `2026-09-29T22:10:09.650000Z`
+- earliest eligibility UTC: `2026-10-02T22:10:09.650000Z`
+- earliest eligibility Europe/Istanbul: `2026-10-03T01:10:09.650000+03:00`
+
+Historical integrity:
+- old epoch `rdp11-3d9f33db-20260929` remains immutable INVALIDATED evidence
+- old invalidation run/job `36622461578/109591020809` remains authoritative
+- no old anchor/observation/failure/invalidation file was deleted, rewritten or backfilled
+- observer semantics/thresholds were not weakened
+- Product/Development frozen runtime target was not changed
+
+Current blocker:
+- real 72-hour minimum for R2 has not elapsed
+- R2 must remain non-invalidated throughout the window
+- final accumulated RDP11 audit must still prove freshness/gaps/reconnections/DB-read health/frozen-proof integrity/no-future/Product+Stream continuity and explicit source limitations
+
+Exact nextAction:
+Let the scheduled UID504 observer continue accumulating immutable R2 observations every 20 minutes. Any mandatory violation after anchoring must invalidate R2 rather than be retried away. At/after `2026-10-02T22:10:09.650000Z` audit the complete R2 epoch and mark RDP11/FP0 PASS only if every roadmap PASS condition is mechanically proven. Parallel FP1+ work may continue only in isolated branches/worktrees that cannot mutate the frozen runtime, observer contract, R2 sidecar or frozen/historical evidence.
+
+Safety:
+- REAL_CAPITAL=0
+- frozen/historical mutation: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
