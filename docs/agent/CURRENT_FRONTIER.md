@@ -5915,3 +5915,62 @@ Bounded repair:
 
 Exact nextAction:
 Replace the 14 verbose integer Decimal string constructors in the new multi-entry test, rerun exact-head WC6/RDP11/F10, then inspect any remaining gate output.
+
+
+## FP3-C2 MULTI-ENTRY LINEAGE PASS / MERGED — 2026-09-29
+
+status: FP3_C2_PASS_MERGED
+verifiedMain: d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd
+sourcePr: 1683
+acceptedHead: 7ab66c7e1d27899bd48414a087f29db3f1426e48
+mergeSha: d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd
+sourceBranch: fp3c2/multi-entry-lineage
+handoffBranch: handoff/fp3c2-pass
+sessionLocalWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchRun: 36613594563
+workbenchJob: 109560885562
+workbenchVerifiedHead: d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd
+workbenchVerifiedBranch: main
+workbenchDirtyCount: 0
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical acceptance:
+- PR WC6 run 36612810152 / job 109558250167: SUCCESS; exact source, focused execution-lab, paper regression, whole-repository regression, Development non-mutation all PASS;
+- PR RDP11 pre-soak fulltest run 36612810246 / job 109558250148: SUCCESS; exact source, full pytest, Ruff, mypy, JS checks, non-mutation PASS; HISTORICAL_BACKFILL=NO; REAL_CAPITAL=0;
+- PR F10 closeout run 36612810257: SUCCESS;
+- post-merge main WC6 run 36613594700 / job 109560887152: SUCCESS across exact-source/focused/paper/full/non-mutation stages;
+- SSD504 Workbench bootstrap run 36613594563 / job 109560885562: SSD504_WORKBENCH_PASS=YES; repo main synced to merge SHA; dirty=0.
+
+Accepted C2 behavior:
+- OPEN -> BUY at zero holdings;
+- distinct SCALE_IN -> BUY only on positive holdings with distinct forecast/proof/sizing-assessment lineage;
+- deterministic fixed-fractional method-result identity may repeat across distinct accepted assessments;
+- verified active BUY entry set preserves each immutable intent/fill/forecast/proof/sizing/allocator/decision lineage;
+- REDUCE after two entries uses the sole canonical weighted-average R22 cost-basis policy and exact replay is byte-idempotent;
+- full-position EXIT removes exact remaining basis so Decimal round-trip cannot leave phantom basis/PnL;
+- EXIT after remaining multi-entry position flattens deterministically;
+- sell evidence carries complete active-entry lineage;
+- STOP_UPDATE remains explicit unavailable;
+- no second accounting/execution/sizing/order engine was added.
+
+RDP11 soak guard:
+- frozen Product/Development target remains 3d9f33db3f1189571d40566125fbeabd00c04930;
+- latest inspected observer failure run 36611618152 / job 109554184576 first proved RDP11_RUNTIME_TARGET_EXACT=YES, then failed only on Product endpoint timing probe with curl 56 connection reset;
+- this remains continuity/gap evidence for final RDP11 acceptance; it is not evidence that the frozen target SHA changed;
+- RDP11 remains ACTIVE / NOT PASS and no C2 code was deployed into the frozen target.
+
+Non-C2 repository signal:
+- post-merge Crypto Stage10 Hosted Gate run 36613594658 failed, but its job log blob was unavailable from GitHub at verification time; do not invent a cause and do not use that run as FP3-C2 acceptance evidence.
+
+Current blocker:
+- FP3-C2 has no remaining mechanical blocker.
+- FP3-D cannot be satisfied by fixtures; it requires genuine post-activation forward observation while preserving the active RDP11 frozen target.
+
+Exact nextAction:
+Start a fresh isolated FP3-D task checkpoint from current main; audit duplicate branches/PRs plus the accepted FP3 activation/liveness watermark and genuine-forward observation surfaces, then define the minimal real forward acceptance path before any implementation.
