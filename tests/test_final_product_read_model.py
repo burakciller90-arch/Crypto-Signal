@@ -14,7 +14,10 @@ from crypto_signal.ledger.serialization import (
     canonical_sha256,
     sha256_text,
 )
-from crypto_signal.product.final_product_read_model import FinalProductReadModel
+from crypto_signal.product.final_product_read_model import (
+    FinalProductReadError,
+    FinalProductReadModel,
+)
 from crypto_signal.product.intelligence_stream_family import (
     IntelligenceStreamFamilyRuntime,
     build_family_snapshot,
@@ -856,7 +859,7 @@ def test_workspace_configured_conflicting_decision_proof_fails_closed(
     )
 
     with pytest.raises(
-        Exception,
+        FinalProductReadError,
         match="Decision Evidence proof lineage mismatch",
     ):
         FinalProductReadModel(
