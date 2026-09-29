@@ -293,19 +293,25 @@ A feature is not rebuilt merely because an old UI is no longer the final design.
 
 ## FP0 — RDP11 Evidence Soak Guard
 
-Status: **ACTIVE / PRIOR EPOCH INVALIDATED / R2 ANCHOR PENDING**
+Status: **ACTIVE / R2 72H SOAK RUNNING / NOT PASS**
 
 Frozen runtime subject remains:
 `3d9f33db3f1189571d40566125fbeabd00c04930`
 
 Prior epoch:
-`rdp11-3d9f33db-20260929` — **INVALIDATED** by immutable continuity evidence (`36622461578/109591020809`, `ConnectionResetError:[Errno 54] Connection reset by peer` on the observer intelligence-center read).
+`rdp11-3d9f33db-20260929` — **INVALIDATED** by immutable continuity evidence (`36622461578/109591020809`, `ConnectionResetError:[Errno 54] Connection reset by peer` on the observer intelligence-center read). Its former eligibility timestamp remains void for PASS.
 
-Replacement epoch candidate:
+Active replacement epoch:
 `rdp11-3d9f33db-20260930-r2`
 
-Replacement soak start and earliest 72h eligibility:
-**NOT ASSERTED until the first successful merged-main non-dry-run observation creates the R2 immutable anchor.** The prior 2026-10-02 eligibility timestamp is void for PASS.
+R2 anchor proof:
+- re-anchor PR/merge: `#1699` / `62540a3746c101530cd843353507a6746579bf15`;
+- merged-main observer run `36637452090`, attempt 1/job `109641453750` failed before anchor creation on finite SSE transfer error and remains preserved;
+- one controlled rerun only, attempt 2/job `109642444475`: SUCCESS;
+- soak start UTC: `2026-09-29T22:10:09.650000Z`;
+- earliest 72h eligibility UTC: `2026-10-02T22:10:09.650000Z`;
+- earliest 72h eligibility Europe/Istanbul: `2026-10-03T01:10:09.650000+03:00`;
+- sidecar-only, canonical runtime non-mutating, no historical backfill, `REAL_CAPITAL=0`.
 
 PASS requires the RDP11 roadmap's real accumulated evidence, not elapsed time alone:
 - non-invalidated immutable anchor;
