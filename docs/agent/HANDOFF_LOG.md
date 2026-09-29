@@ -6539,3 +6539,11 @@ QuantumCapitalTouched: NO
 - sole blocker: mypy optional-to-nonoptional local assignment at forward V2 promotion; behavior tests did not fail
 - repair is local type narrowing only; no semantic change
 - all prior head gates stale after repair; rerun exact-head quartet
+
+
+## 2026-09-30 — FP5-C mypy narrowing repair applied
+
+- repair `f6257a86aee129ae728c8597b233ab5036a85253`
+- optional V2 selection now narrows through a separate local before assignment
+- no behavior/identity/schema change
+- all results from `8d551faf...` stale; fresh exact-head quartet required
