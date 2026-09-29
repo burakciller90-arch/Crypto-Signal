@@ -6707,3 +6707,55 @@ Current blocker:
 
 Exact nextAction:
 Wait for Workbench bootstrap `36628287272`, capture exact `REPO_HEAD/BRANCH/DIRTY_COUNT/SSD504_WORKBENCH_PASS` markers, then mark FP4 PASS in this docs-only closeout, run F10, merge, verify final Workbench, and start FP5 from resulting main.
+
+
+### FP4 FINAL PASS / POST-MERGE WORKBENCH VERIFIED — 2026-09-29
+
+status: FP4_PASS
+finalProductPhase: FP4_PAPER_EXECUTION_REALISM_V2_COMPLETE
+fp4MergeMain: 2de42a57b6d8e1d3e222c45a51a53ced0db8375c
+postMergeWorkbenchRun: 36628287272
+postMergeWorkbenchJob: 109610771010
+postMergeWorkbenchHead: 2de42a57b6d8e1d3e222c45a51a53ced0db8375c
+postMergeWorkbenchBranch: main
+postMergeWorkbenchDirtyCount: 0
+ssd504WorkbenchPass: YES
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Mechanical FP4 PASS:
+- FP4-A exact depth/VWAP/full-partial-not-filled-not-proven/PIT/replay accepted and merged.
+- FP4-B latency/passive queue/public-trade proof/partial/timeout/cancel/fill-not-proven accepted and merged; superseded PR #1691 remains closed unmerged.
+- FP4-C exact settled funding evidence + exact settlement mark requirement accepted and merged.
+- FP4-D exact instrument/account fee schedule accepted and merged; proof-gated discount semantics, special/tax inclusion, missing/future fee fail-closed.
+- Existing authoritative venue-rule snapshot continues to own precision/min/max quantity/min-notional/tick size.
+- FP4-E canonical receipt accepted and merged:
+  - accepted head `f9eba84df23765571cd0800ae866a4ee38731cd6`
+  - dedicated `36627549969/109608319498` PASS
+  - WC6 `36627549985/109608509804` PASS
+  - RDP11 pre-soak `36627549934/109608320536` PASS
+  - F10 `36627550022/109608316313` PASS
+  - exact Binance Spot market-evidence binding PASS
+  - fee-schedule PIT cutoff binding PASS
+  - no v1 spread/slippage reapplication; immediate V2 cost = non-negative adverse price impact + exact fee
+  - funding explicitly separate settlement accounting
+  - R21/R22 schemas not mutated
+
+Post-merge SSD504 proof:
+- run/job `36628287272/109610771010` PASS
+- `REPO_HEAD=2de42a57b6d8e1d3e222c45a51a53ced0db8375c`
+- `REPO_BRANCH=main`
+- `REPO_DIRTY_COUNT=0`
+- `BOOTSTRAP_SHA=2de42a57b6d8e1d3e222c45a51a53ced0db8375c`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Global gates remain independent:
+- FP3-D remains WAITING_NO_POST_ACTIVATION_ISSUANCE; no synthetic forward evidence.
+- RDP11 global status remains ACTIVE / NOT PASS until final soak evidence gate; per-head pre-soak PASS does not close global RDP11.
+- final RDP11 72h gate remains not eligible before 2026-10-02T09:13:21.134000Z.
+
+Exact nextAction:
+Run docs-only closeout F10 and merge this handoff. Verify final Workbench exact-main sync. Then start FP5 Capital Allocator V2 from the resulting exact main, reusing existing FP3 sizing/risk evidence and adding only missing live portfolio/cluster risk controls.
