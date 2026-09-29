@@ -3710,3 +3710,55 @@ D2 PASS:
 
 Exact nextAction:
 Inspect verified capital record/detail payloads and existing capital tests, freeze the D2 field mapping in the existing FP1-D matrix if needed, then implement only CapitalMovements read models in final_product_read_model.py plus focused tests.
+
+
+## FP1-D1 TRANSFER VERIFIED / FP1-D2 TASK START — 2026-09-29
+
+status: FP1_D2_CAPITAL_MOVEMENTS_AUDIT_START
+taskStartMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+activeBranch: fp1d/portfolio-capital-movements-current
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE + EXTEND query/read-model only
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+D1 transfer verification:
+- source accepted head: f49ba2913654dd46b99c65842e9fa0603195c8df
+- UID504 acceptance: run 36571535907 / job 109416495617 — SUCCESS
+- transferred field-source matrix blob: 4d8ee70d8026ee975ef08d592eca5e5e976a6f9f — byte-identical
+- transferred final_product_read_model.py blob: 0fd61a2da371f3a74a9c85cd6acbe3baa14f57c4 — byte-identical
+- transferred test_final_product_read_model.py blob: fd854598c6d5458d36aa48d004a41260fd467143 — byte-identical
+- current continuation branch is ahead of current main and not behind
+- temporary acceptance workflow changes are absent
+- D1 Portfolio Summary must not be rebuilt.
+
+Duplicate/stale check for D2:
+- no open FP1-D / Capital Movements PR exists;
+- existing old fp1d branches are acceptance/history inputs, not new implementation targets;
+- no accepted customer Capital Movements projection exists yet;
+- canonical Stream Capital / R22 / R21 truth must be reused rather than duplicated.
+
+Bounded D2 goal:
+- build a compact customer daily/recent Capital Movements read model;
+- source only accepted immutable/read-only capital lifecycle truth;
+- prefer existing Stream Capital decision/sizing/execution/lifecycle records and exact R22/R21 lineage where present;
+- no duplicate capital event ledger;
+- no new accounting math;
+- no fake fills/sizing/trades;
+- no historical backfill;
+- no Product route/frontend/deploy in D2;
+- default customer view human-readable; exact identities audit-only;
+- missing/deferred natural capital activity remains explicit.
+
+Current blocker:
+- exact canonical source/query contract for Capital Movements has not yet been re-audited on current main; implementation is forbidden until source precedence, event classes, time/vault filtering and empty-state semantics are frozen.
+
+Exact nextAction:
+Audit Stream Capital message/query APIs, R22 transaction/decision tape read surfaces, R21 accounting lineage and existing capital lifecycle tests; update the FP1-D field-source matrix with an exact D2 source contract before production code changes.
+
