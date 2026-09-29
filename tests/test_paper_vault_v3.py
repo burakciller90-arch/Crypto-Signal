@@ -112,7 +112,7 @@ def test_v3_starting_capital_is_constitution_truth_not_global_reset() -> None:
     assert custom.starting_virtual_capital_usdt == Decimal("12345.67")
     assert custom.vault_identity != default.vault_identity
     with pytest.raises(ValueError, match="starting capital"):
-        _constitution(capital=Decimal("0"))
+        _constitution(capital=Decimal(0))
 
 
 def test_v3_allocation_policy_allows_full_cash_and_forbids_forced_exposure() -> None:
@@ -260,18 +260,17 @@ def test_v3_lifecycle_is_append_only_stop_then_archive_with_no_reactivation(
     with pytest.raises(ValueError, match="previous status mismatch"):
         store.append_lifecycle_event(after_archive)
 
-    with sqlite3.connect(store.path) as connection:
-        with pytest.raises(
-            sqlite3.IntegrityError,
-            match="immutable Paper Vault V3 truth",
-        ):
-            connection.execute(
-                """
-                DELETE FROM paper_vault_v3_lifecycle_events
-                WHERE event_identity = ?
-                """,
-                (stop.event_identity,),
-            )
+    with sqlite3.connect(store.path) as connection, pytest.raises(
+        sqlite3.IntegrityError,
+        match="immutable Paper Vault V3 truth",
+    ):
+        connection.execute(
+            """
+            DELETE FROM paper_vault_v3_lifecycle_events
+            WHERE event_identity = ?
+            """,
+            (stop.event_identity,),
+        )
 
 
 def test_v3_can_archive_directly_from_active(tmp_path: Path) -> None:
@@ -371,8 +370,8 @@ def test_v3_constitutions_can_coexist_without_reset_semantics(
     tmp_path: Path,
 ) -> None:
     store = PaperVaultV3Store(tmp_path / "paper_vault_v3-many.sqlite3")
-    first = _constitution(created_at_ms=1_000, capital=Decimal("10000"))
-    second = _constitution(created_at_ms=2_000, capital=Decimal("25000"))
+    first = _constitution(created_at_ms=1_000, capital=Decimal(10000))
+    second = _constitution(created_at_ms=2_000, capital=Decimal(25000))
 
     assert store.append_constitution(first)
     assert store.append_constitution(second)
