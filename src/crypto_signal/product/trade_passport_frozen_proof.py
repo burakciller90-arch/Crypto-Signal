@@ -370,11 +370,14 @@ class TradePassportFrozenProofReadModel:
                 raise TradePassportFrozenProofError(
                     "Trade Passport Stream narrative disappeared during verified read"
                 )
-            narrative = _mapping(
+            narrative_payload = _mapping(
                 detail.get("narrative"),
                 "Trade Passport Stream narrative",
             )
-            if _optional_non_negative_int(narrative.get("event_at_ms")) != event_at_ms:
+            if (
+                _optional_non_negative_int(narrative_payload.get("event_at_ms"))
+                != event_at_ms
+            ):
                 raise TradePassportFrozenProofError(
                     "Trade Passport Stream narrative event time mismatch"
                 )
