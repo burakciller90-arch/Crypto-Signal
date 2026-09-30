@@ -6577,3 +6577,28 @@ FP6 duplicate audit:
 - accepted FP1-E owner already exists: `FinalProductReadModel.trade_passport()` keyed by immutable R22 bundle identity and reusing R22/R21/S11/Decision Proof
 - remaining FP6 work is trade-wide lifecycle + exact per-event frozen proof + historical immutability audit/extension, not a greenfield passport
 - nextAction: isolated FP6-A owner/gap matrix after this docs-only closeout merges
+
+
+## 2026-09-30 — FP6-A owner/gap audit started
+
+- base main `c1263bc073f78caea12b088e95447c3cae91bf50` (FP5 whole-phase PASS closeout #1704)
+- branch `fp6a/trade-passport-lifecycle-audit`
+- no competing FP6/passport PR or branch
+- reuse accepted FP1-E `FinalProductReadModel.trade_passport()`; do not build a second passport ledger
+- audit target is the delta from single R22 bundle passport to trade-wide immutable lifecycle + exact per-event frozen proof
+- inspect FP3 action receipts, R22 bundle story, R21 snapshots, S11 outcomes, Capital Stream lifecycle and RDP10 proof readers
+- classify each required lifecycle/proof field READY_EXACT / EXTEND_EXISTING / UNAVAILABLE_EXPLICIT before coding
+- REAL_CAPITAL=0; no backfill/deploy; RDP11 R2 untouched
+
+
+## 2026-09-30 — FP6-A owner matrix locked; bounded implementation authorized
+
+- exact trade episode can be reconstructed from verified R22 vault/symbol fill chronology as contiguous position `0 -> >0 -> ... -> 0`; lifecycle root is first bundle in that episode
+- OPEN vs SCALE_IN is exact in R22 reason codes (`fp3_action_open` / `fp3_action_scale_in`)
+- partial TP / take profit / stop / close reasons are exact in R22 sell reason codes; outcomes carry exact PnL/quantity/prior-fill lineage
+- STOP_UPDATE receipt exists but has no exact persisted trade-root binding; classify UNAVAILABLE_EXPLICIT, never infer by time/symbol
+- no canonical CORRECTION/SUPERSEDED contract found; classify UNAVAILABLE_EXPLICIT
+- exact per-event frozen proof can reuse Stream story + Decision Proof + signal freeze through `IntelligenceStreamVisualProofReadModel`; missing proof remains explicit
+- FrozenProofStore and all canonical ledgers are immutable/no-latest-current-substitution
+- current FP1-E tests need extension for symmetric closed win/loss lifecycle inspectability
+- implementation boundary: FinalProductReadModel read-only extension + focused tests only; no writer/store/backfill/deploy

@@ -7657,3 +7657,134 @@ Exact nextAction:
 3. map R22 bundle story + FP3 action receipts/capital lifecycle Stream + S11 outcomes + Decision Proof/RDP10 frozen readers into one trade-lifecycle key;
 4. classify each FP6 field/event as REUSE / EXTEND / EXPLICITLY_UNAVAILABLE;
 5. only then implement the smallest read-only lifecycle passport extension; no new canonical truth store, no backfill, REAL_CAPITAL=0.
+
+
+## FP6-A LIVE TASK-START CHECKPOINT — 2026-09-30
+
+status: FP6A_TRADE_PASSPORT_LIFECYCLE_OWNER_AUDIT
+canonicalMainAtTaskStart: c1263bc073f78caea12b088e95447c3cae91bf50
+activeBranch: fp6a/trade-passport-lifecycle-audit
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Duplicate audit:
+- competing FP6 / Trade Passport open PR: NONE
+- competing FP6 / Trade Passport branch: NONE
+- greenfield Trade Passport ledger/store: FORBIDDEN unless audit proves an accepted owner cannot represent a required fact
+
+Accepted owner to REUSE:
+- `FinalProductReadModel.trade_passport(bundle_identity, include_audit=False)`
+- canonical passport lookup key: immutable R22 bundle identity
+- `R22Epoch2AtomicTape.read_bundle_story_context()`
+- R21 before/after vault + consolidated snapshots
+- S11 canonical outcome lineage
+- optional immutable Decision Proof lineage
+- accepted FP1-E source matrix: `docs/CRYPTO_SIGNAL_FP1E_TRADE_PASSPORT_FIELD_SOURCE_MATRIX.md`
+
+FP6 master-roadmap delta to audit:
+- existing FP1-E is one verified R22 bundle projection;
+- FP6 requires one trade-wide append-only lifecycle timeline across OPEN, SCALE_IN, STOP_UPDATE, PARTIAL_TAKE_PROFIT, REDUCE, CLOSE and explicit CORRECTION/SUPERSEDED semantics when supported;
+- every lifecycle event must resolve the exact proof that existed at that event time;
+- frozen Market Story / five-family / Event Risk / trigger / invalidation / targets must reuse accepted RDP10/Stream proof readers, not current-data reconstruction;
+- winning and losing closed trades must be equally inspectable;
+- later model/version state must not alter historical passport content.
+
+Audit questions:
+1. What immutable key links multiple R22 bundles and non-trade FP3 action receipts into one trade lifecycle without inference?
+2. Which lifecycle states already exist canonically in FP3 action receipts, R22 bundles, S11 outcomes and Capital Stream?
+3. Can STOP_UPDATE be represented without inventing a trade/accounting bundle?
+4. Is SCALE_IN distinguishable from initial OPEN in canonical persisted truth, or only by before-position state?
+5. Do CORRECTION/SUPERSEDED records exist canonically; if not, mark explicit unavailable rather than inventing them.
+6. Which accepted frozen-proof reader resolves exact per-event five-family/Market Story evidence from persisted identities?
+7. Does existing single-bundle Trade Passport already satisfy historical-version immutability mechanically?
+
+Exact nextAction:
+Read and map the canonical owners above plus FP3 action receipt/store, Capital lifecycle Stream projector, RDP10 frozen proof store/readers and existing FP1-E tests. Produce a field/event source matrix classifying every FP6 requirement as READY_EXACT, EXTEND_EXISTING or UNAVAILABLE_EXPLICIT. Implement nothing until this owner matrix proves the minimal missing slice.
+
+
+### FP6-A OWNER MATRIX / CONTRACT RESOLUTION — 2026-09-30
+
+status: FP6A_OWNER_MATRIX_LOCKED
+implementationAllowed: YES_BOUNDED_READ_MODEL_ONLY
+newCanonicalLedger: NO
+writerMutation: NO
+historicalBackfill: NO
+realCapital: 0
+
+Canonical owner findings:
+
+#### Trade episode identity / chronology
+- R22 `read_trade_history(vault_id, symbol)` is verified immutable fill chronology.
+- Every fill resolves to exactly one immutable R22 accounting bundle through `read_bundle_identity_for_fill()`.
+- Accepted S11 reconstruction already uses the exact rule that a BUY when reconstructed position quantity is zero starts a fresh open-entry set, REDUCE decreases it, and EXIT must flatten it.
+- Therefore one trade episode can be reconstructed deterministically from immutable R22 truth as the contiguous `0 -> positive -> ... -> 0` position interval.
+- Derived lifecycle root = the first R22 bundle identity in that exact episode.
+- API may accept any bundle identity, resolve its verified vault/symbol history, and return the unique episode containing that bundle. No time/symbol guess across episodes is permitted.
+classification: READY_EXACT / EXTEND_EXISTING_READ_MODEL
+
+#### OPEN / SCALE_IN
+- FP3-C BUY reasons are persisted into canonical R22 intent reason codes:
+  - `fp3_action_open`
+  - `fp3_action_scale_in`
+- R22 action alone is BUY, but the immutable reason code disambiguates OPEN vs SCALE_IN exactly.
+- multi-entry acceptance already proves OPEN -> SCALE_IN -> REDUCE -> EXIT chronology and active-entry lineage.
+classification: READY_EXACT
+
+#### PARTIAL_TAKE_PROFIT / REDUCE / CLOSE
+- FP3-C sell preregistration passes exact exit reason codes into canonical R22:
+  - `partial_take_profit`, `take_profit`, `stop`, `close`
+- R22 canonical action remains REDUCE or EXIT; the reason code preserves the user/action semantic.
+- S11 outcome evidence is immutable and contains financial outcome, quantity before/after, realized PnL and prior fill identities.
+classification: READY_EXACT
+
+#### STOP_UPDATE
+- FP3-C persists immutable STOP_UPDATE action receipts, but current policy marks them `UNAVAILABLE` and creates no R22 trade/accounting bundle.
+- The receipt has vault/symbol/forecast/proof/time but no persisted trade-lifecycle root identity.
+- `process_no_trade()` does not prove attachment to a particular open R22 episode.
+- Therefore attaching STOP_UPDATE to a trade based only on chronology/symbol would be inference and is forbidden.
+classification: UNAVAILABLE_EXPLICIT for exact trade-wide timeline today
+future owner if roadmap later requires it: versioned FP3 action writer must bind an exact lifecycle-root identity prospectively; no backfill.
+
+#### CORRECTION / SUPERSEDED
+- repository-wide canonical search found no accepted CORRECTION or SUPERSEDED lifecycle record/contract.
+classification: UNAVAILABLE_EXPLICIT
+- do not invent synthetic correction rows.
+
+#### Historical proof / Market Story
+- every R22 trade intent binds immutable `forecast_identity` + `proof_identity`.
+- Stream forecast story is deterministic from forecast identity and accepted Stream records are immutable.
+- `IntelligenceStreamVisualProofReadModel.read_for_narrative()` verifies exact Stream fact -> Decision Proof -> signal freeze -> decision-freeze bundle lineage.
+- READY projection includes exact frozen OHLC candles, annotations, trigger/target/invalidation geometry, five-family contributions, evidence-domain manifest and provenance with `current_data_substitution=False`.
+- missing decision proof/freeze returns explicit unavailable; mismatched lineage fails closed.
+- `FrozenProofStore` is independently append-only and intentionally has no latest-proof API; exact object/analysis identity lookup protects historical version truth.
+classification: READY_EXACT when persisted; UNAVAILABLE_EXPLICIT otherwise
+
+#### Later model versions / immutability
+- R22/R21 tables reject UPDATE/DELETE and are replay audited.
+- FP3 action receipts reject UPDATE/DELETE.
+- Decision Proof / signal freeze / Stream narrative are immutable identity-bound records.
+- FrozenProofStore rejects UPDATE/DELETE and identity rebinding.
+- product projections are read-only.
+classification: READY_EXACT
+
+#### Winning vs losing inspectability
+- S11 canonical outcome enum explicitly supports CLOSED_WIN, CLOSED_LOSS, CLOSED_BREAKEVEN and PARTIAL_REDUCTION from exact realized PnL.
+- existing FP1-E Trade Passport projection supports these labels but current dedicated Trade Passport tests cover primarily BUY/proof behavior, not symmetric closed-win/closed-loss lifecycle views.
+classification: EXTEND_EXISTING_TEST_AND_LIFECYCLE_VIEW
+
+Minimal FP6-A implementation contract:
+1. extend `FinalProductReadModel`; do not create a new persistence layer;
+2. add a trade-lifecycle projection accepting any exact R22 bundle identity;
+3. reconstruct the unique R22 trade episode using exact quantity transitions and require all transitions to reconcile;
+4. resolve each event's existing single-bundle `trade_passport()` rather than reimplementing execution/accounting fields;
+5. expose exact lifecycle kind from canonical action + reason codes;
+6. optionally resolve exact frozen visual proof using existing Stream/Decision Proof/signal-freeze read model when all paths are supplied;
+7. missing visual proof is explicit, never substituted with current data;
+8. surface STOP_UPDATE and CORRECTION/SUPERSEDED capability as explicitly unavailable in this version rather than fabricated timeline rows;
+9. prove closed win and closed loss are equally inspectable;
+10. prove bytes of R22, Stream, Decision Proof and signal ledger remain unchanged.
+
+Exact nextAction:
+Implement only this read-only lifecycle projection and focused tests. Do not touch R22/R21 writers, FP3 action writers, Stream writers, RDP10 stores or RDP11 runtime.
