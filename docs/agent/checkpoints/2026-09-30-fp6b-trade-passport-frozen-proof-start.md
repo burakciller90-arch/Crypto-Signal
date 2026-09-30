@@ -8,7 +8,7 @@ Active pointer: `ACTIVE_ROADMAP.md`
 Task-start main: `38d757071a50566379715f3074b4b74b668a6aa6`
 Active branch: `fp6b/trade-passport-frozen-proof`
 Draft PR: `#1737`
-Latest code/test head before this checkpoint write: `7852fc6869b85da3130b39815f9ce81324651731`
+Latest code fix before this checkpoint write: `a6b9047562454550e89d1e04188ef263ab5d4e8e`
 Safety: `REAL_CAPITAL=0`
 
 ## Current program state
@@ -68,10 +68,31 @@ Fixes:
 - `877018421e21e1b0bb9db3d69a363a3f7b2921b9`: resolver now reads event time from the verified canonical narrative payload. Canonical Stream verification was **not weakened**.
 - `7852fc6869b85da3130b39815f9ce81324651731`: test fixture now creates a complete canonical full-lineage later Stream event: new fact bundle, message input, analytical view, plan and narrative identities/digests, all with consistent event/source/stream lineage. This preserves the real production contract instead of weakening tests.
 
-At this checkpoint, exact-head run #3 for `7852fc6869b85da3130b39815f9ce81324651731` is active:
-- FP6-B run `36709219791`: in progress at last poll;
-- F10 run `36709219776`: queued at last poll;
-- RDP11 Pre-Soak run `36709219892`: queued at last poll.
+Dedicated run #2 on exact head `7852fc6869b85da3130b39815f9ce81324651731`:
+- FP6-B run `36709219791`: **FAIL**, but only at focused static typing;
+- focused FP6-B frozen-proof tests: **8 passed**;
+- FP6-A lifecycle regression: **PASS**;
+- S10 frozen visual-proof regression: **PASS**;
+- RDP10 exact-evidence regression: **PASS**;
+- Final Product read-model regression: **PASS**;
+- R22 / FP3 regression: **PASS**;
+- Ruff: **PASS**;
+- mypy: **FAIL** with five assignment/member errors caused by local variable shadowing in `_resolve_exact_narrative`;
+- Product/Development frozen-target non-mutation proof: **PASS**;
+- F10 run `36709219776`: **SUCCESS** on the same head;
+- RDP11 Pre-Soak run `36709219892`: **SUCCESS** on the same head.
+
+Static failure root cause:
+- local mapping variable `narrative` shadowed/conflicted with `_ResolvedNarrative` inference in mypy;
+- no runtime, proof-selection, lineage, or acceptance-test behavior failed.
+
+Static fix:
+- `a6b9047562454550e89d1e04188ef263ab5d4e8e`: renamed the verified detail mapping to `narrative_payload`; canonical behavior and selection contract are unchanged.
+
+Acceptance graph fix:
+- FP6-B workflow now watches the live checkpoint and WC6 workflow so documentation/acceptance-graph changes cannot silently leave FP6-B green on an older head.
+- WC6 workflow now watches FP6-B source/test/checkpoint/workflow paths so the final candidate obtains WC6 on the exact same SHA instead of inheriting a stale paper gate.
+- F10 and RDP11 Pre-Soak already trigger on PR-head changes.
 
 Draft PR `#1737` remains an acceptance vehicle only. It must not merge before all required mechanical gates pass on one final candidate SHA.
 
@@ -122,7 +143,7 @@ Dedicated gate checks:
 - whole-repository regression;
 - post-run Product/Development non-mutation proof.
 
-Before merge, one final candidate SHA must also satisfy the project acceptance set used for FP6-A: FP6-B + WC6 + RDP11 Pre-Soak + F10. Do not count a workflow as PASS only from its top-level conclusion; inspect the relevant acceptance steps/markers.
+Before merge, one final candidate SHA must satisfy the project acceptance set used for FP6-A: FP6-B + WC6 + RDP11 Pre-Soak + F10. Do not count a workflow as PASS only from its top-level conclusion; inspect the relevant acceptance steps/markers.
 
 ## Explicit non-goals / forbidden work
 
@@ -145,9 +166,9 @@ Before merge, one final candidate SHA must also satisfy the project acceptance s
 
 ## Exact next action
 
-1. Inspect FP6-B run `36709219791` for exact head `7852fc6869b85da3130b39815f9ce81324651731`; fix any focused/static/regression failure without weakening canonical verification.
-2. Inspect F10 `36709219776` and RDP11 Pre-Soak `36709219892` on the same exact head.
-3. Locate WC6 trigger semantics and obtain an exact-head WC6 acceptance on the final candidate.
+1. Treat the commit created by this checkpoint update as the new final-candidate head; obtain FP6-B + WC6 + RDP11 Pre-Soak + F10 on that exact SHA.
+2. Inspect FP6-B step-level output; specifically prove focused tests, mypy/Ruff, whole-repository regression and Product/Development non-mutation all pass after `a6b9047562454550e89d1e04188ef263ab5d4e8e`.
+3. Inspect WC6 step-level output rather than relying only on top-level success.
 4. Recheck latest `main` and PR mergeability immediately before merge; reconcile any parallel-agent drift.
-5. Only after one final SHA passes FP6-B + WC6 + RDP11 Pre-Soak + F10 and acceptance outputs are inspected, reconcile `CURRENT_FRONTIER.md` + `HANDOFF_LOG.md` losslessly and consider merge.
+5. Only after one final SHA passes all four gates and acceptance outputs are inspected, reconcile `CURRENT_FRONTIER.md` + `HANDOFF_LOG.md` losslessly and consider merge.
 6. After FP6-B merge, re-audit main; if no parallel agent already closed it, continue with FP6-C by **reusing** FP4-A→E canonical truth and projecting execution/funding status into Trade Passport.
