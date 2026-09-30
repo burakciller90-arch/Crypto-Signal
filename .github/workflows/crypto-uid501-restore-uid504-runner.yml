@@ -60,7 +60,7 @@ jobs:
 
           EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
           existing="$(/bin/ps -axo user=,pid=,command= 2>/dev/null \
-            | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) { print user, pid; exit } }')"
+            | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected && !found) { print user, pid; found=1 } }')"
           if [ -n "$existing" ]; then
             echo "UID504_RUNNER_ALREADY_ALIVE=YES $existing"
             echo "UID504_RUNNER_SUDO_RECOVERY_PASS=YES"
@@ -92,7 +92,7 @@ jobs:
           listener=""
           for _ in {1..30}; do
             listener="$(/bin/ps -axo user=,pid=,command= 2>/dev/null \
-              | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) { print user, pid; exit } }')"
+              | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected && !found) { print user, pid; found=1 } }')"
             [ -n "$listener" ] && break
             /bin/sleep 1
           done
