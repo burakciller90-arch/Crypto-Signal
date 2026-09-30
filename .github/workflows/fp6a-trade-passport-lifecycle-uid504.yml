@@ -46,7 +46,7 @@ jobs:
           echo "FP6A_RDP11_FROZEN_TARGET_EXACT=YES"
           echo "REAL_CAPITAL=0"
 
-      - name: Focused FP6-A lifecycle acceptance
+      - name: Focused FP6-A lifecycle tests
         shell: bash
         run: |
           set -euo pipefail
@@ -54,14 +54,58 @@ jobs:
           PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q \
-            tests/test_fp6a_trade_passport_lifecycle.py \
-            tests/test_final_product_read_model.py \
-            tests/test_transaction_tape_atomic.py \
-            tests/test_autopilot_forward_actions.py
+          "$PY" -m pytest -q tests/test_fp6a_trade_passport_lifecycle.py
+
+      - name: Final Product read-model regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q tests/test_final_product_read_model.py
+
+      - name: R22 transaction-tape regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q tests/test_transaction_tape_atomic.py
+
+      - name: FP3 action regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q tests/test_autopilot_forward_actions.py
+
+      - name: FP6-A Ruff
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
           "$PY" -m ruff check \
             src/crypto_signal/product/final_product_read_model.py \
             tests/test_fp6a_trade_passport_lifecycle.py
+
+      - name: FP6-A mypy
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
           "$PY" -m mypy src/crypto_signal/product/final_product_read_model.py
           echo "FP6A_FOCUSED_PASS=YES"
           echo "FP6A_IMMUTABLE_SOURCE_PASS=YES"
