@@ -582,7 +582,7 @@ class ImmutableSignalLedger:
         """Read a persisted freeze without initializing or mutating the ledger."""
         if not self.path.is_file():
             return None
-        uri = f"{self.path.resolve().as_uri()}?mode=ro&immutable=1"
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
         connection = sqlite3.connect(uri, uri=True, timeout=5.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
