@@ -1,0 +1,43 @@
+name: FP6 execution lineage patch helper
+
+on:
+  push:
+    branches:
+      - "fp6/execution-funding-r22-passport-lineage-20261001"
+    paths:
+      - ".github/workflows/fp6-execution-lineage-patch.yml"
+      - ".github/scripts/patch_fp6_execution_lineage.py"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "fp6/execution-funding-r22-passport-lineage-20261001"
+          fetch-depth: 0
+          clean: true
+      - name: Patch Trade Passport execution lineage projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/patch_fp6_execution_lineage.py
+          python3 -m py_compile \
+            src/crypto_signal/paper/r22_execution_lineage.py \
+            src/crypto_signal/product/final_product_read_model.py
+          git diff --check
+          git config user.name "crypto-signal-agent"
+          git config user.email "crypto-signal-agent@users.noreply.github.com"
+          git add src/crypto_signal/product/final_product_read_model.py
+          if git diff --cached --quiet; then
+            echo "PATCH_ALREADY_PRESENT=YES"
+          else
+            git commit -m "feat: project immutable execution lineage into Trade Passport"
+            git push origin HEAD:fp6/execution-funding-r22-passport-lineage-20261001
+          fi
+          echo "REAL_CAPITAL=0"
