@@ -23,7 +23,7 @@ from crypto_signal.product.intelligence_stream_visual_proof import (
     StreamVisualProofError,
 )
 
-TRADE_PASSPORT_FROZEN_PROOF_SCHEMA_VERSION = "trade-passport-frozen-proof-v1/1"
+TRADE_PASSPORT_FROZEN_PROOF_SCHEMA_VERSION = "trade-passport-frozen-proof-v1/2"
 REAL_CAPITAL = 0
 
 
@@ -34,10 +34,13 @@ class TradePassportFrozenProofError(ValueError):
 @dataclass(frozen=True, slots=True)
 class TradePassportFrozenProofAudit:
     narrative_identity: str
+    narrative_event_at_ms: int
     forecast_identity: str
     proof_identity: str
     signal_freeze_identity: str
     decision_freeze_bundle_identity: str | None
+    event_as_of_ms: int | None
+    proof_frozen_at_ms: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +59,12 @@ class TradePassportFrozenProofView:
     read_only: bool = True
     real_capital: int = REAL_CAPITAL
     schema_version: str = TRADE_PASSPORT_FROZEN_PROOF_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class _ResolvedNarrative:
+    narrative_identity: str
+    event_at_ms: int
 
 
 class TradePassportFrozenProofReadModel:
@@ -121,6 +130,7 @@ class TradePassportFrozenProofReadModel:
             forecast_identity=audit.forecast_identity,
             proof_identity=audit.proof_identity,
             signal_freeze_identity=audit.signal_freeze_identity,
+            as_of_ms=passport.filled_at_ms,
             include_audit=include_audit,
         )
 
@@ -130,11 +140,13 @@ class TradePassportFrozenProofReadModel:
         forecast_identity: str,
         proof_identity: str,
         signal_freeze_identity: str,
+        as_of_ms: int | None = None,
         include_audit: bool = False,
     ) -> TradePassportFrozenProofView:
         _require_sha256(forecast_identity, "Trade Passport forecast identity")
         _require_sha256(proof_identity, "Trade Passport proof identity")
         _require_sha256(signal_freeze_identity, "Trade Passport signal freeze identity")
+        event_as_of_ms = _optional_non_negative_int(as_of_ms)
 
         if not self.stream_ledger_path.is_file():
             return _unavailable("Dondurulmuş Stream kanıtı kullanılamıyor")
@@ -143,21 +155,16 @@ class TradePassportFrozenProofReadModel:
         if not self.signal_ledger_path.is_file():
             return _unavailable("Dondurulmuş sinyal kanıtı kullanılamıyor")
 
-        narrative_identity = self._resolve_exact_narrative(
+        resolved = self._resolve_exact_narrative(
             forecast_identity=forecast_identity,
             proof_identity=proof_identity,
+            signal_freeze_identity=signal_freeze_identity,
+            as_of_ms=event_as_of_ms,
         )
-        if narrative_identity is None:
+        if resolved is None:
             return _unavailable("Bu işlem için exact tarihsel Stream kanıtı bulunamadı")
 
-        try:
-            visual = IntelligenceStreamVisualProofReadModel(
-                stream_ledger_path=self.stream_ledger_path,
-                signal_ledger_path=self.signal_ledger_path,
-                decision_evidence_path=self.decision_evidence_path,
-            ).read_for_narrative(narrative_identity)
-        except StreamVisualProofError as exc:
-            raise TradePassportFrozenProofError(str(exc)) from exc
+        visual = self._read_visual(resolved.narrative_identity)
         if visual is None:
             return _unavailable("Bu işlem için dondurulmuş Market Story bulunamadı")
 
@@ -188,6 +195,34 @@ class TradePassportFrozenProofReadModel:
                 "Trade Passport frozen proof authority boundary mismatch"
             )
 
+        source_as_of_ms = _optional_non_negative_int(provenance.get("source_as_of_ms"))
+        issued_at_ms = _optional_non_negative_int(provenance.get("issued_at_ms"))
+        frozen_at_ms = _optional_non_negative_int(provenance.get("frozen_at_ms"))
+        if event_as_of_ms is not None:
+            _require_not_after(
+                resolved.event_at_ms,
+                event_as_of_ms,
+                "Stream narrative",
+            )
+            if source_as_of_ms is not None:
+                _require_not_after(
+                    source_as_of_ms,
+                    event_as_of_ms,
+                    "proof source-as-of",
+                )
+            if issued_at_ms is not None:
+                _require_not_after(
+                    issued_at_ms,
+                    event_as_of_ms,
+                    "proof issued-at",
+                )
+            if frozen_at_ms is not None:
+                _require_not_after(
+                    frozen_at_ms,
+                    event_as_of_ms,
+                    "signal freeze",
+                )
+
         try:
             exact = IntelligenceStreamExactEvidenceReadModel(
                 stream_ledger_path=self.stream_ledger_path,
@@ -200,7 +235,7 @@ class TradePassportFrozenProofReadModel:
                 options_surface_path=self.options_surface_path,
                 onchain_capital_flow_path=self.onchain_capital_flow_path,
                 onchain_source_contract_path=self.onchain_source_contract_path,
-            ).read_for_narrative(narrative_identity)
+            ).read_for_narrative(resolved.narrative_identity)
         except StreamExactEvidenceError as exc:
             raise TradePassportFrozenProofError(str(exc)) from exc
 
@@ -244,7 +279,8 @@ class TradePassportFrozenProofReadModel:
         audit_view = None
         if include_audit:
             audit_view = TradePassportFrozenProofAudit(
-                narrative_identity=narrative_identity,
+                narrative_identity=resolved.narrative_identity,
+                narrative_event_at_ms=resolved.event_at_ms,
                 forecast_identity=forecast_identity,
                 proof_identity=proof_identity,
                 signal_freeze_identity=signal_freeze_identity,
@@ -253,14 +289,16 @@ class TradePassportFrozenProofReadModel:
                     if decision_freeze_bundle_identity is None
                     else str(decision_freeze_bundle_identity)
                 ),
+                event_as_of_ms=event_as_of_ms,
+                proof_frozen_at_ms=frozen_at_ms,
             )
 
         return TradePassportFrozenProofView(
             availability_label="Doğrulanmış tarihsel kanıt",
             frozen_market_story_label="Dondurulmuş Market Story doğrulandı",
             exact_evidence_label=exact_label,
-            source_as_of_ms=_optional_non_negative_int(provenance.get("source_as_of_ms")),
-            issued_at_ms=_optional_non_negative_int(provenance.get("issued_at_ms")),
+            source_as_of_ms=source_as_of_ms,
+            issued_at_ms=issued_at_ms,
             chart_candle_count=len(candles),
             annotation_count=len(annotations),
             family_proof_count=len(family_contributions),
@@ -274,8 +312,15 @@ class TradePassportFrozenProofReadModel:
         *,
         forecast_identity: str,
         proof_identity: str,
-    ) -> str | None:
+        signal_freeze_identity: str,
+        as_of_ms: int | None,
+    ) -> _ResolvedNarrative | None:
         uri = f"{self.stream_ledger_path.resolve().as_uri()}?mode=ro"
+        parameters: list[object] = [forecast_identity, proof_identity]
+        time_clause = ""
+        if as_of_ms is not None:
+            time_clause = " AND n.event_at_ms <= ?"
+            parameters.append(as_of_ms)
         try:
             with sqlite3.connect(uri, uri=True) as connection:
                 connection.execute("PRAGMA query_only=ON")
@@ -293,8 +338,8 @@ class TradePassportFrozenProofReadModel:
                 if not required.issubset(tables):
                     return None
                 rows = connection.execute(
-                    """
-                    SELECT n.narrative_identity
+                    f"""
+                    SELECT n.narrative_identity, n.event_at_ms
                     FROM stream_narrative_messages AS n
                     JOIN stream_narrative_plans AS p
                       ON p.plan_identity = n.plan_identity
@@ -302,19 +347,21 @@ class TradePassportFrozenProofReadModel:
                       ON f.fact_bundle_identity = p.fact_bundle_identity
                     WHERE json_extract(f.payload_json, '$.forecast_identity') = ?
                       AND json_extract(f.payload_json, '$.proof_identity') = ?
+                      {time_clause}
                     ORDER BY n.event_at_ms ASC, n.narrative_identity ASC
                     """,
-                    (forecast_identity, proof_identity),
+                    tuple(parameters),
                 ).fetchall()
         except sqlite3.DatabaseError as exc:
             raise TradePassportFrozenProofError(
                 "Trade Passport Stream lineage cannot be read safely"
             ) from exc
 
-        verified: list[str] = []
+        verified: list[_ResolvedNarrative] = []
         reader = IntelligenceStreamReadModel(self.stream_ledger_path)
         for row in rows:
             narrative_identity = str(row[0])
+            event_at_ms = _row_non_negative_int(row[1], "Stream narrative event time")
             try:
                 detail = reader.read_message_detail(narrative_identity)
             except StreamReadModelError as exc:
@@ -323,25 +370,67 @@ class TradePassportFrozenProofReadModel:
                 raise TradePassportFrozenProofError(
                     "Trade Passport Stream narrative disappeared during verified read"
                 )
+            if _optional_non_negative_int(detail.get("event_at_ms")) != event_at_ms:
+                raise TradePassportFrozenProofError(
+                    "Trade Passport Stream narrative event time mismatch"
+                )
             fact = _mapping(
                 detail.get("fact_bundle"),
                 "Trade Passport Stream fact bundle",
             )
             if (
-                fact.get("forecast_identity") == forecast_identity
-                and fact.get("proof_identity") == proof_identity
+                fact.get("forecast_identity") != forecast_identity
+                or fact.get("proof_identity") != proof_identity
             ):
-                verified.append(narrative_identity)
+                continue
+
+            visual = self._read_visual(narrative_identity)
+            if visual is None or visual.get("status") != "ready":
+                continue
+            lineage = _mapping(
+                visual.get("lineage"),
+                "Trade Passport candidate visual lineage",
+            )
+            if (
+                lineage.get("forecast_identity") == forecast_identity
+                and lineage.get("proof_identity") == proof_identity
+                and lineage.get("signal_freeze_identity") == signal_freeze_identity
+            ):
+                verified.append(
+                    _ResolvedNarrative(
+                        narrative_identity=narrative_identity,
+                        event_at_ms=event_at_ms,
+                    )
+                )
 
         if not verified:
             return None
-        unique = tuple(dict.fromkeys(verified))
+        latest_event_at_ms = max(item.event_at_ms for item in verified)
+        latest = tuple(
+            item for item in verified if item.event_at_ms == latest_event_at_ms
+        )
+        unique = tuple(
+            dict.fromkeys(item.narrative_identity for item in latest)
+        )
         if len(unique) != 1:
             raise TradePassportFrozenProofError(
-                "Trade Passport lineage resolves to multiple Stream narratives"
+                "Trade Passport exact lineage has competing narratives at the same event time"
             )
         _require_sha256(unique[0], "Trade Passport Stream narrative identity")
-        return unique[0]
+        return _ResolvedNarrative(
+            narrative_identity=unique[0],
+            event_at_ms=latest_event_at_ms,
+        )
+
+    def _read_visual(self, narrative_identity: str) -> dict[str, Any] | None:
+        try:
+            return IntelligenceStreamVisualProofReadModel(
+                stream_ledger_path=self.stream_ledger_path,
+                signal_ledger_path=self.signal_ledger_path,
+                decision_evidence_path=self.decision_evidence_path,
+            ).read_for_narrative(narrative_identity)
+        except StreamVisualProofError as exc:
+            raise TradePassportFrozenProofError(str(exc)) from exc
 
 
 def _unavailable(label: str) -> TradePassportFrozenProofView:
@@ -377,6 +466,20 @@ def _optional_non_negative_int(value: Any) -> int | None:
     if parsed < 0:
         raise TradePassportFrozenProofError("proof timestamp cannot be negative")
     return parsed
+
+
+def _row_non_negative_int(value: Any, label: str) -> int:
+    parsed = _optional_non_negative_int(value)
+    if parsed is None:
+        raise TradePassportFrozenProofError(f"{label} is missing")
+    return parsed
+
+
+def _require_not_after(value: int, as_of_ms: int, label: str) -> None:
+    if value > as_of_ms:
+        raise TradePassportFrozenProofError(
+            f"Trade Passport {label} is newer than lifecycle event"
+        )
 
 
 def _require_sha256(value: str, label: str) -> None:
