@@ -29,7 +29,8 @@ from crypto_signal.product.final_product_read_model import (
 
 def _sqlite_sidecar_bytes(path: Path) -> dict[str, bytes | None]:
     result: dict[str, bytes | None] = {}
-    for suffix in ("-wal", "-shm"):
+    # SQLite -shm contains volatile reader/coordination metadata, not ledger payload.
+    for suffix in ("-wal",):
         sidecar = Path(f"{path}{suffix}")
         result[suffix] = sidecar.read_bytes() if sidecar.exists() else None
     return result
