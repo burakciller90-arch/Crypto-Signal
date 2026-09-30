@@ -80,7 +80,7 @@ jobs:
             ACTIONS_RUNNER_SVC=1 \
             RUNNER_PATH="$RUNNER" \
             RUNNER_LOG="$LOG" \
-            /bin/bash -c 'set -euo pipefail; mkdir -p "$RUNNER_LOG"; cd "$RUNNER_PATH"; /usr/bin/nohup ./runsvc.sh >>"$RUNNER_LOG/uid501-sudo-recovery.out.log" 2>>"$RUNNER_LOG/uid501-sudo-recovery.err.log" </dev/null & pid=$!; echo "$pid" >"$RUNNER_LOG/uid501-sudo-recovery.pid"; sleep 3; if ! kill -0 "$pid"; then echo "UID504_DIRECT_START_PROCESS_EXITED=$pid" >&2; exit 20; fi; echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"'; then
+            /bin/bash -c 'set -euo pipefail; mkdir -p "$RUNNER_LOG"; cd "$RUNNER_PATH"; ./runsvc.sh >>"$RUNNER_LOG/uid501-sudo-recovery.out.log" 2>>"$RUNNER_LOG/uid501-sudo-recovery.err.log" </dev/null & pid=$!; echo "$pid" >"$RUNNER_LOG/uid501-sudo-recovery.pid"; sleep 3; if ! kill -0 "$pid"; then echo "UID504_DIRECT_START_PROCESS_EXITED=$pid" >&2; exit 20; fi; echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"'; then
             echo "UID504_RUNNER_START_FAILED" >&2
             echo "=== UID504 RUNNER STDERR ===" >&2
             /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/tail -80 "$LOG/uid501-sudo-recovery.err.log" >&2 2>/dev/null || true
