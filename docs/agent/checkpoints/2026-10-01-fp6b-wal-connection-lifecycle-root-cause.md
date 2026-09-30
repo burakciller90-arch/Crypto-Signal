@@ -42,3 +42,12 @@ On one exact final candidate SHA:
 - The inspected FP6-B run reports `triggering_actor=github-actions[bot]` and zero jobs. Do not infer a product failure from this state.
 - ACTIVE BLOCKER: remove the temporary transport workflow from the PR while preserving the source fix; then obtain a new exact candidate SHA and rerun/read actual acceptance jobs.
 - NEXT ACTION: fetch exact blob SHA for `.github/workflows/fp6b-close-ledger-connections.yml`, delete that helper from this branch only, re-read PR head/diff, then inspect exact-head FP6-B + WC6 + RDP11 + F10 acceptance. No merge until all four have real jobs and their acceptance markers are verified on one exact SHA.
+
+## LIVE continuation checkpoint — sequence 2
+
+- Temporary transport workflow was removed from `fp6b/trade-passport-frozen-proof` in commit `87912f96c3f2b28c928e007d4ceb69afad2feea8`.
+- The intended source fix in `src/crypto_signal/ledger/store.py` remains; no product rollback was performed.
+- This checkpoint commit becomes the next acceptance candidate head. Do not modify the branch while its acceptance is being evaluated unless a real acceptance failure is proven.
+- ACTIVE PROBLEM: establish whether deterministic connection close + immutable readers now pass the real four-gate acceptance on one exact SHA.
+- NEXT ACTION: re-read PR head SHA after this checkpoint, verify the temporary helper is absent from changed files, then inspect actual jobs/log markers for FP6-B + WC6 + RDP11 Pre-Soak + F10 on that exact head. Treat `action_required`, skipped, queued, cancelled, or zero-job runs as non-evidence; never as PASS.
+- FP6 remains OPEN after FP6-B even if this slice becomes green. The next separate proof is `ExecutionReceiptV2 → R22 immutable tape → Trade Passport`; do not open/merge a duplicate implementation if that lineage already exists.
