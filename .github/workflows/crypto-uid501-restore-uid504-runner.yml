@@ -11,56 +11,91 @@ permissions:
 jobs:
   restore:
     if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[MAC501] RESTORE UID504 RUNNER VIA SUDO'
-    name: UID501 restore canonical UID504 SSD runner
+    name: UID501 restore UID504 runner
     runs-on: [self-hosted, crypto-signal, uid501]
     timeout-minutes: 10
     steps:
-      - name: Restore canonical SSD runner directly as UID504
+      - name: Restore configured UID504 runner directly as UID504
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          RUNNER="$ROOT/Runner"
-          LOG="$ROOT/RunnerLogs"
+          SSD_RUNNER="$ROOT/Runner"
+          INTERNAL_RUNNER="/Users/crypto-signal-agent/actions-runner-crypto"
+          LOG="/Users/crypto-signal-agent/Library/Logs/CryptoSignalRunnerRecovery"
           START_SCRIPT="/tmp/crypto-uid504-runner-direct-start.sh"
-          EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
 
           test "$(id -u)" = "501" || { echo "UID501_REQUIRED" >&2; exit 10; }
-          test -d "$RUNNER" || { echo "RUNNER_DIR_MISSING=$RUNNER" >&2; exit 11; }
-          test -f "$RUNNER/.runner" || { echo "RUNNER_CONFIG_MISSING=$RUNNER/.runner" >&2; exit 12; }
-          test -f "$RUNNER/.credentials" || { echo "RUNNER_CREDENTIALS_MISSING=$RUNNER/.credentials" >&2; exit 13; }
-          test -x "$RUNNER/runsvc.sh" || { echo "RUNSVC_MISSING_OR_NOT_EXECUTABLE=$RUNNER/runsvc.sh" >&2; exit 14; }
           /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/id -u | /usr/bin/grep -qx '504' \
             || { echo "UID501_TO_UID504_SUDO_UNAVAILABLE" >&2; exit 15; }
 
+          if [ -d "$SSD_RUNNER" ]; then
+            RUNNER="$SSD_RUNNER"
+            MODE="SSD"
+          elif [ -d "$INTERNAL_RUNNER" ]; then
+            RUNNER="$INTERNAL_RUNNER"
+            MODE="INTERNAL_FALLBACK"
+          else
+            echo "UID504_RUNNER_DIR_MISSING_BOTH=YES" >&2
+            exit 11
+          fi
+
+          echo "UID504_RUNNER_RECOVERY_MODE=$MODE"
+          echo "UID504_RUNNER_RECOVERY_PATH=$RUNNER"
+
+          test "$(/usr/bin/stat -f '%Su' "$RUNNER")" = "crypto-signal-agent" \
+            || { echo "RUNNER_OWNER_INVALID=$RUNNER" >&2; exit 12; }
+          test -f "$RUNNER/.runner" \
+            || { echo "RUNNER_CONFIG_MISSING=$RUNNER/.runner" >&2; exit 13; }
+          test -f "$RUNNER/.credentials" \
+            || { echo "RUNNER_CREDENTIALS_MISSING=$RUNNER/.credentials" >&2; exit 14; }
+          test -x "$RUNNER/runsvc.sh" \
+            || { echo "RUNSVC_MISSING_OR_NOT_EXECUTABLE=$RUNNER/runsvc.sh" >&2; exit 16; }
+          test -x "$RUNNER/bin/Runner.Listener" \
+            || { echo "RUNNER_LISTENER_MISSING=$RUNNER/bin/Runner.Listener" >&2; exit 17; }
+
+          RUNNER_NAME="$(/usr/bin/python3 - "$RUNNER/.runner" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text())
+print(payload.get("agentName", ""))
+PY
+)"
+          echo "UID504_RUNNER_REGISTERED_NAME=$RUNNER_NAME"
+          test "$RUNNER_NAME" = "crypto-signal-uid504" \
+            || { echo "UID504_RUNNER_REGISTERED_NAME_INVALID=$RUNNER_NAME" >&2; exit 18; }
+
+          EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
           existing="$(/bin/ps -axo user=,pid=,command= 2>/dev/null \
             | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) { print user, pid; exit } }')"
           if [ -n "$existing" ]; then
-            echo "UID504_SSD_RUNNER_ALREADY_ALIVE=YES $existing"
-            echo "UID504_SSD_RUNNER_SUDO_RECOVERY_PASS=YES"
+            echo "UID504_RUNNER_ALREADY_ALIVE=YES $existing"
+            echo "UID504_RUNNER_SUDO_RECOVERY_PASS=YES"
             echo "REAL_CAPITAL=0"
             exit 0
           fi
 
           if /bin/ps -axo user=,command= 2>/dev/null \
-            | /usr/bin/awk -v expected="$RUNNER/bin/Runner.Worker" '$1 == "crypto-signal-agent" && index($0, expected) { found=1 } END { exit(found ? 0 : 1) }'; then
-            echo "UID504_SSD_RUNNER_RECOVERY_ABORT=ACTIVE_WORKER" >&2
+            | /usr/bin/awk '$1 == "crypto-signal-agent" && $0 ~ /bin\/Runner\.Worker/ { found=1 } END { exit(found ? 0 : 1) }'; then
+            echo "UID504_RUNNER_RECOVERY_ABORT=ACTIVE_WORKER" >&2
             exit 3
           fi
 
           /bin/cat > "$START_SCRIPT" <<'SH'
           #!/bin/bash
           set -euo pipefail
-          ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          RUNNER="$ROOT/Runner"
-          LOG="$ROOT/RunnerLogs"
+          RUNNER="${RUNNER_PATH:?}"
+          LOG="${RUNNER_LOG:?}"
           mkdir -p "$LOG"
           cd "$RUNNER"
           export HOME="/Users/crypto-signal-agent"
+          export ACTIONS_RUNNER_SVC=1
           unset RUNNER_TRACKING_ID
           /usr/bin/nohup ./runsvc.sh >>"$LOG/uid501-sudo-recovery.out.log" 2>>"$LOG/uid501-sudo-recovery.err.log" < /dev/null &
           pid=$!
-          echo "$pid" > "$ROOT/ssd-runner-uid501-sudo.pid"
+          echo "$pid" > "$LOG/uid501-sudo-recovery.pid"
           sleep 3
           kill -0 "$pid"
           echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"
@@ -68,7 +103,10 @@ jobs:
           /bin/chmod 755 "$START_SCRIPT"
 
           /usr/bin/sudo -n -u crypto-signal-agent \
-            /usr/bin/env HOME=/Users/crypto-signal-agent \
+            /usr/bin/env -u RUNNER_TRACKING_ID \
+            HOME=/Users/crypto-signal-agent \
+            RUNNER_PATH="$RUNNER" \
+            RUNNER_LOG="$LOG" \
             /bin/bash "$START_SCRIPT"
           /bin/rm -f "$START_SCRIPT"
 
@@ -80,11 +118,15 @@ jobs:
             /bin/sleep 1
           done
 
-          test -n "$listener" || {
-            echo "UID504_SSD_RUNNER_LISTENER_NOT_FOUND" >&2
-            /usr/bin/tail -80 "$LOG/uid501-sudo-recovery.err.log" 2>/dev/null || true
-            exit 16
-          }
-          echo "UID504_SSD_RUNNER_LISTENER=$listener"
-          echo "UID504_SSD_RUNNER_SUDO_RECOVERY_PASS=YES"
+          if [ -z "$listener" ]; then
+            echo "UID504_RUNNER_LISTENER_NOT_FOUND" >&2
+            echo "=== UID504 RUNNER STDERR ===" >&2
+            /usr/bin/tail -80 "$LOG/uid501-sudo-recovery.err.log" >&2 2>/dev/null || true
+            echo "=== UID504 RUNNER STDOUT ===" >&2
+            /usr/bin/tail -80 "$LOG/uid501-sudo-recovery.out.log" >&2 2>/dev/null || true
+            exit 19
+          fi
+
+          echo "UID504_RUNNER_LISTENER=$listener"
+          echo "UID504_RUNNER_SUDO_RECOVERY_PASS=YES"
           echo "REAL_CAPITAL=0"
