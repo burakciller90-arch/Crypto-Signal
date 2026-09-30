@@ -53,7 +53,7 @@ jobs:
           test -x "$RUNNER/bin/Runner.Listener" \
             || { echo "RUNNER_LISTENER_MISSING=$RUNNER/bin/Runner.Listener" >&2; exit 17; }
 
-          RUNNER_NAME="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("agentName", ""))' "$RUNNER/.runner")"
+          RUNNER_NAME="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8-sig")).get("agentName", ""))' "$RUNNER/.runner")"
           echo "UID504_RUNNER_REGISTERED_NAME=$RUNNER_NAME"
           test "$RUNNER_NAME" = "crypto-signal-uid504" \
             || { echo "UID504_RUNNER_REGISTERED_NAME_INVALID=$RUNNER_NAME" >&2; exit 18; }
