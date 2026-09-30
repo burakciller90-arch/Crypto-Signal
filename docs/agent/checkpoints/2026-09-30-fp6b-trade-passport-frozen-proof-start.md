@@ -1,12 +1,14 @@
 # Crypto Signal — FP6-B Live Checkpoint
 
-Status: **ACTIVE / IMPLEMENTATION NOT YET STARTED**
+Status: **ACTIVE / TEST ACCEPTANCE PENDING**
 Date: 2026-09-30
 Repository: `burakciller90-arch/Crypto-Signal`
 Canonical roadmap: `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
 Active pointer: `ACTIVE_ROADMAP.md`
 Task-start main: `38d757071a50566379715f3074b4b74b668a6aa6`
 Active branch: `fp6b/trade-passport-frozen-proof`
+Draft PR: `#1737`
+Current branch head before this checkpoint update: `ecb949dcce578de60d2a7848b6f310afa0b130d5`
 Safety: `REAL_CAPITAL=0`
 
 ## Current program state
@@ -16,12 +18,11 @@ Safety: `REAL_CAPITAL=0`
 - FP6-A merged as PR #1705 / main `38d757071a50566379715f3074b4b74b668a6aa6` after exact-head FP6-A + WC6 + RDP11 Pre-Soak + F10 acceptance.
 - FP6 is the current parallel product frontier while FP0 remains time/evidence gated.
 
-## Duplicate audit before implementation
+## Duplicate audit
 
-Live GitHub recheck on task start found:
-- current `main` still `38d757071a50566379715f3074b4b74b668a6aa6`;
-- no FP6-B branch exists;
-- no open/merged PR already implements the same Trade Passport frozen-proof event binding;
+Live GitHub recheck found:
+- current `main` still `38d757071a50566379715f3074b4b74b668a6aa6` before FP6-B coding;
+- no FP6-B branch or PR pre-existed;
 - existing FP6 branches are FP6-A/runner/acceptance remnants only.
 
 Classification:
@@ -29,26 +30,43 @@ Classification:
 - **REUSE** FP1-E immutable Trade Passport read model;
 - **REUSE** S10 `IntelligenceStreamVisualProofReadModel` for frozen historical chart/annotation proof;
 - **REUSE** RDP10 `IntelligenceStreamExactEvidenceReadModel` for exact persisted family/source proof;
-- **EXTEND** read-only Trade Passport proof projection so every lifecycle event can open the exact persisted proof that existed at that time;
+- **EXTEND** read-only Trade Passport proof projection;
 - **BUILD: NO** new canonical ledger/store/schema/writer/evidence engine.
 
 ## First mechanically open FP6 requirement
 
 Master-roadmap FP6 PASS requires **every lifecycle event to open the exact proof that existed at that time**.
 
-FP6-A correctly reconstructs OPEN / SCALE_IN / PARTIAL_TAKE_PROFIT / REDUCE / CLOSE and reopens each exact Trade Passport, but the current customer Trade Passport view exposes only a decision-proof summary. It does not yet provide a direct event-level customer projection into the accepted frozen Market Story / exact family proof stack.
+FP6-A correctly reconstructs OPEN / SCALE_IN / PARTIAL_TAKE_PROFIT / REDUCE / CLOSE and reopens each exact Trade Passport, but the current customer Trade Passport view exposes only a decision-proof summary. It does not yet directly bind each event to accepted frozen Market Story / exact family proof.
 
-The existing Trade Passport audit already preserves the exact immutable `forecast_identity`, `proof_identity`, and `signal_freeze_identity`. The implementation must resolve from those identities and fail closed; it must never substitute current market data or recompute historical evidence.
+## Implemented so far
 
-## Bounded FP6-B goal
+Commit `8b5ab765a74c0daafd664e4b3a78ee312b51b1d7`:
+- added `src/crypto_signal/product/trade_passport_frozen_proof.py`;
+- reads exact `forecast_identity + proof_identity + signal_freeze_identity` from existing Trade Passport audit lineage;
+- resolves exactly one persisted Stream narrative through read-only SQL over existing immutable Stream tables;
+- re-verifies the narrative with `IntelligenceStreamReadModel`;
+- reuses S10 `IntelligenceStreamVisualProofReadModel` for frozen candles/annotations;
+- reuses RDP10 `IntelligenceStreamExactEvidenceReadModel` for exact family/source proof;
+- rejects ambiguous/mismatched lineage;
+- requires `current_data_substitution=false`;
+- no canonical writer/store/schema/backfill added.
 
-Create the smallest read-only bridge from each FP6 lifecycle event to accepted historical proof owners:
-1. deterministically resolve the persisted Stream narrative bound to the event's exact forecast/proof lineage;
-2. verify the resolved narrative is bound to the same forecast/proof/signal-freeze lineage as the Trade Passport;
-3. reuse S10 frozen visual proof for issuance-time chart/annotations;
-4. reuse RDP10 exact evidence for exact persisted family/source proof where available;
-5. expose explicit unavailable/fail-closed state when exact historical proof cannot be resolved;
-6. prove source databases are not mutated and `current_data_substitution=false`.
+Commit `ecb949dcce578de60d2a7848b6f310afa0b130d5`:
+- added `tests/test_fp6b_trade_passport_frozen_proof.py`;
+- covers exact-lineage proof opening, source DB byte immutability, explicit missing-lineage behavior, signal-lineage mismatch fail-closed behavior, and invalid identity rejection before lookup.
+
+Draft PR `#1737` opened only as an acceptance vehicle. It must not merge before all required mechanical gates pass on one final candidate SHA.
+
+## Acceptance currently running
+
+PR-head workflows observed after opening #1737:
+- RDP11 Pre-Soak Fulltest UID504 — run `36706151196` — queued at last check;
+- Crypto Stream Final F10 Closeout Prep UID504 — run `36706150990` — in progress at last check;
+- Crypto Stream Final F7 Local Rewrite Prep UID504 — run `36706151080` — in progress at last check;
+- Crypto Stream Final F9 Real UI Acceptance — run `36706151189` — in progress at last check.
+
+A dedicated FP6-B focused acceptance still needs to be established/run; generic workflow SUCCESS alone is not FP6-B PASS.
 
 ## Explicit non-goals / forbidden work
 
@@ -63,12 +81,11 @@ Create the smallest read-only bridge from each FP6 lifecycle event to accepted h
 
 ## Other active project risks retained for handoff
 
-These are not ignored merely because FP6-B is bounded:
-- `CURRENT_FRONTIER.md` and `HANDOFF_LOG.md` on `main` are stale relative to FP6-A; they must be reconciled without truncating their large historical contents before final handoff/merge.
+- `CURRENT_FRONTIER.md` (~382 KB) and `HANDOFF_LOG.md` (~305 KB) on `main` are stale relative to FP6-A. Do not overwrite them from truncated reads. Reconcile them losslessly before final handoff/merge or add an authoritative bootstrap pointer to this live checkpoint.
 - UID504 runner startup was repaired for the immediate FP6-A blocker, but daily sleep/shutdown/network-loss resilience has not all been mechanically exercised as durable operational acceptance.
-- FP0/RDP11 remains independently open until its real 72h accumulated evidence audit passes; elapsed time alone is not PASS.
-- After FP6-B, audit all remaining FP6 master clauses before advancing to FP7; likely checks include execution semantics such as funding/latency/partial-fill/queue visibility and whole-phase immutable-archive acceptance.
+- FP0/RDP11 remains independently open until its real accumulated evidence audit passes; elapsed time alone is not PASS.
+- After FP6-B, audit all remaining FP6 master clauses before advancing to FP7; likely checks include funding/latency/partial-fill/queue visibility plus whole-phase immutable-archive acceptance.
 
 ## Exact next action
 
-Inspect current Stream persistence lineage and add a read-only exact-lineage resolver that maps a Trade Passport event's `forecast_identity + proof_identity + signal_freeze_identity` to exactly one persisted decision narrative, then compose the existing S10/RDP10 proof readers over that narrative. Add deterministic tests before acceptance workflow work.
+Read PR #1737 workflow results/logs. Fix any code/test issue first. Then add/confirm a dedicated FP6-B exact-head gate that runs the new focused test plus relevant FP6-A/read-model regressions, Ruff, strict mypy/py_compile, and non-mutation assertions. Before any merge, recheck latest `main`, reconcile parallel changes if any, and rerun FP6-B + WC6 + RDP11 Pre-Soak + F10 on the single final candidate SHA.
