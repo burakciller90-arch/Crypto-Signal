@@ -1409,7 +1409,7 @@ def _resolve_signal_objects(
 ) -> dict[str, dict[str, Any]]:
     if not path.is_file():
         return {}
-    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
+    uri = f"{path.resolve().as_uri()}?mode=ro"
     try:
         connection = sqlite3.connect(uri, uri=True)
     except sqlite3.DatabaseError as exc:
