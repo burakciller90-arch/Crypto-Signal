@@ -19,7 +19,7 @@ jobs:
           ref: fp6b/trade-passport-frozen-proof
           fetch-depth: 0
 
-      - name: Apply exact bounded repair and remove helper
+      - name: Apply exact bounded source repair
         shell: bash
         run: |
           set -euo pipefail
@@ -64,33 +64,15 @@ jobs:
               "src/crypto_signal/product/intelligence_stream_exact_evidence.py",
               "_resolve_signal_objects",
           )
-
-          workflow = Path(".github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml")
-          workflow_text = workflow.read_text()
-          anchor = '      - "src/crypto_signal/product/trade_passport_frozen_proof.py"\n'
-          additions = (
-              '      - "src/crypto_signal/ledger/store.py"\n'
-              '      - "src/crypto_signal/product/intelligence_stream_exact_evidence.py"\n'
-          )
-          if '      - "src/crypto_signal/ledger/store.py"\n' not in workflow_text:
-              if anchor not in workflow_text:
-                  raise SystemExit("FP6-B workflow source-path anchor missing")
-              workflow_text = workflow_text.replace(anchor, anchor + additions, 1)
-              workflow.write_text(workflow_text)
           PY
-
-          rm .github/workflows/fp6b-apply-immutable-read-fix.yml
 
           git diff --check
           git diff -- src/crypto_signal/ledger/store.py \
-            src/crypto_signal/product/intelligence_stream_exact_evidence.py \
-            .github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml
+            src/crypto_signal/product/intelligence_stream_exact_evidence.py
 
           git config user.name "crypto-signal-agent"
           git config user.email "crypto-signal-agent@users.noreply.github.com"
           git add src/crypto_signal/ledger/store.py \
-            src/crypto_signal/product/intelligence_stream_exact_evidence.py \
-            .github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml \
-            .github/workflows/fp6b-apply-immutable-read-fix.yml
+            src/crypto_signal/product/intelligence_stream_exact_evidence.py
           git commit -m "fix: make FP6-B frozen signal reads SQLite-immutable"
           git push origin HEAD:fp6b/trade-passport-frozen-proof
