@@ -7,6 +7,7 @@ on:
       - "src/crypto_signal/product/trade_passport_frozen_proof.py"
       - "tests/test_fp6b_trade_passport_frozen_proof.py"
       - "docs/agent/checkpoints/2026-09-30-fp6b-trade-passport-frozen-proof-start.md"
+      - "docs/agent/checkpoints/2026-09-30-fp6b-shared-venv-triage.md"
       - ".github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml"
       - ".github/workflows/wc6-paper-recovery-reconciliation-uid504.yml"
   workflow_dispatch:
@@ -48,79 +49,81 @@ jobs:
           echo "FP6B_RDP11_FROZEN_TARGET_EXACT=YES"
           echo "REAL_CAPITAL=0"
 
+      - name: Create isolated acceptance environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/fp6b-trade-passport-frozen-proof-venv"
+          test -x "$BASE_PY"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "FP6B_ISOLATED_ACCEPTANCE_ENV=YES"
+          echo "REAL_CAPITAL=0"
+
       - name: Focused FP6-B frozen-proof tests
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_fp6b_trade_passport_frozen_proof.py
+          "$TEST_PY" -m pytest -q tests/test_fp6b_trade_passport_frozen_proof.py
 
       - name: FP6-A lifecycle regression
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_fp6a_trade_passport_lifecycle.py
+          "$TEST_PY" -m pytest -q tests/test_fp6a_trade_passport_lifecycle.py
 
       - name: S10 frozen visual-proof regression
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_intelligence_stream_visual_proof.py
+          "$TEST_PY" -m pytest -q tests/test_intelligence_stream_visual_proof.py
 
       - name: RDP10 exact-evidence regression
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_intelligence_stream_exact_evidence.py
+          "$TEST_PY" -m pytest -q tests/test_intelligence_stream_exact_evidence.py
 
       - name: Final Product read-model regression
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_final_product_read_model.py
+          "$TEST_PY" -m pytest -q tests/test_final_product_read_model.py
 
       - name: R22 and FP3 regression
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_transaction_tape_atomic.py tests/test_autopilot_forward_actions.py
+          "$TEST_PY" -m pytest -q tests/test_transaction_tape_atomic.py tests/test_autopilot_forward_actions.py
 
       - name: FP6-B Ruff and mypy
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m ruff check \
+          "$TEST_PY" -m ruff check \
             src/crypto_signal/product/trade_passport_frozen_proof.py \
             tests/test_fp6b_trade_passport_frozen_proof.py
-          "$PY" -m mypy src/crypto_signal/product/trade_passport_frozen_proof.py
-          "$PY" -m py_compile src/crypto_signal/product/trade_passport_frozen_proof.py
+          "$TEST_PY" -m mypy src/crypto_signal/product/trade_passport_frozen_proof.py
+          "$TEST_PY" -m py_compile src/crypto_signal/product/trade_passport_frozen_proof.py
           echo "FP6B_FOCUSED_STATIC_PASS=YES"
           echo "REAL_CAPITAL=0"
 
@@ -128,13 +131,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q
-          "$PY" -m ruff check src tests ops/verify_stage10_integrated.py
-          "$PY" -m mypy src ops/verify_stage10_integrated.py
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
           node --check src/crypto_signal/product/static/freshness.js
           node --check src/crypto_signal/product/static/app.js
           node tests/js/test_product_freshness.js
