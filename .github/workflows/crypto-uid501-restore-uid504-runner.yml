@@ -23,7 +23,6 @@ jobs:
           SSD_RUNNER="$ROOT/Runner"
           INTERNAL_RUNNER="/Users/crypto-signal-agent/actions-runner-crypto"
           LOG="/Users/crypto-signal-agent/Library/Logs/CryptoSignalRunnerRecovery"
-          START_SCRIPT="/tmp/crypto-uid504-runner-direct-start.sh"
 
           test "$(id -u)" = "501" || { echo "UID501_REQUIRED" >&2; exit 10; }
           /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/id -u | /usr/bin/grep -qx '504' \
@@ -54,15 +53,7 @@ jobs:
           test -x "$RUNNER/bin/Runner.Listener" \
             || { echo "RUNNER_LISTENER_MISSING=$RUNNER/bin/Runner.Listener" >&2; exit 17; }
 
-          RUNNER_NAME="$(/usr/bin/python3 - "$RUNNER/.runner" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-payload = json.loads(Path(sys.argv[1]).read_text())
-print(payload.get("agentName", ""))
-PY
-)"
+          RUNNER_NAME="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("agentName", ""))' "$RUNNER/.runner")"
           echo "UID504_RUNNER_REGISTERED_NAME=$RUNNER_NAME"
           test "$RUNNER_NAME" = "crypto-signal-uid504" \
             || { echo "UID504_RUNNER_REGISTERED_NAME_INVALID=$RUNNER_NAME" >&2; exit 18; }
@@ -83,32 +74,13 @@ PY
             exit 3
           fi
 
-          /bin/cat > "$START_SCRIPT" <<'SH'
-          #!/bin/bash
-          set -euo pipefail
-          RUNNER="${RUNNER_PATH:?}"
-          LOG="${RUNNER_LOG:?}"
-          mkdir -p "$LOG"
-          cd "$RUNNER"
-          export HOME="/Users/crypto-signal-agent"
-          export ACTIONS_RUNNER_SVC=1
-          unset RUNNER_TRACKING_ID
-          /usr/bin/nohup ./runsvc.sh >>"$LOG/uid501-sudo-recovery.out.log" 2>>"$LOG/uid501-sudo-recovery.err.log" < /dev/null &
-          pid=$!
-          echo "$pid" > "$LOG/uid501-sudo-recovery.pid"
-          sleep 3
-          kill -0 "$pid"
-          echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"
-          SH
-          /bin/chmod 755 "$START_SCRIPT"
-
           /usr/bin/sudo -n -u crypto-signal-agent \
             /usr/bin/env -u RUNNER_TRACKING_ID \
             HOME=/Users/crypto-signal-agent \
+            ACTIONS_RUNNER_SVC=1 \
             RUNNER_PATH="$RUNNER" \
             RUNNER_LOG="$LOG" \
-            /bin/bash "$START_SCRIPT"
-          /bin/rm -f "$START_SCRIPT"
+            /bin/bash -c 'set -euo pipefail; mkdir -p "$RUNNER_LOG"; cd "$RUNNER_PATH"; /usr/bin/nohup ./runsvc.sh >>"$RUNNER_LOG/uid501-sudo-recovery.out.log" 2>>"$RUNNER_LOG/uid501-sudo-recovery.err.log" </dev/null & pid=$!; echo "$pid" >"$RUNNER_LOG/uid501-sudo-recovery.pid"; sleep 3; kill -0 "$pid"; echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"'
 
           listener=""
           for _ in {1..30}; do
