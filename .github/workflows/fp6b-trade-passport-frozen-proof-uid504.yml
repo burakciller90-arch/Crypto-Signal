@@ -8,6 +8,7 @@ on:
       - "tests/test_fp6b_trade_passport_frozen_proof.py"
       - "docs/agent/checkpoints/2026-09-30-fp6b-trade-passport-frozen-proof-start.md"
       - ".github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml"
+      - ".github/workflows/wc6-paper-recovery-reconciliation-uid504.yml"
   workflow_dispatch:
 
 permissions:
