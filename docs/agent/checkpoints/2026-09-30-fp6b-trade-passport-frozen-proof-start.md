@@ -1,6 +1,6 @@
 # Crypto Signal — FP6-B Live Checkpoint
 
-Status: **ACTIVE / TEST ACCEPTANCE PENDING**
+Status: **ACTIVE / EXACT-HEAD ACCEPTANCE RUNNING**
 Date: 2026-09-30
 Repository: `burakciller90-arch/Crypto-Signal`
 Canonical roadmap: `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
@@ -8,7 +8,7 @@ Active pointer: `ACTIVE_ROADMAP.md`
 Task-start main: `38d757071a50566379715f3074b4b74b668a6aa6`
 Active branch: `fp6b/trade-passport-frozen-proof`
 Draft PR: `#1737`
-Current branch head before this checkpoint update: `32281aa4613f1ca2d0be685368df98073b15b782`
+Latest code/test head before this checkpoint write: `7852fc6869b85da3130b39815f9ce81324651731`
 Safety: `REAL_CAPITAL=0`
 
 ## Current program state
@@ -18,12 +18,13 @@ Safety: `REAL_CAPITAL=0`
 - FP6-A merged as PR #1705 / main `38d757071a50566379715f3074b4b74b668a6aa6` after exact-head FP6-A + WC6 + RDP11 Pre-Soak + F10 acceptance.
 - FP6 is the current parallel product frontier while FP0 remains time/evidence gated.
 
-## Duplicate audit
+## Duplicate / drift audit
 
 Live GitHub recheck found:
-- current `main` is still `38d757071a50566379715f3074b4b74b668a6aa6` at this continuation checkpoint;
-- draft PR #1737 is still open, mergeable, and based on that exact main SHA;
-- no parallel `main` drift was present at this checkpoint.
+- current `main` remained `38d757071a50566379715f3074b4b74b668a6aa6` during this continuation;
+- draft PR #1737 is open and was `mergeable=true` after the latest code/test push;
+- PR base remains exact FP6-A main SHA;
+- no parallel `main` drift was present at the last recheck.
 
 Classification:
 - **REUSE** R22/R21 immutable transaction/accounting lineage and FP6-A lifecycle reconstruction;
@@ -42,39 +43,73 @@ From `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`:
 - lifecycle is append-only and includes OPEN / SCALE_IN / STOP_UPDATE / PARTIAL_TAKE_PROFIT / REDUCE / CLOSE / CORRECTION-SUPERSEDED when required;
 - PASS requires reconstruction solely from accepted immutable records, every lifecycle event opening the exact proof that existed then, losses being equally inspectable, and later model versions being unable to alter historical content.
 
-## Implemented so far
+## FP6-B implementation state
 
-Commit `8b5ab765a74c0daafd664e4b3a78ee312b51b1d7`:
-- added `src/crypto_signal/product/trade_passport_frozen_proof.py`;
-- reads `forecast_identity + proof_identity + signal_freeze_identity` from existing Trade Passport audit lineage;
-- reuses S10 frozen visual proof and RDP10 exact family/source proof;
-- requires `current_data_substitution=false`;
-- no canonical writer/store/schema/backfill added.
+Initial commits:
+- `8b5ab765a74c0daafd664e4b3a78ee312b51b1d7`: added `src/crypto_signal/product/trade_passport_frozen_proof.py`; reuses existing Trade Passport audit lineage + S10 + RDP10; no new truth writer/store.
+- `ecb949dcce578de60d2a7848b6f310afa0b130d5`: initial focused proof tests.
+- `1cd1ae0753800c98067ecedb0d3b2bc32c08a2eb`: exact triple + lifecycle event-time resolver.
+- `0cad8a5e0876bb4230bb97db27559876828ba8a1`: event-time/story-revision/lifecycle tests.
+- `12ad17efcecbd98a5217b3c4e0b8ee5d8a6991d7`: dedicated exact-head UID504 FP6-B workflow.
 
-Commit `ecb949dcce578de60d2a7848b6f310afa0b130d5`:
-- added `tests/test_fp6b_trade_passport_frozen_proof.py`;
-- covers exact-lineage proof opening, source DB byte immutability, explicit missing-lineage behavior, signal-lineage mismatch fail-closed behavior, and invalid identity rejection before lookup.
+Dedicated run #1 on exact head `12ad17efcecbd98a5217b3c4e0b8ee5d8a6991d7`:
+- workflow run: `36708501018`;
+- exact source assertion: **PASS**;
+- UID504 + frozen RDP11 Product/Development target assertion: **PASS**;
+- focused FP6-B test: **FAIL**;
+- post-run Product/Development non-mutation: **PASS**;
+- failure cause was local to this slice, not runner/soak/runtime mutation.
 
-Draft PR `#1737` is an acceptance vehicle only. It must not merge before all required mechanical gates pass on one final candidate SHA.
+Failure root causes found from decoded job log:
+1. resolver incorrectly read `read_message_detail()` event time at `detail["event_at_ms"]`; canonical contract exposes it at `detail["narrative"]["event_at_ms"]`;
+2. the synthetic later-story fixture changed only the narrative row, violating canonical Stream detail lineage because narrative / analytical / fact / message event identities and event time must remain mutually consistent.
 
-## Continuation audit — active problem found
+Fixes:
+- `877018421e21e1b0bb9db3d69a363a3f7b2921b9`: resolver now reads event time from the verified canonical narrative payload. Canonical Stream verification was **not weakened**.
+- `7852fc6869b85da3130b39815f9ce81324651731`: test fixture now creates a complete canonical full-lineage later Stream event: new fact bundle, message input, analytical view, plan and narrative identities/digests, all with consistent event/source/stream lineage. This preserves the real production contract instead of weakening tests.
 
-The current resolver still selects Stream candidates using only `forecast_identity + proof_identity` and then requires exactly one narrative. That is too coarse for the FP6 historical guarantee because one accepted decision truth can legitimately have more than one persisted Stream narrative/story revision.
+At this checkpoint, exact-head run #3 for `7852fc6869b85da3130b39815f9ce81324651731` is active:
+- FP6-B run `36709219791`: in progress at last poll;
+- F10 run `36709219776`: queued at last poll;
+- RDP11 Pre-Soak run `36709219892`: queued at last poll.
+
+Draft PR `#1737` remains an acceptance vehicle only. It must not merge before all required mechanical gates pass on one final candidate SHA.
+
+## Historical-proof selection contract
 
 The safe selection key is:
 1. exact Trade Passport `forecast_identity`;
 2. exact Trade Passport `proof_identity`;
 3. exact Trade Passport `signal_freeze_identity` resolved through S10 proof lineage;
-4. for a lifecycle event, the narrative must have existed by that event (`event_at_ms <= passport.filled_at_ms` / lifecycle event time);
-5. among exact-lineage candidates already existing at that time, select the latest persisted narrative deterministically; same-timestamp competing exact candidates remain fail-closed.
+4. for a lifecycle event, candidate narrative `event_at_ms <= passport.filled_at_ms` / lifecycle event time;
+5. among exact-lineage candidates already existing by the event cutoff, select the latest event time deterministically;
+6. distinct exact candidates at the same latest event timestamp remain fail-closed because accepted history provides no safe ordering basis.
 
-This prevents a later Stream rewrite/story from being substituted into an earlier trade event while also avoiding false ambiguity merely because accepted history contains multiple narrative revisions.
+This prevents a later Stream event/story from being substituted into an earlier lifecycle event and does not invent ordering when persisted truth is ambiguous.
 
-## Acceptance status / known limitation
+## FP4 reuse audit — important whole-project finding
 
-Generic F10 green is **not** FP6-B PASS. It does not execute the new focused test and PR-event runs may checkout a GitHub merge ref. FP6-B requires a dedicated exact-head workflow modeled on the accepted FP6-A gate.
+Do **not** build a second execution realism engine for FP6. Accepted FP4 work already owns the required hard execution truth:
 
-Required dedicated gate:
+- FP4-A / PR #1688 → `src/crypto_signal/paper/execution_depth_v2.py`: deterministic depth-aware FULL / PARTIAL / NOT_FILLED / FILL_NOT_PROVEN outcomes.
+- FP4-B / PR #1692 → `src/crypto_signal/paper/execution_limit_v2.py`: passive-limit latency, effective arrival, queue-ahead/queue-consumed proof, timeout/cancel terminal states, partial fills and FILL_NOT_PROVEN.
+- FP4-C / PR #1693 → `src/crypto_signal/paper/funding_cost_v2.py` plus settled funding evidence: PROVEN / NOT_PROVEN exact settlement cash-flow projection; future/missing evidence fails closed.
+- FP4-D / PR #1695 → `src/crypto_signal/paper/instrument_fees_v2.py`: exact instrument fee schedule/projection.
+- FP4-E / PR #1696 → `src/crypto_signal/paper/execution_receipt_v2.py`: canonical execution receipt binding authoritative pretrade/venue truth to depth/passive outcome + fee evidence; funding intentionally accounted separately.
+
+`ExecutionReceiptV2` already exposes exact status, mode, requested/filled/unfilled quantity, reference price, average fill price, fill notional, fee, adverse price impact, immediate execution cost, market evidence identities and all receipt/outcome/pretrade/venue identities.
+
+`PassiveLimitExecutionOutcome` already exposes latency, queue proof, timeout/cancel, terminal state and partial-fill state.
+
+`PaperFundingCostProjection` already exposes PROVEN/NOT_PROVEN status, exact settlement/mark identities/timestamps and funding cash flow.
+
+Current `TradePassportView` on main still exposes only older summary execution fields (`reference_price`, `simulated_fill_price`, `fee_usdt`, `spread_usdt`, `slippage_usdt`, etc.) and does not expose the accepted FP4 receipt status/mode/partial-fill/queue/latency/funding truth. Therefore the likely next still-open FP6 bounded slice after FP6-B is **FP6-C: read-only binding/projection of accepted FP4 execution receipt + funding truth into Trade Passport**, not new simulation logic. Re-audit before starting because another agent may advance main.
+
+## Acceptance requirements
+
+Generic F10 green is **not** FP6-B PASS by itself. Dedicated exact-head workflow is required.
+
+Dedicated gate checks:
 - exact PR head checkout and explicit SHA assertion;
 - frozen RDP11 Product/Development target assertion (`3d9f33db3f1189571d40566125fbeabd00c04930`);
 - focused FP6-B proof tests;
@@ -87,10 +122,13 @@ Required dedicated gate:
 - whole-repository regression;
 - post-run Product/Development non-mutation proof.
 
+Before merge, one final candidate SHA must also satisfy the project acceptance set used for FP6-A: FP6-B + WC6 + RDP11 Pre-Soak + F10. Do not count a workflow as PASS only from its top-level conclusion; inspect the relevant acceptance steps/markers.
+
 ## Explicit non-goals / forbidden work
 
 - no second Trade Passport ledger;
 - no second evidence database;
+- no second execution simulator or funding truth engine;
 - no historical backfill;
 - no current-data substitution;
 - no Product/Development deployment;
@@ -103,12 +141,13 @@ Required dedicated gate:
 - `CURRENT_FRONTIER.md` and `HANDOFF_LOG.md` are large and must never be overwritten from truncated connector reads. Reconcile losslessly before final handoff/merge; this live checkpoint remains the authoritative in-flight FP6-B continuation record until that reconciliation.
 - UID504 runner startup was repaired for the immediate FP6-A blocker, but daily sleep/shutdown/network-loss resilience has not all been mechanically exercised as durable operational acceptance.
 - FP0/RDP11 remains independently open until its real accumulated evidence audit passes; elapsed time alone is not PASS.
-- FP6-B closes only the first still-open FP6 master clause. Before FP7, separately audit remaining execution visibility (funding/latency/partial-fill/queue/fill-not-proven) and immutable archive/later-model immutability clauses.
+- After FP6-B, audit FP6-C execution projection and then immutable archive/later-model immutability clauses before FP7. Do not skip remaining FP6 clauses merely because FP6-B passes.
 
 ## Exact next action
 
-1. Change FP6-B resolver to exact triple + event-time selection.
-2. Add tests proving later narratives cannot rewrite earlier lifecycle-event proof and proving every lifecycle event opens proof through its own immutable passport lineage.
-3. Add dedicated exact-head FP6-B UID504 acceptance workflow.
-4. Run/inspect dedicated FP6-B workflow and fix failures.
-5. Recheck latest `main`, then require FP6-B + WC6 + RDP11 Pre-Soak + F10 on one final candidate SHA before any merge.
+1. Inspect FP6-B run `36709219791` for exact head `7852fc6869b85da3130b39815f9ce81324651731`; fix any focused/static/regression failure without weakening canonical verification.
+2. Inspect F10 `36709219776` and RDP11 Pre-Soak `36709219892` on the same exact head.
+3. Locate WC6 trigger semantics and obtain an exact-head WC6 acceptance on the final candidate.
+4. Recheck latest `main` and PR mergeability immediately before merge; reconcile any parallel-agent drift.
+5. Only after one final SHA passes FP6-B + WC6 + RDP11 Pre-Soak + F10 and acceptance outputs are inspected, reconcile `CURRENT_FRONTIER.md` + `HANDOFF_LOG.md` losslessly and consider merge.
+6. After FP6-B merge, re-audit main; if no parallel agent already closed it, continue with FP6-C by **reusing** FP4-A→E canonical truth and projecting execution/funding status into Trade Passport.
