@@ -11,44 +11,81 @@ permissions:
 jobs:
   restore:
     if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[MAC501] RESTORE UID504 RUNNER VIA SUDO'
-    name: UID501 restore canonical UID504 SSD runner
+    name: UID501 restore UID504 runner
     runs-on: [self-hosted, crypto-signal, uid501]
     timeout-minutes: 10
     steps:
-      - name: Restore existing SSD runner through accepted UID504 helper
+      - name: Restore configured UID504 runner through accepted sudo path
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          RUNNER="$ROOT/Runner"
-          HELPER="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/start-ssd-runner.command"
-          EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
+          SSD_RUNNER="$ROOT/Runner"
+          INTERNAL_RUNNER="/Users/crypto-signal-agent/actions-runner-crypto"
+          LOG_DIR="/Users/crypto-signal-agent/Library/Logs/CryptoSignalRunnerRecovery"
 
           test "$(id -u)" = "501"
+          test "$(/usr/bin/sudo -n -u crypto-signal-agent /usr/bin/id -u)" = "504"
+
+          if [ -d "$SSD_RUNNER" ]; then
+            RUNNER="$SSD_RUNNER"
+            MODE="SSD"
+          else
+            RUNNER="$INTERNAL_RUNNER"
+            MODE="INTERNAL_FALLBACK"
+          fi
+
+          echo "UID504_RUNNER_RECOVERY_MODE=$MODE"
+          echo "UID504_RUNNER_RECOVERY_PATH=$RUNNER"
+
           test -d "$RUNNER"
+          test "$(/usr/bin/stat -f '%Su' "$RUNNER")" = "crypto-signal-agent"
           test -f "$RUNNER/.runner"
           test -f "$RUNNER/.credentials"
           test -x "$RUNNER/runsvc.sh"
-          test -x "$HELPER"
+          test -x "$RUNNER/bin/Runner.Listener"
 
+          RUNNER_NAME="$(/usr/bin/python3 - "$RUNNER/.runner" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text())
+print(payload.get("agentName", ""))
+PY
+)"
+          echo "UID504_RUNNER_REGISTERED_NAME=$RUNNER_NAME"
+          test "$RUNNER_NAME" = "crypto-signal-uid504"
+
+          EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
           existing="$(/bin/ps -axo user=,pid=,command= 2>/dev/null \
             | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) { print user, pid; exit } }')"
           if [ -n "$existing" ]; then
-            echo "UID504_SSD_RUNNER_ALREADY_ALIVE=YES $existing"
-            echo "UID504_SSD_RUNNER_SUDO_RECOVERY_PASS=YES"
+            echo "UID504_RUNNER_ALREADY_ALIVE=YES $existing"
+            echo "UID504_RUNNER_SUDO_RECOVERY_PASS=YES"
             echo "REAL_CAPITAL=0"
             exit 0
           fi
 
           if /bin/ps -axo user=,command= 2>/dev/null \
-            | /usr/bin/awk -v expected="$RUNNER/bin/Runner.Worker" '$1 == "crypto-signal-agent" && index($0, expected) { found=1 } END { exit(found ? 0 : 1) }'; then
-            echo "UID504_SSD_RUNNER_RECOVERY_ABORT=ACTIVE_WORKER" >&2
+            | /usr/bin/awk '$1 == "crypto-signal-agent" && $0 ~ /bin\/Runner\.Worker/ { found=1 } END { exit(found ? 0 : 1) }'; then
+            echo "UID504_RUNNER_RECOVERY_ABORT=ACTIVE_WORKER" >&2
             exit 3
           fi
 
+          /usr/bin/sudo -n -u crypto-signal-agent /bin/mkdir -p "$LOG_DIR"
           /usr/bin/sudo -n -u crypto-signal-agent \
-            /usr/bin/env HOME=/Users/crypto-signal-agent \
-            /bin/bash "$HELPER"
+            /usr/bin/env -u RUNNER_TRACKING_ID \
+            HOME=/Users/crypto-signal-agent \
+            ACTIONS_RUNNER_SVC=1 \
+            /bin/bash -c '
+              set -euo pipefail
+              runner="$1"
+              log_dir="$2"
+              cd "$runner"
+              /usr/bin/nohup ./runsvc.sh >>"$log_dir/runner.out.log" 2>>"$log_dir/runner.err.log" </dev/null &
+              echo $! >"$log_dir/runner.pid"
+            ' _ "$RUNNER" "$LOG_DIR"
 
           listener=""
           for _ in {1..30}; do
@@ -58,7 +95,14 @@ jobs:
             /bin/sleep 1
           done
 
-          test -n "$listener"
-          echo "UID504_SSD_RUNNER_LISTENER=$listener"
-          echo "UID504_SSD_RUNNER_SUDO_RECOVERY_PASS=YES"
+          if [ -z "$listener" ]; then
+            echo "=== UID504 RUNNER STDERR ===" >&2
+            /usr/bin/tail -80 "$LOG_DIR/runner.err.log" >&2 2>/dev/null || true
+            echo "=== UID504 RUNNER STDOUT ===" >&2
+            /usr/bin/tail -80 "$LOG_DIR/runner.out.log" >&2 2>/dev/null || true
+            exit 4
+          fi
+
+          echo "UID504_RUNNER_LISTENER=$listener"
+          echo "UID504_RUNNER_SUDO_RECOVERY_PASS=YES"
           echo "REAL_CAPITAL=0"
