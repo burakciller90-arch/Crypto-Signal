@@ -17,6 +17,10 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.models import PaperSymbol
+from crypto_signal.paper.r22_execution_lineage import (
+    R22ExecutionLineageRecord,
+    R22ExecutionLineageTape,
+)
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
@@ -572,6 +576,40 @@ class TradePassportAudit:
 
 
 @dataclass(frozen=True, slots=True)
+class TradePassportFundingProjectionView:
+    projection_identity: str
+    status: str
+    side: str
+    position_quantity: str
+    settlement_identity: str | None
+    settlement_at_ms: int | None
+    mark_evidence_identity: str | None
+    mark_price: str | None
+    cash_flow_usdt: str | None
+    reason_code: str
+
+
+@dataclass(frozen=True, slots=True)
+class TradePassportExecutionLineageView:
+    attachment_identity: str
+    execution_receipt_identity: str
+    execution_outcome_identity: str
+    mode: str
+    status: str
+    requested_quantity: str
+    filled_quantity: str
+    unfilled_quantity: str
+    partial_fills_enabled: bool
+    latency_ms: int | None
+    visible_queue_ahead_quantity: str | None
+    queue_consumed_quantity: str | None
+    funding_projections: tuple[TradePassportFundingProjectionView, ...]
+    source_label: str = "R22 immutable execution lineage"
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+
+
+@dataclass(frozen=True, slots=True)
 class TradePassportView:
     availability_label: str
     program_label: str
@@ -608,6 +646,7 @@ class TradePassportView:
     position_quantity_after: str | None
     realized_pnl_delta_usdt: str | None
     unrealized_pnl_delta_usdt: str | None
+    execution_lineage: TradePassportExecutionLineageView | None = None
     audit: TradePassportAudit | None = None
     read_only: bool = True
     real_capital: int = REAL_CAPITAL
@@ -1408,11 +1447,15 @@ class FinalProductReadModel:
                         )
                     proof_label = "Karar kanıtı doğrulandı"
 
+            execution_lineage = R22ExecutionLineageTape(
+                self.epoch2_path
+            ).read_for_bundle(bundle_identity)
             return _trade_passport_view(
                 bundle_identity=bundle_identity,
                 context=context,
                 proof=proof,
                 proof_label=proof_label,
+                execution_lineage=execution_lineage,
                 include_audit=include_audit,
             )
         except (
@@ -2647,6 +2690,7 @@ def _trade_passport_view(
     context: dict[str, Any],
     proof: dict[str, Any] | None,
     proof_label: str,
+    execution_lineage: R22ExecutionLineageRecord | None,
     include_audit: bool,
 ) -> TradePassportView:
     bundle = _required_mapping(context, "bundle")
@@ -2728,6 +2772,11 @@ def _trade_passport_view(
         )
 
     outcome_identity = _optional_sha(fill.get("outcome_evidence_identity"))
+    execution_lineage_view = _trade_passport_execution_lineage_view(
+        execution_lineage,
+        expected_fill_identity=_required_sha(fill, "fill_identity"),
+        expected_symbol=symbol,
+    )
     audit = None
     if include_audit:
         audit = TradePassportAudit(
@@ -2878,7 +2927,135 @@ def _trade_passport_view(
                 "Trade Passport unrealized PnL",
             )
         ),
+        execution_lineage=execution_lineage_view,
         audit=audit,
+    )
+
+
+def _trade_passport_execution_lineage_view(
+    record: R22ExecutionLineageRecord | None,
+    *,
+    expected_fill_identity: str,
+    expected_symbol: str,
+) -> TradePassportExecutionLineageView | None:
+    if record is None:
+        return None
+    if record.fill_identity != expected_fill_identity:
+        raise ValueError("Trade Passport execution-lineage fill mismatch")
+    receipt = record.execution_receipt
+    outcome = record.execution_outcome
+    if _required_text(receipt, "symbol") != expected_symbol:
+        raise ValueError("Trade Passport execution-lineage symbol mismatch")
+    if _required_sha(receipt, "receipt_identity") != record.execution_receipt_identity:
+        raise ValueError("Trade Passport execution receipt identity mismatch")
+    if _required_sha(receipt, "execution_outcome_identity") != record.execution_outcome_identity:
+        raise ValueError("Trade Passport execution outcome lineage mismatch")
+    if _required_sha(outcome, "outcome_identity") != record.execution_outcome_identity:
+        raise ValueError("Trade Passport execution outcome identity mismatch")
+    if _required_text(receipt, "status") != _required_text(outcome, "status"):
+        raise ValueError("Trade Passport execution status mismatch")
+
+    mode = _required_text(receipt, "mode")
+    partial_fills_enabled = outcome.get("partial_fills_enabled")
+    if not isinstance(partial_fills_enabled, bool):
+        raise TypeError("Trade Passport partial-fill flag must be boolean")
+    latency_ms: int | None = None
+    queue_ahead: str | None = None
+    queue_consumed: str | None = None
+    if mode == "passive_limit":
+        latency_ms = _required_non_negative_int_value(
+            outcome.get("latency_ms"),
+            "Trade Passport execution latency",
+        )
+        queue_ahead = _plain_decimal_text(
+            _decimal(
+                outcome.get("visible_queue_ahead_quantity"),
+                "Trade Passport queue ahead",
+            )
+        )
+        queue_consumed = _plain_decimal_text(
+            _decimal(
+                outcome.get("queue_consumed_quantity"),
+                "Trade Passport queue consumed",
+            )
+        )
+    elif mode != "depth":
+        raise ValueError("unsupported Trade Passport execution mode")
+
+    funding_views: list[TradePassportFundingProjectionView] = []
+    for projection in record.funding_projections:
+        if _required_text(projection, "symbol") != expected_symbol:
+            raise ValueError("Trade Passport funding symbol mismatch")
+        status = _required_text(projection, "status")
+        cash_flow = projection.get("cash_flow_usdt")
+        if status == "proven" and cash_flow is None:
+            raise ValueError("Trade Passport proven funding lost cash flow")
+        if status == "not_proven" and cash_flow is not None:
+            raise ValueError("Trade Passport unproven funding invented cash flow")
+        funding_views.append(
+            TradePassportFundingProjectionView(
+                projection_identity=_required_sha(projection, "projection_identity"),
+                status=status,
+                side=_required_text(projection, "side"),
+                position_quantity=_plain_decimal_text(
+                    _decimal(
+                        projection.get("position_quantity"),
+                        "Trade Passport funding quantity",
+                    )
+                ),
+                settlement_identity=_optional_sha(projection.get("settlement_identity")),
+                settlement_at_ms=(
+                    None
+                    if projection.get("settlement_at_ms") is None
+                    else _required_non_negative_int_value(
+                        projection.get("settlement_at_ms"),
+                        "Trade Passport funding settlement time",
+                    )
+                ),
+                mark_evidence_identity=_optional_sha(
+                    projection.get("mark_evidence_identity")
+                ),
+                mark_price=(
+                    None
+                    if projection.get("mark_price") is None
+                    else _plain_decimal_text(
+                        _decimal(
+                            projection.get("mark_price"),
+                            "Trade Passport funding mark price",
+                        )
+                    )
+                ),
+                cash_flow_usdt=(
+                    None
+                    if cash_flow is None
+                    else _signed_money_text(
+                        _decimal(cash_flow, "Trade Passport funding cash flow")
+                    )
+                ),
+                reason_code=_required_text(projection, "reason_code"),
+            )
+        )
+
+    return TradePassportExecutionLineageView(
+        attachment_identity=record.attachment_identity,
+        execution_receipt_identity=record.execution_receipt_identity,
+        execution_outcome_identity=record.execution_outcome_identity,
+        mode=mode,
+        status=_required_text(receipt, "status"),
+        requested_quantity=_plain_decimal_text(
+            _decimal(receipt.get("requested_quantity"), "Trade Passport requested quantity")
+        ),
+        filled_quantity=_plain_decimal_text(
+            _decimal(receipt.get("filled_quantity"), "Trade Passport filled quantity")
+        ),
+        unfilled_quantity=_plain_decimal_text(
+            _decimal(receipt.get("unfilled_quantity"), "Trade Passport unfilled quantity")
+        ),
+        partial_fills_enabled=partial_fills_enabled,
+        latency_ms=latency_ms,
+        visible_queue_ahead_quantity=queue_ahead,
+        queue_consumed_quantity=queue_consumed,
+        funding_projections=tuple(funding_views),
     )
 
 
