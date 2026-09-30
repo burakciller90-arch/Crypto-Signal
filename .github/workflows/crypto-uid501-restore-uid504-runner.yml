@@ -15,21 +15,23 @@ jobs:
     runs-on: [self-hosted, crypto-signal, uid501]
     timeout-minutes: 10
     steps:
-      - name: Restore existing SSD runner through accepted UID504 helper
+      - name: Restore canonical SSD runner directly as UID504
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           RUNNER="$ROOT/Runner"
-          HELPER="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/start-ssd-runner.command"
+          LOG="$ROOT/RunnerLogs"
+          START_SCRIPT="/tmp/crypto-uid504-runner-direct-start.sh"
           EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
 
-          test "$(id -u)" = "501"
-          test -d "$RUNNER"
-          test -f "$RUNNER/.runner"
-          test -f "$RUNNER/.credentials"
-          test -x "$RUNNER/runsvc.sh"
-          test -x "$HELPER"
+          test "$(id -u)" = "501" || { echo "UID501_REQUIRED" >&2; exit 10; }
+          test -d "$RUNNER" || { echo "RUNNER_DIR_MISSING=$RUNNER" >&2; exit 11; }
+          test -f "$RUNNER/.runner" || { echo "RUNNER_CONFIG_MISSING=$RUNNER/.runner" >&2; exit 12; }
+          test -f "$RUNNER/.credentials" || { echo "RUNNER_CREDENTIALS_MISSING=$RUNNER/.credentials" >&2; exit 13; }
+          test -x "$RUNNER/runsvc.sh" || { echo "RUNSVC_MISSING_OR_NOT_EXECUTABLE=$RUNNER/runsvc.sh" >&2; exit 14; }
+          /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/id -u | /usr/bin/grep -qx '504' \
+            || { echo "UID501_TO_UID504_SUDO_UNAVAILABLE" >&2; exit 15; }
 
           existing="$(/bin/ps -axo user=,pid=,command= 2>/dev/null \
             | /usr/bin/awk -v expected="$EXPECTED" '$1 == "crypto-signal-agent" { user=$1; pid=$2; sub(/^[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) { print user, pid; exit } }')"
@@ -46,9 +48,29 @@ jobs:
             exit 3
           fi
 
+          /bin/cat > "$START_SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          mkdir -p "$LOG"
+          cd "$RUNNER"
+          export HOME="/Users/crypto-signal-agent"
+          unset RUNNER_TRACKING_ID
+          /usr/bin/nohup ./runsvc.sh >>"$LOG/uid501-sudo-recovery.out.log" 2>>"$LOG/uid501-sudo-recovery.err.log" < /dev/null &
+          pid=$!
+          echo "$pid" > "$ROOT/ssd-runner-uid501-sudo.pid"
+          sleep 3
+          kill -0 "$pid"
+          echo "UID504_DIRECT_START_PROCESS_ALIVE=$pid"
+          SH
+          /bin/chmod 755 "$START_SCRIPT"
+
           /usr/bin/sudo -n -u crypto-signal-agent \
             /usr/bin/env HOME=/Users/crypto-signal-agent \
-            /bin/bash "$HELPER"
+            /bin/bash "$START_SCRIPT"
+          /bin/rm -f "$START_SCRIPT"
 
           listener=""
           for _ in {1..30}; do
@@ -58,7 +80,11 @@ jobs:
             /bin/sleep 1
           done
 
-          test -n "$listener"
+          test -n "$listener" || {
+            echo "UID504_SSD_RUNNER_LISTENER_NOT_FOUND" >&2
+            /usr/bin/tail -80 "$LOG/uid501-sudo-recovery.err.log" 2>/dev/null || true
+            exit 16
+          }
           echo "UID504_SSD_RUNNER_LISTENER=$listener"
           echo "UID504_SSD_RUNNER_SUDO_RECOVERY_PASS=YES"
           echo "REAL_CAPITAL=0"
