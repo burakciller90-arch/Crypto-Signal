@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from test_final_product_read_model import _seed_trade_passport_bundle
 from test_intelligence_stream_read_model import _sha
 from test_intelligence_stream_visual_proof import _create_visual_truth
 
-from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
+from crypto_signal.ledger.serialization import (
+    canonical_json,
+    canonical_sha256,
+    sha256_text,
+)
 from crypto_signal.product.final_product_read_model import FinalProductReadModel
 from crypto_signal.product.intelligence_stream_read_model import IntelligenceStreamReadModel
 from crypto_signal.product.trade_passport_frozen_proof import (
@@ -44,6 +48,19 @@ def _truth_paths(tmp_path: Path) -> tuple[Path, Path, Path, str, str, str, str]:
     )
 
 
+def _rekey(
+    payload: dict[str, Any],
+    *,
+    identity_key: str,
+    updates: dict[str, Any],
+) -> dict[str, Any]:
+    changed = dict(payload)
+    changed.update(updates)
+    changed.pop(identity_key, None)
+    identity = canonical_sha256(changed)
+    return {identity_key: identity, **changed}
+
+
 def _append_stream_rewrite(
     stream_path: Path,
     *,
@@ -51,52 +68,118 @@ def _append_stream_rewrite(
     event_at_ms: int,
     label: str,
 ) -> str:
-    with sqlite3.connect(stream_path) as connection:
-        row = connection.execute(
-            """
-            SELECT
-                n.plan_identity,
-                p.fact_bundle_identity,
-                n.payload_json
-            FROM stream_narrative_messages AS n
-            JOIN stream_narrative_plans AS p
-              ON p.plan_identity = n.plan_identity
-            WHERE n.narrative_identity = ?
-            """,
-            (source_narrative_identity,),
-        ).fetchone()
-        assert row is not None
-        fact_bundle_identity = str(row[1])
-        payload = json.loads(str(row[2]))
-        assert isinstance(payload, dict)
+    detail = IntelligenceStreamReadModel(stream_path).read_message_detail(
+        source_narrative_identity
+    )
+    assert detail is not None
+    source_narrative = detail["narrative"]
+    source_fact = detail["fact_bundle"]
+    source_analytical = detail["analytical_view"]
+    source_message = detail["message_input"]
+    assert isinstance(source_narrative, dict)
+    assert isinstance(source_fact, dict)
+    assert isinstance(source_analytical, dict)
+    assert isinstance(source_message, dict)
 
-        new_plan_identity = _sha(f"{label}-plan")
+    source_event_identity = _sha(f"{label}-source-event")
+    stream_event_identity = _sha(f"{label}-stream-event")
+    shared_updates = {
+        "event_at_ms": event_at_ms,
+        "source_event_identity": source_event_identity,
+        "stream_event_identity": stream_event_identity,
+    }
+    fact = _rekey(
+        source_fact,
+        identity_key="fact_bundle_identity",
+        updates=shared_updates,
+    )
+    message = _rekey(
+        source_message,
+        identity_key="message_identity",
+        updates={
+            **shared_updates,
+            "fact_bundle_identity": fact["fact_bundle_identity"],
+        },
+    )
+    analytical = _rekey(
+        source_analytical,
+        identity_key="analytical_view_identity",
+        updates={
+            **shared_updates,
+            "fact_bundle_identity": fact["fact_bundle_identity"],
+            "source_message_identity": message["message_identity"],
+        },
+    )
+    new_plan_identity = _sha(f"{label}-plan")
+    text = dict(source_narrative["text"])
+    text["collapsed_text"] = f"{text['collapsed_text']} [{label}]"
+    text["simple_text"] = f"{text['simple_text']} [{label}]"
+    narrative = _rekey(
+        source_narrative,
+        identity_key="narrative_identity",
+        updates={
+            **shared_updates,
+            "plan_identity": new_plan_identity,
+            "fact_bundle_identity": fact["fact_bundle_identity"],
+            "analytical_view_identity": analytical["analytical_view_identity"],
+            "source_kind": "local_rewrite",
+            "text": text,
+        },
+    )
+
+    fact_json = canonical_json(fact)
+    message_json = canonical_json(message)
+    analytical_json = canonical_json(analytical)
+    narrative_json = canonical_json(narrative)
+    with sqlite3.connect(stream_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO stream_fact_bundles (
+                fact_bundle_identity, payload_json, payload_sha256
+            ) VALUES (?, ?, ?)
+            """,
+            (
+                fact["fact_bundle_identity"],
+                fact_json,
+                sha256_text(fact_json),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO stream_message_inputs (
+                message_identity, payload_json, payload_sha256
+            ) VALUES (?, ?, ?)
+            """,
+            (
+                message["message_identity"],
+                message_json,
+                sha256_text(message_json),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO stream_analytical_views (
+                analytical_view_identity,
+                source_message_identity,
+                payload_json,
+                payload_sha256
+            ) VALUES (?, ?, ?, ?)
+            """,
+            (
+                analytical["analytical_view_identity"],
+                message["message_identity"],
+                analytical_json,
+                sha256_text(analytical_json),
+            ),
+        )
         connection.execute(
             """
             INSERT INTO stream_narrative_plans (
-                plan_identity,
-                fact_bundle_identity
+                plan_identity, fact_bundle_identity
             ) VALUES (?, ?)
             """,
-            (new_plan_identity, fact_bundle_identity),
+            (new_plan_identity, fact["fact_bundle_identity"]),
         )
-
-        payload_without_identity = dict(payload)
-        payload_without_identity.pop("narrative_identity", None)
-        payload_without_identity["plan_identity"] = new_plan_identity
-        payload_without_identity["event_at_ms"] = event_at_ms
-        payload_without_identity["source_kind"] = "local_rewrite"
-        text = dict(payload_without_identity["text"])
-        text["collapsed_text"] = f"{text['collapsed_text']} [{label}]"
-        text["simple_text"] = f"{text['simple_text']} [{label}]"
-        payload_without_identity["text"] = text
-
-        narrative_identity = canonical_sha256(payload_without_identity)
-        rewritten = {
-            "narrative_identity": narrative_identity,
-            **payload_without_identity,
-        }
-        payload_json = canonical_json(rewritten)
         connection.execute(
             """
             INSERT INTO stream_narrative_messages (
@@ -113,20 +196,20 @@ def _append_stream_rewrite(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                narrative_identity,
+                narrative["narrative_identity"],
                 new_plan_identity,
-                rewritten["analytical_view_identity"],
-                rewritten["story_identity"],
-                rewritten["source_event_identity"],
-                rewritten["stream_event_identity"],
+                analytical["analytical_view_identity"],
+                narrative["story_identity"],
+                source_event_identity,
+                stream_event_identity,
                 event_at_ms,
                 "local_rewrite",
-                payload_json,
-                sha256_text(payload_json),
+                narrative_json,
+                sha256_text(narrative_json),
             ),
         )
         connection.commit()
-    return narrative_identity
+    return str(narrative["narrative_identity"])
 
 
 def test_fp6b_exact_lineage_opens_existing_frozen_proof_read_only(
