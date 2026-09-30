@@ -1,0 +1,59 @@
+name: FP6-B bounded ledger connection lifecycle repair
+
+on:
+  push:
+    branches: [fp6b/trade-passport-frozen-proof]
+    paths:
+      - ".github/workflows/fp6b-close-ledger-connections.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fp6b/trade-passport-frozen-proof
+          fetch-depth: 0
+
+      - name: Apply deterministic sqlite connection close
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          target = Path("src/crypto_signal/ledger/store.py")
+          text = target.read_text()
+          old_import = "import json\nimport sqlite3\nimport time\n"
+          new_import = "import json\nimport sqlite3\nimport time\nfrom contextlib import closing\n"
+          if "from contextlib import closing\n" not in text:
+              if old_import not in text:
+                  raise SystemExit("expected import anchor missing")
+              text = text.replace(old_import, new_import, 1)
+
+          old = "with self._connect() as connection:"
+          new = "with closing(self._connect()) as connection, connection:"
+          count = text.count(old)
+          if count < 1:
+              if new not in text:
+                  raise SystemExit("no ledger connection contexts found")
+          else:
+              text = text.replace(old, new)
+
+          target.write_text(text)
+          print(f"LEDGER_CONNECTION_CONTEXTS_REPAIRED={count}")
+          PY
+
+          git diff --check
+          git diff -- src/crypto_signal/ledger/store.py
+          python3 -m py_compile src/crypto_signal/ledger/store.py
+
+          git config user.name "crypto-signal-agent"
+          git config user.email "crypto-signal-agent@users.noreply.github.com"
+          git add src/crypto_signal/ledger/store.py
+          git commit -m "fix: close immutable ledger sqlite connections deterministically"
+          git push origin HEAD:fp6b/trade-passport-frozen-proof
