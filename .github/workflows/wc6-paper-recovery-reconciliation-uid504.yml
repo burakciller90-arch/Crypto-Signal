@@ -9,6 +9,10 @@ on:
       - "tests/test_wc6_execution_lab.py"
       - "src/crypto_signal/product/final_product_read_model.py"
       - "tests/test_fp6a_trade_passport_lifecycle.py"
+      - "src/crypto_signal/product/trade_passport_frozen_proof.py"
+      - "tests/test_fp6b_trade_passport_frozen_proof.py"
+      - "docs/agent/checkpoints/2026-09-30-fp6b-trade-passport-frozen-proof-start.md"
+      - ".github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml"
       - ".github/workflows/wc6-paper-recovery-reconciliation-uid504.yml"
   push:
     branches: [main]
@@ -16,6 +20,9 @@ on:
       - "src/crypto_signal/paper/**"
       - "tests/test_paper_*.py"
       - "tests/test_wc6_execution_lab.py"
+      - "src/crypto_signal/product/trade_passport_frozen_proof.py"
+      - "tests/test_fp6b_trade_passport_frozen_proof.py"
+      - ".github/workflows/fp6b-trade-passport-frozen-proof-uid504.yml"
       - ".github/workflows/wc6-paper-recovery-reconciliation-uid504.yml"
   workflow_dispatch:
 

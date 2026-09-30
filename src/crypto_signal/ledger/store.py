@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from contextlib import closing
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -104,7 +105,7 @@ class ImmutableSignalLedger:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute("PRAGMA synchronous=NORMAL")
             connection.execute("PRAGMA foreign_keys=ON")
@@ -224,7 +225,7 @@ class ImmutableSignalLedger:
             raise ValueError("ledger freeze time cannot precede decision as-of")
 
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("BEGIN IMMEDIATE")
 
@@ -319,7 +320,7 @@ class ImmutableSignalLedger:
             )
 
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("BEGIN IMMEDIATE")
             parent = connection.execute(
@@ -405,7 +406,7 @@ class ImmutableSignalLedger:
             )
 
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("BEGIN IMMEDIATE")
             parent = connection.execute(
@@ -494,7 +495,7 @@ class ImmutableSignalLedger:
         source_cutoff_open_time_ms: int,
     ) -> bool:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT 1
@@ -526,7 +527,7 @@ class ImmutableSignalLedger:
         source_cutoff_open_time_ms: int,
     ) -> FreezeRecord | None:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT * FROM signal_freezes
@@ -641,7 +642,7 @@ class ImmutableSignalLedger:
         signal_freeze_identity: str,
     ) -> FreezeRecord | None:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT * FROM signal_freezes
@@ -653,7 +654,7 @@ class ImmutableSignalLedger:
 
     def list_geometry_proofs(self) -> tuple[GeometryProofRecord, ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT * FROM geometry_proofs
@@ -664,7 +665,7 @@ class ImmutableSignalLedger:
 
     def list_freezes(self) -> tuple[FreezeRecord, ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT * FROM signal_freezes
@@ -678,7 +679,7 @@ class ImmutableSignalLedger:
         signal_freeze_identity: str | None = None,
     ) -> tuple[LifecycleRecord, ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             if signal_freeze_identity is None:
                 rows = connection.execute(
                     """
@@ -702,7 +703,7 @@ class ImmutableSignalLedger:
         signal_freeze_identity: str | None = None,
     ) -> tuple[OutcomeRecord, ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             if signal_freeze_identity is None:
                 rows = connection.execute(
                     """
@@ -723,7 +724,7 @@ class ImmutableSignalLedger:
 
     def count_geometry_proofs(self) -> int:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT COUNT(*) AS count FROM geometry_proofs"
             ).fetchone()
@@ -731,7 +732,7 @@ class ImmutableSignalLedger:
 
     def count_freezes(self) -> int:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT COUNT(*) AS count FROM signal_freezes"
             ).fetchone()
@@ -739,7 +740,7 @@ class ImmutableSignalLedger:
 
     def count_lifecycle_evaluations(self) -> int:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT COUNT(*) AS count FROM lifecycle_evaluations"
             ).fetchone()
@@ -747,7 +748,7 @@ class ImmutableSignalLedger:
 
     def count_outcome_evaluations(self) -> int:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT COUNT(*) AS count FROM outcome_evaluations"
             ).fetchone()
