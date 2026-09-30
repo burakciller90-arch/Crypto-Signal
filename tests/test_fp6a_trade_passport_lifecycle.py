@@ -27,6 +27,14 @@ from crypto_signal.product.final_product_read_model import (
 )
 
 
+def _sqlite_sidecar_bytes(path: Path) -> dict[str, bytes | None]:
+    result: dict[str, bytes | None] = {}
+    for suffix in ("-wal", "-shm"):
+        sidecar = Path(f"{path}{suffix}")
+        result[suffix] = sidecar.read_bytes() if sidecar.exists() else None
+    return result
+
+
 def _seed_forward_episode(
     tmp_path: Path,
     *,
@@ -163,6 +171,7 @@ def test_fp6a_single_open_bundle_projects_one_open_episode_read_only(
 ) -> None:
     epoch2_path, _, _, bundle = _seed_trade_passport_bundle(tmp_path)
     before = epoch2_path.read_bytes()
+    before_sidecars = _sqlite_sidecar_bytes(epoch2_path)
 
     view = FinalProductReadModel(
         stream_ledger_path=tmp_path / "missing-stream.sqlite3",
@@ -190,7 +199,7 @@ def test_fp6a_single_open_bundle_projects_one_open_episode_read_only(
     assert view.audit.requested_bundle_identity == bundle.bundle_identity
     assert view.audit.bundle_identities == (bundle.bundle_identity,)
     assert epoch2_path.read_bytes() == before
-    assert not Path(f"{epoch2_path}-wal").exists()
+    assert _sqlite_sidecar_bytes(epoch2_path) == before_sidecars
 
 
 def test_fp6a_partial_take_profit_and_close_reconstruct_exact_episode(
@@ -199,6 +208,7 @@ def test_fp6a_partial_take_profit_and_close_reconstruct_exact_episode(
     epoch2_path, stream_path, bundles = _seed_forward_episode(tmp_path)
     before_epoch = epoch2_path.read_bytes()
     before_stream = stream_path.read_bytes()
+    before_sidecars = _sqlite_sidecar_bytes(epoch2_path)
 
     model = FinalProductReadModel(
         stream_ledger_path=stream_path,
@@ -220,7 +230,7 @@ def test_fp6a_partial_take_profit_and_close_reconstruct_exact_episode(
     assert tuple(item.lifecycle_label for item in view.events) == (
         "Pozisyon açılışı",
         "Kısmi kâr alma",
-        "Pozisyon kapandı",
+        "Pozisyon kapanışı",
     )
     assert tuple(
         item.audit.lifecycle_kind if item.audit is not None else None
@@ -246,7 +256,7 @@ def test_fp6a_partial_take_profit_and_close_reconstruct_exact_episode(
     )
     assert epoch2_path.read_bytes() == before_epoch
     assert stream_path.read_bytes() == before_stream
-    assert not Path(f"{epoch2_path}-wal").exists()
+    assert _sqlite_sidecar_bytes(epoch2_path) == before_sidecars
 
 
 def test_fp6a_event_classification_distinguishes_scale_in_and_reduce() -> None:
@@ -291,6 +301,7 @@ def test_fp6a_winning_and_losing_closed_trades_are_equally_inspectable(
             include_partial_take_profit=False,
         )
         before = epoch2_path.read_bytes()
+        before_sidecars = _sqlite_sidecar_bytes(epoch2_path)
         view = FinalProductReadModel(
             stream_ledger_path=stream_path,
             epoch2_path=epoch2_path,
@@ -311,3 +322,4 @@ def test_fp6a_winning_and_losing_closed_trades_are_equally_inspectable(
         assert view.audit is not None
         assert view.audit.bundle_identities == bundles
         assert epoch2_path.read_bytes() == before
+        assert _sqlite_sidecar_bytes(epoch2_path) == before_sidecars
