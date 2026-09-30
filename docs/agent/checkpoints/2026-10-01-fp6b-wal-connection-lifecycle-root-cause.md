@@ -31,3 +31,14 @@ On one exact final candidate SHA:
 4. F10 Final Closeout must pass.
 5. Development remains clean and `REAL_CAPITAL=0`.
 6. Only after FP6-B is green, continue to the separate immutable lineage proof: `ExecutionReceiptV2 → R22 immutable tape → Trade Passport`; FP6 remains open until that chain is mechanically proven.
+
+## LIVE continuation checkpoint — sequence 1
+
+- Live `main` re-verified at `38d757071a50566379715f3074b4b74b668a6aa6`.
+- PR #1737 remains open/draft on `fp6b/trade-passport-frozen-proof`.
+- Product-fix head observed before this checkpoint: `112998033279d555f70bf801a1b2af45d463f78a` (`fix: close immutable ledger sqlite connections deterministically`).
+- Diff from prior candidate `4d6146b0d2fba5d584071f29377e647de67c53bc` contains the intended `src/crypto_signal/ledger/store.py` deterministic-close fix, this root-cause checkpoint, and a temporary transport workflow `.github/workflows/fp6b-close-ledger-connections.yml`.
+- Exact-head pull-request runs on `1129980…` (including FP6-B `36780718769`, WC6 `36780718826`, RDP11 Pre-Soak `36780718817`, F10 `36780718895`) completed as `action_required` with no jobs for the inspected FP6-B run. These are NOT acceptance results and MUST NOT be treated as PASS/FAIL evidence.
+- The inspected FP6-B run reports `triggering_actor=github-actions[bot]` and zero jobs. Do not infer a product failure from this state.
+- ACTIVE BLOCKER: remove the temporary transport workflow from the PR while preserving the source fix; then obtain a new exact candidate SHA and rerun/read actual acceptance jobs.
+- NEXT ACTION: fetch exact blob SHA for `.github/workflows/fp6b-close-ledger-connections.yml`, delete that helper from this branch only, re-read PR head/diff, then inspect exact-head FP6-B + WC6 + RDP11 + F10 acceptance. No merge until all four have real jobs and their acceptance markers are verified on one exact SHA.
