@@ -6634,3 +6634,20 @@ Current blocker:
 Exact nextAction:
 - add one append-only R22 execution-lineage attachment contract/table, then project it read-only into Trade Passport and prove exact-SHA acceptance.
 
+## 2026-10-01 — FP6 execution lineage implementation -> acceptance checkpoint
+
+- exact main: `523b1727cf369737abac4884e06c81b3402a1322`
+- branch: `fp6/execution-funding-r22-passport-lineage-20261001`
+- implementation head entering acceptance: `b212cdc8d9ace08f525b46384e8cc62207604877`
+- worktree: none in connector session; UID504 runner is execution plane
+- slice: FP6 `ExecutionReceiptV2 -> funding/queue/latency/partial-fill -> R22 immutable tape -> Trade Passport`
+- classification: BRIDGE only; accepted FP4/R22/FP6-B owners reused
+- implementation: append-only R22 execution/funding companion lineage + read-only Trade Passport projection present
+- acceptance pending: canonical fixture focused tests, helper cleanup, then same-final-SHA FP6-B + WC6 + whole-repo + RDP11 Pre-Soak + F10/non-mutation
+- RDP11 global R2 soak remains independently ACTIVE / NOT PASS; this branch must not re-anchor or mutate the frozen runtime
+- `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`
+- Product/Development deploy: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- exact nextAction: add canonical R22 execution-lineage focused tests, then remove temporary helper artifacts before defining the final candidate SHA.
+

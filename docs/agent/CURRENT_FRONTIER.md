@@ -1,5 +1,46 @@
 # Crypto Signal Current Frontier
 
+## FP6 EXECUTION LINEAGE — IMPLEMENTATION -> ACCEPTANCE CHECKPOINT — 2026-10-01
+
+status: FP6_EXECUTION_LINEAGE_ACCEPTANCE_START
+verifiedMain: 523b1727cf369737abac4884e06c81b3402a1322
+activeBranch: fp6/execution-funding-r22-passport-lineage-20261001
+implementationHeadBeforeCheckpoint: b212cdc8d9ace08f525b46384e8cc62207604877
+sessionLocalWorktree: NONE (GitHub connector + UID504 runner)
+mechanicalGate: FP0 / RDP11 R2 ACTIVE / NOT PASS; frozen Product/Development target unchanged
+finalProductSlice: FP6 immutable execution/funding lineage completion
+classification: BRIDGE — REUSE accepted FP4 ExecutionReceiptV2/funding truth + R22 + FP6-B; persist/project only missing immutable lineage
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implementation evidence now present:
+- `src/crypto_signal/paper/r22_execution_lineage.py` adds append-only execution/funding companion records beside accepted R22 without rewriting historical R22 rows;
+- `FinalProductReadModel.trade_passport()` projects only persisted execution-lineage truth and returns `None` for legacy bundles without lineage instead of recomputing/current-data substitution;
+- passive-limit latency/queue fields are read only from immutable passive-limit outcomes; depth outcomes do not invent them;
+- funding projections remain exact separate settlement evidence and are not folded into immediate execution cost;
+- identical append is idempotent; conflicting immutable rebinding is rejected; `REAL_CAPITAL=0` is verified at write/read boundaries.
+
+Acceptance scope locked by user / roadmap:
+1. canonical R22 fixture focused execution-lineage tests;
+2. partial fill;
+3. passive-limit latency + visible queue ahead + queue consumed;
+4. exact funding projection identities;
+5. mismatch/conflicting rewrite rejection;
+6. historical point-in-time immutability / later V2 truth cannot alter older Passport;
+7. clean final candidate must not contain temporary `.github/scripts/patch_fp6_execution_lineage.py` or `.github/workflows/fp6-execution-lineage-patch.yml`;
+8. SAME final SHA must pass focused lineage + FP6-B + WC6 + whole-repository + RDP11 Pre-Soak + F10 + Product/Development/frozen-runtime non-mutation with `REAL_CAPITAL=0`.
+
+Current blocker:
+- focused canonical fixture tests have not yet been added/run;
+- temporary branch-only patch helper artifacts remain and must be removed before final candidate acceptance.
+
+Exact nextAction:
+Add canonical R22 execution-lineage focused tests using existing production constructors/fixtures, then remove the temporary helper artifacts before defining the final candidate SHA.
+
 ## FP6 EXECUTION / FUNDING -> R22 -> TRADE PASSPORT LINEAGE - TASK START - 2026-10-01
 
 status: ACTIVE / DURABLE START CHECKPOINT
