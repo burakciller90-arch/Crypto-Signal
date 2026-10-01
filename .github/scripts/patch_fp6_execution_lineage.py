@@ -1,46 +1,74 @@
 from pathlib import Path
 
-path = Path('src/crypto_signal/product/final_product_read_model.py')
-text = path.read_text()
+frontier = Path("docs/agent/CURRENT_FRONTIER.md")
+handoff = Path("docs/agent/HANDOFF_LOG.md")
+marker = "## FP6 EXECUTION LINEAGE — IMPLEMENTATION -> ACCEPTANCE CHECKPOINT — 2026-10-01"
+checkpoint = """## FP6 EXECUTION LINEAGE — IMPLEMENTATION -> ACCEPTANCE CHECKPOINT — 2026-10-01
 
-old = 'from crypto_signal.paper.models import PaperSymbol\nfrom crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape\n'
-new = 'from crypto_signal.paper.models import PaperSymbol\nfrom crypto_signal.paper.r22_execution_lineage import (\n    R22ExecutionLineageRecord,\n    R22ExecutionLineageTape,\n)\nfrom crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape\n'
-assert text.count(old) == 1
-text = text.replace(old, new)
+status: FP6_EXECUTION_LINEAGE_ACCEPTANCE_START
+verifiedMain: 523b1727cf369737abac4884e06c81b3402a1322
+activeBranch: fp6/execution-funding-r22-passport-lineage-20261001
+implementationHeadBeforeCheckpoint: b212cdc8d9ace08f525b46384e8cc62207604877
+sessionLocalWorktree: NONE (GitHub connector + UID504 runner)
+mechanicalGate: FP0 / RDP11 R2 ACTIVE / NOT PASS; frozen Product/Development target unchanged
+finalProductSlice: FP6 immutable execution/funding lineage completion
+classification: BRIDGE — REUSE accepted FP4 ExecutionReceiptV2/funding truth + R22 + FP6-B; persist/project only missing immutable lineage
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
 
-marker = '''@dataclass(frozen=True, slots=True)\nclass TradePassportView:\n'''
-insert = '''@dataclass(frozen=True, slots=True)\nclass TradePassportFundingProjectionView:\n    projection_identity: str\n    status: str\n    side: str\n    position_quantity: str\n    settlement_identity: str | None\n    settlement_at_ms: int | None\n    mark_evidence_identity: str | None\n    mark_price: str | None\n    cash_flow_usdt: str | None\n    reason_code: str\n\n\n@dataclass(frozen=True, slots=True)\nclass TradePassportExecutionLineageView:\n    attachment_identity: str\n    execution_receipt_identity: str\n    execution_outcome_identity: str\n    mode: str\n    status: str\n    requested_quantity: str\n    filled_quantity: str\n    unfilled_quantity: str\n    partial_fills_enabled: bool\n    latency_ms: int | None\n    visible_queue_ahead_quantity: str | None\n    queue_consumed_quantity: str | None\n    funding_projections: tuple[TradePassportFundingProjectionView, ...]\n    source_label: str = "R22 immutable execution lineage"\n    read_only: bool = True\n    real_capital: int = REAL_CAPITAL\n\n\n@dataclass(frozen=True, slots=True)\nclass TradePassportView:\n'''
-assert text.count(marker) == 1
-text = text.replace(marker, insert)
+Implementation evidence now present:
+- `src/crypto_signal/paper/r22_execution_lineage.py` adds append-only execution/funding companion records beside accepted R22 without rewriting historical R22 rows;
+- `FinalProductReadModel.trade_passport()` projects only persisted execution-lineage truth and returns `None` for legacy bundles without lineage instead of recomputing/current-data substitution;
+- passive-limit latency/queue fields are read only from immutable passive-limit outcomes; depth outcomes do not invent them;
+- funding projections remain exact separate settlement evidence and are not folded into immediate execution cost;
+- identical append is idempotent; conflicting immutable rebinding is rejected; `REAL_CAPITAL=0` is verified at write/read boundaries.
 
-old = '''    realized_pnl_delta_usdt: str | None\n    unrealized_pnl_delta_usdt: str | None\n    audit: TradePassportAudit | None = None\n'''
-new = '''    realized_pnl_delta_usdt: str | None\n    unrealized_pnl_delta_usdt: str | None\n    execution_lineage: TradePassportExecutionLineageView | None = None\n    audit: TradePassportAudit | None = None\n'''
-assert text.count(old) == 1
-text = text.replace(old, new)
+Acceptance scope locked by user / roadmap:
+1. canonical R22 fixture focused execution-lineage tests;
+2. partial fill;
+3. passive-limit latency + visible queue ahead + queue consumed;
+4. exact funding projection identities;
+5. mismatch/conflicting rewrite rejection;
+6. historical point-in-time immutability / later V2 truth cannot alter older Passport;
+7. clean final candidate must not contain temporary `.github/scripts/patch_fp6_execution_lineage.py` or `.github/workflows/fp6-execution-lineage-patch.yml`;
+8. SAME final SHA must pass focused lineage + FP6-B + WC6 + whole-repository + RDP11 Pre-Soak + F10 + Product/Development/frozen-runtime non-mutation with `REAL_CAPITAL=0`.
 
-old = '''            return _trade_passport_view(\n                bundle_identity=bundle_identity,\n                context=context,\n                proof=proof,\n                proof_label=proof_label,\n                include_audit=include_audit,\n            )\n'''
-new = '''            execution_lineage = R22ExecutionLineageTape(\n                self.epoch2_path\n            ).read_for_bundle(bundle_identity)\n            return _trade_passport_view(\n                bundle_identity=bundle_identity,\n                context=context,\n                proof=proof,\n                proof_label=proof_label,\n                execution_lineage=execution_lineage,\n                include_audit=include_audit,\n            )\n'''
-assert text.count(old) == 1
-text = text.replace(old, new)
+Current blocker:
+- focused canonical fixture tests have not yet been added/run;
+- temporary branch-only patch helper artifacts remain and must be removed before final candidate acceptance.
 
-old = '''def _trade_passport_view(\n    *,\n    bundle_identity: str,\n    context: dict[str, Any],\n    proof: dict[str, Any] | None,\n    proof_label: str,\n    include_audit: bool,\n) -> TradePassportView:\n'''
-new = '''def _trade_passport_view(\n    *,\n    bundle_identity: str,\n    context: dict[str, Any],\n    proof: dict[str, Any] | None,\n    proof_label: str,\n    execution_lineage: R22ExecutionLineageRecord | None,\n    include_audit: bool,\n) -> TradePassportView:\n'''
-assert text.count(old) == 1
-text = text.replace(old, new)
+Exact nextAction:
+Add canonical R22 execution-lineage focused tests using existing production constructors/fixtures, then remove the temporary helper artifacts before defining the final candidate SHA.
 
-old = '''    outcome_identity = _optional_sha(fill.get("outcome_evidence_identity"))\n    audit = None\n'''
-new = '''    outcome_identity = _optional_sha(fill.get("outcome_evidence_identity"))\n    execution_lineage_view = _trade_passport_execution_lineage_view(\n        execution_lineage,\n        expected_fill_identity=_required_sha(fill, "fill_identity"),\n        expected_symbol=symbol,\n    )\n    audit = None\n'''
-assert text.count(old) == 1
-text = text.replace(old, new)
+"""
+frontier_text = frontier.read_text()
+if marker not in frontier_text:
+    frontier.write_text("# Crypto Signal Current Frontier\n\n" + checkpoint + frontier_text.removeprefix("# Crypto Signal Current Frontier\n\n"))
 
-old = '''        unrealized_pnl_delta_usdt=_signed_money_text(\n            _decimal(\n                fill.get("unrealized_pnl_delta_usdt"),\n                "Trade Passport unrealized PnL",\n            )\n        ),\n        audit=audit,\n'''
-new = '''        unrealized_pnl_delta_usdt=_signed_money_text(\n            _decimal(\n                fill.get("unrealized_pnl_delta_usdt"),\n                "Trade Passport unrealized PnL",\n            )\n        ),\n        execution_lineage=execution_lineage_view,\n        audit=audit,\n'''
-assert text.count(old) == 1
-text = text.replace(old, new)
+handoff_marker = "FP6 execution lineage implementation -> acceptance checkpoint"
+handoff_entry = """
 
-anchor = '''\ndef _trade_passport_action_label(value: str) -> str:\n'''
-helper = '''\ndef _trade_passport_execution_lineage_view(\n    record: R22ExecutionLineageRecord | None,\n    *,\n    expected_fill_identity: str,\n    expected_symbol: str,\n) -> TradePassportExecutionLineageView | None:\n    if record is None:\n        return None\n    if record.fill_identity != expected_fill_identity:\n        raise ValueError("Trade Passport execution-lineage fill mismatch")\n    receipt = record.execution_receipt\n    outcome = record.execution_outcome\n    if _required_text(receipt, "symbol") != expected_symbol:\n        raise ValueError("Trade Passport execution-lineage symbol mismatch")\n    if _required_sha(receipt, "receipt_identity") != record.execution_receipt_identity:\n        raise ValueError("Trade Passport execution receipt identity mismatch")\n    if _required_sha(receipt, "execution_outcome_identity") != record.execution_outcome_identity:\n        raise ValueError("Trade Passport execution outcome lineage mismatch")\n    if _required_sha(outcome, "outcome_identity") != record.execution_outcome_identity:\n        raise ValueError("Trade Passport execution outcome identity mismatch")\n    if _required_text(receipt, "status") != _required_text(outcome, "status"):\n        raise ValueError("Trade Passport execution status mismatch")\n\n    mode = _required_text(receipt, "mode")\n    partial_fills_enabled = outcome.get("partial_fills_enabled")\n    if not isinstance(partial_fills_enabled, bool):\n        raise TypeError("Trade Passport partial-fill flag must be boolean")\n    latency_ms: int | None = None\n    queue_ahead: str | None = None\n    queue_consumed: str | None = None\n    if mode == "passive_limit":\n        latency_ms = _required_non_negative_int_value(\n            outcome.get("latency_ms"),\n            "Trade Passport execution latency",\n        )\n        queue_ahead = _plain_decimal_text(\n            _decimal(\n                outcome.get("visible_queue_ahead_quantity"),\n                "Trade Passport queue ahead",\n            )\n        )\n        queue_consumed = _plain_decimal_text(\n            _decimal(\n                outcome.get("queue_consumed_quantity"),\n                "Trade Passport queue consumed",\n            )\n        )\n    elif mode != "depth":\n        raise ValueError("unsupported Trade Passport execution mode")\n\n    funding_views: list[TradePassportFundingProjectionView] = []\n    for projection in record.funding_projections:\n        if _required_text(projection, "symbol") != expected_symbol:\n            raise ValueError("Trade Passport funding symbol mismatch")\n        status = _required_text(projection, "status")\n        cash_flow = projection.get("cash_flow_usdt")\n        if status == "proven" and cash_flow is None:\n            raise ValueError("Trade Passport proven funding lost cash flow")\n        if status == "not_proven" and cash_flow is not None:\n            raise ValueError("Trade Passport unproven funding invented cash flow")\n        funding_views.append(\n            TradePassportFundingProjectionView(\n                projection_identity=_required_sha(projection, "projection_identity"),\n                status=status,\n                side=_required_text(projection, "side"),\n                position_quantity=_plain_decimal_text(\n                    _decimal(\n                        projection.get("position_quantity"),\n                        "Trade Passport funding quantity",\n                    )\n                ),\n                settlement_identity=_optional_sha(projection.get("settlement_identity")),\n                settlement_at_ms=(\n                    None\n                    if projection.get("settlement_at_ms") is None\n                    else _required_non_negative_int_value(\n                        projection.get("settlement_at_ms"),\n                        "Trade Passport funding settlement time",\n                    )\n                ),\n                mark_evidence_identity=_optional_sha(\n                    projection.get("mark_evidence_identity")\n                ),\n                mark_price=(\n                    None\n                    if projection.get("mark_price") is None\n                    else _plain_decimal_text(\n                        _decimal(\n                            projection.get("mark_price"),\n                            "Trade Passport funding mark price",\n                        )\n                    )\n                ),\n                cash_flow_usdt=(\n                    None\n                    if cash_flow is None\n                    else _signed_money_text(\n                        _decimal(cash_flow, "Trade Passport funding cash flow")\n                    )\n                ),\n                reason_code=_required_text(projection, "reason_code"),\n            )\n        )\n\n    return TradePassportExecutionLineageView(\n        attachment_identity=record.attachment_identity,\n        execution_receipt_identity=record.execution_receipt_identity,\n        execution_outcome_identity=record.execution_outcome_identity,\n        mode=mode,\n        status=_required_text(receipt, "status"),\n        requested_quantity=_plain_decimal_text(\n            _decimal(receipt.get("requested_quantity"), "Trade Passport requested quantity")\n        ),\n        filled_quantity=_plain_decimal_text(\n            _decimal(receipt.get("filled_quantity"), "Trade Passport filled quantity")\n        ),\n        unfilled_quantity=_plain_decimal_text(\n            _decimal(receipt.get("unfilled_quantity"), "Trade Passport unfilled quantity")\n        ),\n        partial_fills_enabled=partial_fills_enabled,\n        latency_ms=latency_ms,\n        visible_queue_ahead_quantity=queue_ahead,\n        queue_consumed_quantity=queue_consumed,\n        funding_projections=tuple(funding_views),\n    )\n\n\ndef _trade_passport_action_label(value: str) -> str:\n'''
-assert text.count(anchor) == 1
-text = text.replace(anchor, helper)
+## 2026-10-01 — FP6 execution lineage implementation -> acceptance checkpoint
 
-path.write_text(text)
+- exact main: `523b1727cf369737abac4884e06c81b3402a1322`
+- branch: `fp6/execution-funding-r22-passport-lineage-20261001`
+- implementation head entering acceptance: `b212cdc8d9ace08f525b46384e8cc62207604877`
+- worktree: none in connector session; UID504 runner is execution plane
+- slice: FP6 `ExecutionReceiptV2 -> funding/queue/latency/partial-fill -> R22 immutable tape -> Trade Passport`
+- classification: BRIDGE only; accepted FP4/R22/FP6-B owners reused
+- implementation: append-only R22 execution/funding companion lineage + read-only Trade Passport projection present
+- acceptance pending: canonical fixture focused tests, helper cleanup, then same-final-SHA FP6-B + WC6 + whole-repo + RDP11 Pre-Soak + F10/non-mutation
+- RDP11 global R2 soak remains independently ACTIVE / NOT PASS; this branch must not re-anchor or mutate the frozen runtime
+- `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`
+- Product/Development deploy: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- exact nextAction: add canonical R22 execution-lineage focused tests, then remove temporary helper artifacts before defining the final candidate SHA.
+"""
+handoff_text = handoff.read_text()
+if handoff_marker not in handoff_text:
+    handoff.write_text(handoff_text.rstrip() + handoff_entry + "\n")
